@@ -1,0 +1,7 @@
+<resources>
+    <color name="quartz_primary">#0B3D91</color>
+    <color name="quartz_on_primary">#FFFFFF</color>
+    <color name="quartz_secondary">#FF6B00</color>
+    <color name="quartz_background">#F6F8FC</color>
+    <color name="quartz_surface">#FFFFFF</color>
+</resources>

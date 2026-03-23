@@ -1,0 +1,19 @@
+model = "gpt-5.3-codex"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[context]
+include = [
+  "README.md",
+  "AGENTS.md",
+  "docs/product-overview.md",
+  "docs/architecture.md",
+  "docs/roadmap.md",
+  "docs/domain-model.md",
+  "docs/acceptance-criteria.md",
+  ".codex/skills/android_build.md",
+  ".codex/skills/spring_boot.md",
+  ".codex/skills/architecture_rules.md",
+  ".codex/skills/testing_rules.md",
+  ".codex/skills/quality_gate.md"
+]
