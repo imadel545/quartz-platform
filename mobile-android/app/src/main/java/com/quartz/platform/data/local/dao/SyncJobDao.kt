@@ -47,6 +47,59 @@ interface SyncJobDao {
 
     @Query(
         """
+        SELECT * FROM sync_jobs
+        WHERE aggregateType = :aggregateType
+          AND aggregateId = :aggregateId
+          AND operationType = :operationType
+        ORDER BY createdAtEpochMillis DESC
+        LIMIT 1
+        """
+    )
+    fun observeLatestJob(
+        aggregateType: SyncAggregateType,
+        aggregateId: String,
+        operationType: SyncOperationType
+    ): Flow<SyncJobEntity?>
+
+    @Query(
+        """
+        SELECT * FROM sync_jobs
+        WHERE aggregateType = :aggregateType
+          AND aggregateId = :aggregateId
+          AND operationType = :operationType
+        ORDER BY createdAtEpochMillis DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getLatestJob(
+        aggregateType: SyncAggregateType,
+        aggregateId: String,
+        operationType: SyncOperationType
+    ): SyncJobEntity?
+
+    @Query(
+        """
+        UPDATE sync_jobs
+        SET status = 'FAILED_TERMINAL',
+            nextAttemptAtEpochMillis = NULL,
+            lastAttemptAtEpochMillis = :updatedAtEpochMillis,
+            lastError = :reason
+        WHERE aggregateType = :aggregateType
+          AND aggregateId = :aggregateId
+          AND operationType = :operationType
+          AND status IN ('PENDING', 'IN_FLIGHT', 'FAILED_RETRYABLE')
+        """
+    )
+    suspend fun markActionableAsSuperseded(
+        aggregateType: SyncAggregateType,
+        aggregateId: String,
+        operationType: SyncOperationType,
+        reason: String,
+        updatedAtEpochMillis: Long
+    )
+
+    @Query(
+        """
         UPDATE sync_jobs
         SET status = :status,
             retryCount = :retryCount,

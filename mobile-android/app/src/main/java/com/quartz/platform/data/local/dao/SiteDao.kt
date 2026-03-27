@@ -12,6 +12,12 @@ interface SiteDao {
     @Query("SELECT * FROM sites ORDER BY name ASC")
     fun observeAll(): Flow<List<SiteEntity>>
 
+    @Query("SELECT * FROM sites WHERE id = :siteId LIMIT 1")
+    fun observeById(siteId: String): Flow<SiteEntity?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(sites: List<SiteEntity>)
+
+    @Query("DELETE FROM sites")
+    suspend fun deleteAll()
 }

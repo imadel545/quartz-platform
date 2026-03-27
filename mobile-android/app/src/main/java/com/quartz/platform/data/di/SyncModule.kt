@@ -1,6 +1,6 @@
 package com.quartz.platform.data.di
 
-import com.quartz.platform.data.remote.FakeSyncGateway
+import com.quartz.platform.data.remote.StubSyncGateway
 import com.quartz.platform.data.remote.SyncGateway
 import com.quartz.platform.data.sync.SyncOrchestrator
 import com.quartz.platform.data.sync.WorkManagerSyncOrchestrator
@@ -16,7 +16,7 @@ abstract class SyncModule {
 
     @Binds
     @Singleton
-    abstract fun bindSyncGateway(impl: FakeSyncGateway): SyncGateway
+    abstract fun bindSyncGateway(impl: StubSyncGateway): SyncGateway
 
     @Binds
     @Singleton

@@ -1,0 +1,14 @@
+# Copy to local.properties and adjust the SDK path for your machine.
+# Linux example:
+# sdk.dir=/home/your-user/Android/Sdk
+# macOS example:
+# sdk.dir=/Users/your-user/Library/Android/sdk
+# macOS Homebrew commandline-tools example:
+# sdk.dir=/opt/homebrew/share/android-commandlinetools
+# Windows example (escaped backslashes):
+# sdk.dir=C:\\Users\\your-user\\AppData\\Local\\Android\\Sdk
+#
+# Connected instrumentation tests also need:
+# - platform-tools (adb)
+# - emulator
+# - a system image (for example: system-images;android-35;default;arm64-v8a)

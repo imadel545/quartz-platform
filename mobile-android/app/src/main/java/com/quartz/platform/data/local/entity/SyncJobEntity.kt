@@ -1,5 +1,6 @@
 package com.quartz.platform.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -16,6 +17,7 @@ data class SyncJobEntity(
     val aggregateType: SyncAggregateType,
     val aggregateId: String,
     val operationType: SyncOperationType,
+    @ColumnInfo(name = "payload")
     val payloadReference: String?,
     val status: SyncJobStatus,
     val retryCount: Int,

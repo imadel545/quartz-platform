@@ -3,9 +3,16 @@ package com.quartz.platform.data.di
 import android.content.Context
 import androidx.room.Room
 import androidx.work.WorkManager
+import com.quartz.platform.data.local.DatabaseMigrations
 import com.quartz.platform.data.local.QuartzDatabase
+import com.quartz.platform.data.local.dao.ReportDraftDao
+import com.quartz.platform.data.local.dao.SiteAntennaDao
+import com.quartz.platform.data.local.dao.SiteCellDao
 import com.quartz.platform.data.local.dao.SiteDao
+import com.quartz.platform.data.local.dao.SiteSectorDao
 import com.quartz.platform.data.local.dao.SyncJobDao
+import com.quartz.platform.data.local.dao.XfeederSessionDao
+import com.quartz.platform.data.local.dao.XfeederStepDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,7 +31,14 @@ object DatabaseModule {
             context,
             QuartzDatabase::class.java,
             "quartz.db"
-        ).fallbackToDestructiveMigration()
+        ).addMigrations(
+            DatabaseMigrations.MIGRATION_1_2,
+            DatabaseMigrations.MIGRATION_2_3,
+            DatabaseMigrations.MIGRATION_3_4,
+            DatabaseMigrations.MIGRATION_4_5,
+            DatabaseMigrations.MIGRATION_5_6,
+            DatabaseMigrations.MIGRATION_6_7
+        )
             .build()
     }
 
@@ -32,7 +46,25 @@ object DatabaseModule {
     fun provideSiteDao(database: QuartzDatabase): SiteDao = database.siteDao()
 
     @Provides
+    fun provideSiteSectorDao(database: QuartzDatabase): SiteSectorDao = database.siteSectorDao()
+
+    @Provides
+    fun provideSiteAntennaDao(database: QuartzDatabase): SiteAntennaDao = database.siteAntennaDao()
+
+    @Provides
+    fun provideSiteCellDao(database: QuartzDatabase): SiteCellDao = database.siteCellDao()
+
+    @Provides
+    fun provideXfeederSessionDao(database: QuartzDatabase): XfeederSessionDao = database.xfeederSessionDao()
+
+    @Provides
+    fun provideXfeederStepDao(database: QuartzDatabase): XfeederStepDao = database.xfeederStepDao()
+
+    @Provides
     fun provideSyncJobDao(database: QuartzDatabase): SyncJobDao = database.syncJobDao()
+
+    @Provides
+    fun provideReportDraftDao(database: QuartzDatabase): ReportDraftDao = database.reportDraftDao()
 
     @Provides
     @Singleton

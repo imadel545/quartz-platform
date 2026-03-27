@@ -2,7 +2,7 @@ package com.quartz.platform
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.google.common.truth.Truth.assertThat
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -12,6 +12,6 @@ class ExampleInstrumentedTest {
     @Test
     fun useAppContext() {
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertThat(appContext.packageName).isEqualTo("com.quartz.platform")
+        assertEquals("com.quartz.platform", appContext.packageName)
     }
 }
