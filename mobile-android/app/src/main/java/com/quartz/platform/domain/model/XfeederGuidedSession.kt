@@ -1,10 +1,20 @@
 package com.quartz.platform.domain.model
 
+import com.quartz.platform.domain.model.workflow.WorkflowClosureSummary
+import com.quartz.platform.domain.model.workflow.WorkflowCompletionGuard
+import com.quartz.platform.domain.model.workflow.WorkflowSessionIdentity
+import com.quartz.platform.domain.model.workflow.WorkflowSessionStatus
+import com.quartz.platform.domain.model.workflow.WorkflowStepState
+import com.quartz.platform.domain.model.workflow.WorkflowStepStatus
+
 data class XfeederGuidedSession(
     val id: String,
     val siteId: String,
     val sectorId: String,
     val sectorCode: String,
+    val measurementZoneRadiusMeters: Int,
+    val measurementZoneExtensionReason: String,
+    val proximityModeEnabled: Boolean,
     val status: XfeederSessionStatus,
     val sectorOutcome: XfeederSectorOutcome,
     val closureEvidence: XfeederClosureEvidence,
@@ -14,13 +24,26 @@ data class XfeederGuidedSession(
     val updatedAtEpochMillis: Long,
     val completedAtEpochMillis: Long?,
     val steps: List<XfeederGuidedStep>
-)
+) {
+    val identity: WorkflowSessionIdentity
+        get() = WorkflowSessionIdentity(
+            sessionId = id,
+            siteId = siteId,
+            scopeId = sectorId,
+            scopeCode = sectorCode
+        )
 
-data class XfeederGuidedStep(
-    val code: XfeederStepCode,
-    val required: Boolean,
-    val status: XfeederStepStatus
-)
+    val closureSummary: WorkflowClosureSummary<XfeederSectorOutcome>
+        get() = WorkflowClosureSummary(
+            outcome = sectorOutcome,
+            notes = notes,
+            resultSummary = resultSummary
+        )
+
+    fun completionGuard(): WorkflowCompletionGuard = WorkflowCompletionGuard.fromSteps(steps)
+}
+
+typealias XfeederGuidedStep = WorkflowStepState<XfeederStepCode>
 
 data class XfeederClosureEvidence(
     val relatedSectorCode: String,
@@ -39,19 +62,8 @@ enum class XfeederClosureEvidenceIssue {
     OBSERVED_SECTOR_COUNT_INVALID
 }
 
-enum class XfeederSessionStatus {
-    CREATED,
-    IN_PROGRESS,
-    COMPLETED,
-    CANCELLED
-}
-
-enum class XfeederStepStatus {
-    TODO,
-    IN_PROGRESS,
-    DONE,
-    BLOCKED
-}
+typealias XfeederSessionStatus = WorkflowSessionStatus
+typealias XfeederStepStatus = WorkflowStepStatus
 
 enum class XfeederSectorOutcome {
     NOT_TESTED,

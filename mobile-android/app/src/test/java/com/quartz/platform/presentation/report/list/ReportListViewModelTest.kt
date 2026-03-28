@@ -5,6 +5,7 @@ import com.google.common.truth.Truth.assertThat
 import com.quartz.platform.MainDispatcherRule
 import com.quartz.platform.TestUiStrings
 import com.quartz.platform.domain.model.ReportDraft
+import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.ReportSyncTrace
 import com.quartz.platform.domain.repository.ReportDraftRepository
@@ -109,14 +110,23 @@ class ReportListViewModelTest {
         override suspend fun createDraft(
             siteId: String,
             originSessionId: String?,
-            originSectorId: String?
+            originSectorId: String?,
+            originWorkflowType: ReportDraftOriginWorkflowType?
         ): ReportDraft = draftsFlow.value.first()
 
         override suspend fun updateDraft(draftId: String, title: String, observation: String): ReportDraft? = null
 
-        override suspend fun findLatestLinkedDraft(siteId: String, originSessionId: String): ReportDraft? {
+        override suspend fun findLatestLinkedDraft(
+            siteId: String,
+            originSessionId: String,
+            originWorkflowType: ReportDraftOriginWorkflowType?
+        ): ReportDraft? {
             return draftsFlow.value
-                .filter { draft -> draft.siteId == siteId && draft.originSessionId == originSessionId }
+                .filter { draft ->
+                    draft.siteId == siteId &&
+                        draft.originSessionId == originSessionId &&
+                        draft.originWorkflowType == originWorkflowType
+                }
                 .maxByOrNull { draft -> draft.updatedAtEpochMillis }
         }
 

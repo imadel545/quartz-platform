@@ -9,7 +9,7 @@ import androidx.room.PrimaryKey
     indices = [
         Index(value = ["siteId"]),
         Index(
-            value = ["siteId", "originSessionId"],
+            value = ["siteId", "originSessionId", "originWorkflowType"],
             unique = true
         )
     ]
@@ -19,6 +19,7 @@ data class ReportDraftEntity(
     val siteId: String,
     val originSessionId: String?,
     val originSectorId: String?,
+    val originWorkflowType: String?,
     val title: String,
     val observation: String,
     val revision: Int,

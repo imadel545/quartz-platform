@@ -4,6 +4,7 @@ import com.quartz.platform.data.local.dao.ReportDraftDao
 import com.quartz.platform.data.local.entity.ReportDraftEntity
 import com.quartz.platform.data.local.mapper.toDomain
 import com.quartz.platform.domain.model.ReportDraft
+import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.repository.ReportDraftRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -17,7 +18,8 @@ class OfflineFirstReportDraftRepository @Inject constructor(
     override suspend fun createDraft(
         siteId: String,
         originSessionId: String?,
-        originSectorId: String?
+        originSectorId: String?,
+        originWorkflowType: ReportDraftOriginWorkflowType?
     ): ReportDraft {
         val now = System.currentTimeMillis()
         val draft = ReportDraftEntity(
@@ -25,6 +27,7 @@ class OfflineFirstReportDraftRepository @Inject constructor(
             siteId = siteId,
             originSessionId = originSessionId,
             originSectorId = originSectorId,
+            originWorkflowType = originWorkflowType?.name,
             title = "Brouillon rapport",
             observation = "",
             revision = 1,
@@ -51,10 +54,15 @@ class OfflineFirstReportDraftRepository @Inject constructor(
         return reportDraftDao.getById(draftId)?.toDomain()
     }
 
-    override suspend fun findLatestLinkedDraft(siteId: String, originSessionId: String): ReportDraft? {
+    override suspend fun findLatestLinkedDraft(
+        siteId: String,
+        originSessionId: String,
+        originWorkflowType: ReportDraftOriginWorkflowType?
+    ): ReportDraft? {
         return reportDraftDao.findLatestLinkedBySession(
             siteId = siteId,
-            originSessionId = originSessionId
+            originSessionId = originSessionId,
+            originWorkflowType = originWorkflowType?.name
         )?.toDomain()
     }
 

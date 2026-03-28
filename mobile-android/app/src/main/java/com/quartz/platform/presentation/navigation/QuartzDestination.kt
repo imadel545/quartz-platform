@@ -29,4 +29,12 @@ sealed class QuartzDestination(val route: String) {
             return "xfeeder_session/${Uri.encode(siteId)}/${Uri.encode(sectorId)}"
         }
     }
+
+    data object RetGuidedSession : QuartzDestination("ret_session/{siteId}/{sectorId}") {
+        const val ARG_SITE_ID = "siteId"
+        const val ARG_SECTOR_ID = "sectorId"
+        fun routeFor(siteId: String, sectorId: String): String {
+            return "ret_session/${Uri.encode(siteId)}/${Uri.encode(sectorId)}"
+        }
+    }
 }

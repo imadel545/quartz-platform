@@ -28,4 +28,11 @@ interface XfeederGuidedSessionRepository {
         notes: String,
         resultSummary: String
     )
+
+    suspend fun updateSessionGeospatialContext(
+        sessionId: String,
+        measurementZoneRadiusMeters: Int,
+        measurementZoneExtensionReason: String,
+        proximityModeEnabled: Boolean
+    )
 }

@@ -1,6 +1,7 @@
 package com.quartz.platform.domain.usecase
 
 import com.quartz.platform.domain.model.ReportDraft
+import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.repository.ReportDraftRepository
 import javax.inject.Inject
 
@@ -15,11 +16,13 @@ class OpenOrCreateGuidedSessionReportDraftUseCase @Inject constructor(
     suspend operator fun invoke(
         siteId: String,
         originSessionId: String,
-        originSectorId: String
+        originSectorId: String,
+        originWorkflowType: ReportDraftOriginWorkflowType
     ): GuidedSessionReportDraftResult {
         val existing = reportDraftRepository.findLatestLinkedDraft(
             siteId = siteId,
-            originSessionId = originSessionId
+            originSessionId = originSessionId,
+            originWorkflowType = originWorkflowType
         )
 
         return if (existing != null) {
@@ -32,7 +35,8 @@ class OpenOrCreateGuidedSessionReportDraftUseCase @Inject constructor(
                 draft = reportDraftRepository.createDraft(
                     siteId = siteId,
                     originSessionId = originSessionId,
-                    originSectorId = originSectorId
+                    originSectorId = originSectorId,
+                    originWorkflowType = originWorkflowType
                 ),
                 created = true
             )

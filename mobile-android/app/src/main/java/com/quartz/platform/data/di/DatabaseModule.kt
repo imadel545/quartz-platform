@@ -6,6 +6,8 @@ import androidx.work.WorkManager
 import com.quartz.platform.data.local.DatabaseMigrations
 import com.quartz.platform.data.local.QuartzDatabase
 import com.quartz.platform.data.local.dao.ReportDraftDao
+import com.quartz.platform.data.local.dao.RetSessionDao
+import com.quartz.platform.data.local.dao.RetStepDao
 import com.quartz.platform.data.local.dao.SiteAntennaDao
 import com.quartz.platform.data.local.dao.SiteCellDao
 import com.quartz.platform.data.local.dao.SiteDao
@@ -37,7 +39,11 @@ object DatabaseModule {
             DatabaseMigrations.MIGRATION_3_4,
             DatabaseMigrations.MIGRATION_4_5,
             DatabaseMigrations.MIGRATION_5_6,
-            DatabaseMigrations.MIGRATION_6_7
+            DatabaseMigrations.MIGRATION_6_7,
+            DatabaseMigrations.MIGRATION_7_8,
+            DatabaseMigrations.MIGRATION_8_9,
+            DatabaseMigrations.MIGRATION_9_10,
+            DatabaseMigrations.MIGRATION_10_11
         )
             .build()
     }
@@ -59,6 +65,12 @@ object DatabaseModule {
 
     @Provides
     fun provideXfeederStepDao(database: QuartzDatabase): XfeederStepDao = database.xfeederStepDao()
+
+    @Provides
+    fun provideRetSessionDao(database: QuartzDatabase): RetSessionDao = database.retSessionDao()
+
+    @Provides
+    fun provideRetStepDao(database: QuartzDatabase): RetStepDao = database.retStepDao()
 
     @Provides
     fun provideSyncJobDao(database: QuartzDatabase): SyncJobDao = database.syncJobDao()

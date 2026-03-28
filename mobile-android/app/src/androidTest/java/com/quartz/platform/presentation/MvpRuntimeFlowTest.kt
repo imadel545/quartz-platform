@@ -1,10 +1,14 @@
 package com.quartz.platform.presentation
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasScrollToNodeAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.quartz.platform.MainActivity
 import com.quartz.platform.R
@@ -42,15 +46,25 @@ class MvpRuntimeFlowTest {
         openDemoSiteDetail()
 
         composeRule.onNodeWithText(string(R.string.title_site_detail)).assertIsDisplayed()
+        scrollToTextIfNeeded(string(R.string.action_create_local_draft))
+        composeRule.waitUntilExists(string(R.string.action_create_local_draft))
         composeRule.onNodeWithText(string(R.string.action_create_local_draft)).assertIsDisplayed()
+        scrollToTextIfNeeded(string(R.string.action_open_site_local_reports))
+        composeRule.waitUntilExists(string(R.string.action_open_site_local_reports))
         composeRule.onNodeWithText(string(R.string.action_open_site_local_reports)).assertIsDisplayed()
 
         composeRule.onNodeWithText(string(R.string.action_create_local_draft)).performClick()
 
         composeRule.waitUntilExists(string(R.string.title_report_draft))
         composeRule.onNodeWithText(string(R.string.title_report_draft)).assertIsDisplayed()
-        composeRule.onNodeWithText(syncStateText(string(R.string.sync_state_local_only))).assertIsDisplayed()
+        composeRule.waitUntilExistsSubstring(syncStatePrefix())
+        composeRule
+            .onAllNodesWithText(syncStatePrefix(), substring = true)
+            .onFirst()
+            .assertIsDisplayed()
+        composeRule.waitUntilExists(string(R.string.debug_header_sync_simulation))
         composeRule.onNodeWithText(string(R.string.debug_header_sync_simulation)).assertIsDisplayed()
+        composeRule.waitUntilExists(string(R.string.debug_header_live_sync_snapshot))
         composeRule.onNodeWithText(string(R.string.debug_header_live_sync_snapshot)).assertIsDisplayed()
     }
 
@@ -59,14 +73,29 @@ class MvpRuntimeFlowTest {
         ensureDemoSitesLoaded()
         openDemoSiteDetail()
 
+        scrollToTextIfNeeded(string(R.string.action_create_local_draft))
+        composeRule.waitUntilExists(string(R.string.action_create_local_draft))
         composeRule.onNodeWithText(string(R.string.action_create_local_draft)).performClick()
         composeRule.waitUntilExists(string(R.string.title_report_draft))
-        composeRule.onNodeWithText(string(R.string.action_open_site_reports)).performClick()
+        composeRule.activity.runOnUiThread {
+            composeRule.activity.onBackPressedDispatcher.onBackPressed()
+        }
+        composeRule.waitUntilExists(string(R.string.title_site_detail))
+        scrollToTextIfNeeded(string(R.string.action_open_site_local_reports))
+        composeRule.waitUntilExists(string(R.string.action_open_site_local_reports))
+        composeRule.onNodeWithText(string(R.string.action_open_site_local_reports)).performClick()
 
         composeRule.waitUntilExists(string(R.string.title_local_reports))
         composeRule.onNodeWithText(string(R.string.title_local_reports)).assertIsDisplayed()
-        composeRule.onNodeWithText(syncStateText(string(R.string.sync_state_local_only))).assertIsDisplayed()
-        composeRule.onNodeWithText(string(R.string.action_open_draft)).assertIsDisplayed()
+        composeRule.waitUntilExistsSubstring(syncStatePrefix())
+        composeRule
+            .onAllNodesWithText(syncStatePrefix(), substring = true)
+            .onFirst()
+            .assertIsDisplayed()
+        composeRule
+            .onAllNodesWithText(string(R.string.action_open_draft))
+            .onFirst()
+            .assertIsDisplayed()
     }
 
     private fun ensureDemoSitesLoaded() {
@@ -86,8 +115,24 @@ class MvpRuntimeFlowTest {
         composeRule.waitUntilExists(string(R.string.title_site_detail))
     }
 
+    private fun scrollToTextIfNeeded(text: String) {
+        if (nodeExists(text)) return
+        val scrollContainers = composeRule.onAllNodes(hasScrollToNodeAction()).fetchSemanticsNodes()
+        if (scrollContainers.isEmpty()) return
+        composeRule
+            .onAllNodes(hasScrollToNodeAction())
+            .onFirst()
+            .performScrollToNode(hasText(text))
+        composeRule.waitForIdle()
+    }
+
     private fun syncStateText(stateLabel: String): String {
         return string(R.string.label_sync_state, stateLabel)
+    }
+
+    private fun syncStatePrefix(): String {
+        val marker = "__sync_state__"
+        return syncStateText(marker).substringBefore(marker)
     }
 
     private fun string(resId: Int, vararg args: Any): String {

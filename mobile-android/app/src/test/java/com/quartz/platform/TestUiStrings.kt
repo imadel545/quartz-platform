@@ -39,6 +39,16 @@ class TestUiStrings : UiStrings {
             R.string.error_xfeeder_closure_requires_observed_sector_count -> "Impossible de clôturer: indiquez un nombre de secteurs observés supérieur ou égal à 2."
             R.string.info_xfeeder_session_created -> "Session guidée locale créée."
             R.string.info_xfeeder_summary_saved -> "Session guidée enregistrée localement."
+            R.string.error_ret_observe_session -> "Impossible de charger la session RET secteur."
+            R.string.error_ret_sector_not_found -> "Secteur introuvable dans le snapshot technique local pour RET."
+            R.string.error_ret_create_session -> "Impossible de créer la session RET locale."
+            R.string.error_ret_update_step -> "Impossible de mettre à jour l'étape RET."
+            R.string.error_ret_save_summary -> "Impossible d'enregistrer le résumé RET."
+            R.string.error_ret_create_report_draft -> "Impossible de créer le brouillon rapport depuis la session RET."
+            R.string.error_ret_complete_requires_required_steps -> "Impossible de clôturer la session RET: terminez toutes les étapes obligatoires."
+            R.string.info_ret_session_created -> "Session RET locale créée."
+            R.string.info_ret_summary_saved -> "Session RET enregistrée localement."
+            R.string.info_ret_opened_linked_draft -> "Brouillon déjà lié à cette session RET: ouverture du brouillon existant."
             else -> "res:$resId"
         }
 

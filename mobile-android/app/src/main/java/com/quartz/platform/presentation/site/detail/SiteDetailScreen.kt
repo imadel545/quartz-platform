@@ -43,6 +43,7 @@ fun SiteDetailRoute(
     onOpenDraft: (String) -> Unit,
     onOpenReportList: (String) -> Unit,
     onOpenXfeederSession: (siteId: String, sectorId: String) -> Unit,
+    onOpenRetSession: (siteId: String, sectorId: String) -> Unit,
     viewModel: SiteDetailViewModel = hiltViewModel()
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
@@ -61,7 +62,8 @@ fun SiteDetailRoute(
         onCreateDraftClicked = viewModel::onCreateDraftClicked,
         onOpenDraft = onOpenDraft,
         onOpenReportList = onOpenReportList,
-        onOpenXfeederSession = onOpenXfeederSession
+        onOpenXfeederSession = onOpenXfeederSession,
+        onOpenRetSession = onOpenRetSession
     )
 }
 
@@ -73,7 +75,8 @@ fun SiteDetailScreen(
     onCreateDraftClicked: () -> Unit,
     onOpenDraft: (String) -> Unit,
     onOpenReportList: (String) -> Unit,
-    onOpenXfeederSession: (siteId: String, sectorId: String) -> Unit
+    onOpenXfeederSession: (siteId: String, sectorId: String) -> Unit,
+    onOpenRetSession: (siteId: String, sectorId: String) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -148,7 +151,8 @@ fun SiteDetailScreen(
                     item {
                         SiteTechnicalStructureCard(
                             site = state.site,
-                            onOpenXfeederSession = onOpenXfeederSession
+                            onOpenXfeederSession = onOpenXfeederSession,
+                            onOpenRetSession = onOpenRetSession
                         )
                     }
 
@@ -277,7 +281,8 @@ private fun SiteTechnicalSnapshotCard(site: SiteDetail) {
 @Composable
 private fun SiteTechnicalStructureCard(
     site: SiteDetail,
-    onOpenXfeederSession: (siteId: String, sectorId: String) -> Unit
+    onOpenXfeederSession: (siteId: String, sectorId: String) -> Unit,
+    onOpenRetSession: (siteId: String, sectorId: String) -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -299,7 +304,8 @@ private fun SiteTechnicalStructureCard(
                     SectorDetailBlock(
                         siteId = site.id,
                         sector = sector,
-                        onOpenXfeederSession = onOpenXfeederSession
+                        onOpenXfeederSession = onOpenXfeederSession,
+                        onOpenRetSession = onOpenRetSession
                     )
                 }
             }
@@ -311,7 +317,8 @@ private fun SiteTechnicalStructureCard(
 private fun SectorDetailBlock(
     siteId: String,
     sector: SiteSector,
-    onOpenXfeederSession: (siteId: String, sectorId: String) -> Unit
+    onOpenXfeederSession: (siteId: String, sectorId: String) -> Unit,
+    onOpenRetSession: (siteId: String, sectorId: String) -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -377,6 +384,13 @@ private fun SectorDetailBlock(
                 onClick = { onOpenXfeederSession(siteId, sector.id) }
             ) {
                 Text(stringResource(R.string.action_open_xfeeder_guided_session))
+            }
+
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { onOpenRetSession(siteId, sector.id) }
+            ) {
+                Text(stringResource(R.string.action_open_ret_guided_session))
             }
         }
     }

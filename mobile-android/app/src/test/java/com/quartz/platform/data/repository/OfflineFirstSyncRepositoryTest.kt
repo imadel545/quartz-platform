@@ -47,7 +47,8 @@ class OfflineFirstSyncRepositoryTest {
                         createdAtEpochMillis = 1L,
                         updatedAtEpochMillis = 1L,
                         originSessionId = null,
-                        originSectorId = null
+                        originSectorId = null,
+                        originWorkflowType = null
                     )
                 )
             ),
@@ -81,7 +82,8 @@ class OfflineFirstSyncRepositoryTest {
                         createdAtEpochMillis = 1L,
                         updatedAtEpochMillis = 1L,
                         originSessionId = null,
-                        originSectorId = null
+                        originSectorId = null,
+                        originWorkflowType = null
                     )
                 )
             ),
@@ -132,7 +134,8 @@ class OfflineFirstSyncRepositoryTest {
                         createdAtEpochMillis = 1L,
                         updatedAtEpochMillis = 1L,
                         originSessionId = null,
-                        originSectorId = null
+                        originSectorId = null,
+                        originWorkflowType = null
                     )
                 )
             ),
@@ -166,7 +169,8 @@ class OfflineFirstSyncRepositoryTest {
                         createdAtEpochMillis = 1L,
                         updatedAtEpochMillis = 1L,
                         originSessionId = null,
-                        originSectorId = null
+                        originSectorId = null,
+                        originWorkflowType = null
                     )
                 )
             ),
@@ -202,7 +206,8 @@ class OfflineFirstSyncRepositoryTest {
                         createdAtEpochMillis = 1L,
                         updatedAtEpochMillis = 1L,
                         originSessionId = null,
-                        originSectorId = null
+                        originSectorId = null,
+                        originWorkflowType = null
                     )
                 )
             ),
@@ -401,10 +406,18 @@ class OfflineFirstSyncRepositoryTest {
 
         override suspend fun getById(draftId: String): ReportDraftEntity? = drafts.value[draftId]
 
-        override suspend fun findLatestLinkedBySession(siteId: String, originSessionId: String): ReportDraftEntity? {
+        override suspend fun findLatestLinkedBySession(
+            siteId: String,
+            originSessionId: String,
+            originWorkflowType: String?
+        ): ReportDraftEntity? {
             return drafts.value.values
                 .asSequence()
-                .filter { entity -> entity.siteId == siteId && entity.originSessionId == originSessionId }
+                .filter { entity ->
+                    entity.siteId == siteId &&
+                        entity.originSessionId == originSessionId &&
+                        entity.originWorkflowType == originWorkflowType
+                }
                 .maxByOrNull { entity -> entity.updatedAtEpochMillis }
         }
 

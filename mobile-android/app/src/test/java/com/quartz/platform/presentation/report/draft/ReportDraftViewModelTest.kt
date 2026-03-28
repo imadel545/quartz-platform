@@ -8,9 +8,11 @@ import com.quartz.platform.data.remote.simulation.SyncSimulationControl
 import com.quartz.platform.data.remote.simulation.SyncSimulationMode
 import com.quartz.platform.domain.model.GuidedSessionClosureProjection
 import com.quartz.platform.domain.model.ReportDraft
+import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.ReportSyncTrace
 import com.quartz.platform.domain.model.XfeederClosureEvidence
+import com.quartz.platform.domain.model.XfeederGeospatialPolicy
 import com.quartz.platform.domain.model.XfeederGuidedSession
 import com.quartz.platform.domain.model.XfeederGuidedStep
 import com.quartz.platform.domain.model.XfeederSectorOutcome
@@ -308,7 +310,8 @@ class ReportDraftViewModelTest {
         override suspend fun createDraft(
             siteId: String,
             originSessionId: String?,
-            originSectorId: String?
+            originSectorId: String?,
+            originWorkflowType: ReportDraftOriginWorkflowType?
         ): ReportDraft = state.value
 
         override suspend fun updateDraft(draftId: String, title: String, observation: String): ReportDraft {
@@ -322,9 +325,21 @@ class ReportDraftViewModelTest {
             return updated
         }
 
-        override suspend fun findLatestLinkedDraft(siteId: String, originSessionId: String): ReportDraft? {
+        override suspend fun findLatestLinkedDraft(
+            siteId: String,
+            originSessionId: String,
+            originWorkflowType: ReportDraftOriginWorkflowType?
+        ): ReportDraft? {
             val draft = state.value
-            return if (draft.siteId == siteId && draft.originSessionId == originSessionId) draft else null
+            return if (
+                draft.siteId == siteId &&
+                draft.originSessionId == originSessionId &&
+                draft.originWorkflowType == originWorkflowType
+            ) {
+                draft
+            } else {
+                null
+            }
         }
 
         override fun observeDraft(draftId: String): Flow<ReportDraft?> = state
@@ -393,6 +408,9 @@ class ReportDraftViewModelTest {
                 siteId = siteId,
                 sectorId = sectorId,
                 sectorCode = sectorCode,
+                measurementZoneRadiusMeters = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
+                measurementZoneExtensionReason = "",
+                proximityModeEnabled = false,
                 status = XfeederSessionStatus.CREATED,
                 sectorOutcome = XfeederSectorOutcome.NOT_TESTED,
                 closureEvidence = XfeederClosureEvidence(
@@ -428,6 +446,13 @@ class ReportDraftViewModelTest {
             closureEvidence: XfeederClosureEvidence,
             notes: String,
             resultSummary: String
+        ) = Unit
+
+        override suspend fun updateSessionGeospatialContext(
+            sessionId: String,
+            measurementZoneRadiusMeters: Int,
+            measurementZoneExtensionReason: String,
+            proximityModeEnabled: Boolean
         ) = Unit
     }
 }

@@ -3,6 +3,7 @@ package com.quartz.platform.data.local.mapper
 import com.google.common.truth.Truth.assertThat
 import com.quartz.platform.data.local.entity.XfeederSessionEntity
 import com.quartz.platform.data.local.entity.XfeederStepEntity
+import com.quartz.platform.domain.model.XfeederGeospatialPolicy
 import com.quartz.platform.domain.model.XfeederSectorOutcome
 import com.quartz.platform.domain.model.XfeederSessionStatus
 import com.quartz.platform.domain.model.XfeederStepCode
@@ -18,6 +19,9 @@ class XfeederSessionMapperTest {
             siteId = "site-1",
             sectorId = "sector-1",
             sectorCode = "S0",
+            measurementZoneRadiusMeters = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
+            measurementZoneExtensionReason = "",
+            proximityModeEnabled = false,
             status = XfeederSessionStatus.IN_PROGRESS.name,
             sectorOutcome = XfeederSectorOutcome.CROSSED.name,
             closureRelatedSectorCode = "S1",

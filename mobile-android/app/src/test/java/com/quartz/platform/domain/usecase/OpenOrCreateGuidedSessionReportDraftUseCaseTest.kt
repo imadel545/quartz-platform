@@ -2,6 +2,7 @@ package com.quartz.platform.domain.usecase
 
 import com.google.common.truth.Truth.assertThat
 import com.quartz.platform.domain.model.ReportDraft
+import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.repository.ReportDraftRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,7 @@ class OpenOrCreateGuidedSessionReportDraftUseCaseTest {
                     siteId = "site-1",
                     originSessionId = "session-1",
                     originSectorId = "sector-a",
+                    originWorkflowType = ReportDraftOriginWorkflowType.XFEEDER,
                     title = "A",
                     observation = "",
                     revision = 1,
@@ -33,7 +35,8 @@ class OpenOrCreateGuidedSessionReportDraftUseCaseTest {
         val result = useCase(
             siteId = "site-1",
             originSessionId = "session-1",
-            originSectorId = "sector-a"
+            originSectorId = "sector-a",
+            originWorkflowType = ReportDraftOriginWorkflowType.XFEEDER
         )
 
         assertThat(result.created).isFalse()
@@ -49,7 +52,8 @@ class OpenOrCreateGuidedSessionReportDraftUseCaseTest {
         val result = useCase(
             siteId = "site-1",
             originSessionId = "session-new",
-            originSectorId = "sector-s0"
+            originSectorId = "sector-s0",
+            originWorkflowType = ReportDraftOriginWorkflowType.RET
         )
 
         assertThat(result.created).isTrue()
@@ -67,7 +71,8 @@ class OpenOrCreateGuidedSessionReportDraftUseCaseTest {
         override suspend fun createDraft(
             siteId: String,
             originSessionId: String?,
-            originSectorId: String?
+            originSectorId: String?,
+            originWorkflowType: ReportDraftOriginWorkflowType?
         ): ReportDraft {
             createDraftCalls += 1
             val created = ReportDraft(
@@ -75,6 +80,7 @@ class OpenOrCreateGuidedSessionReportDraftUseCaseTest {
                 siteId = siteId,
                 originSessionId = originSessionId,
                 originSectorId = originSectorId,
+                originWorkflowType = originWorkflowType,
                 title = "Nouveau",
                 observation = "",
                 revision = 1,
@@ -87,10 +93,18 @@ class OpenOrCreateGuidedSessionReportDraftUseCaseTest {
 
         override suspend fun updateDraft(draftId: String, title: String, observation: String): ReportDraft? = null
 
-        override suspend fun findLatestLinkedDraft(siteId: String, originSessionId: String): ReportDraft? {
+        override suspend fun findLatestLinkedDraft(
+            siteId: String,
+            originSessionId: String,
+            originWorkflowType: ReportDraftOriginWorkflowType?
+        ): ReportDraft? {
             return drafts.value
                 .asSequence()
-                .filter { draft -> draft.siteId == siteId && draft.originSessionId == originSessionId }
+                .filter { draft ->
+                    draft.siteId == siteId &&
+                        draft.originSessionId == originSessionId &&
+                        draft.originWorkflowType == originWorkflowType
+                }
                 .maxByOrNull { draft -> draft.updatedAtEpochMillis }
         }
 

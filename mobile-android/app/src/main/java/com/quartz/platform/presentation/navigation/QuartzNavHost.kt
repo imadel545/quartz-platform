@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.quartz.platform.presentation.home.map.HomeMapRoute
+import com.quartz.platform.presentation.ret.session.RetGuidedSessionRoute
 import com.quartz.platform.presentation.report.draft.ReportDraftRoute
 import com.quartz.platform.presentation.report.list.ReportListRoute
 import com.quartz.platform.presentation.site.detail.SiteDetailRoute
@@ -55,6 +56,14 @@ fun QuartzNavHost() {
                             sectorId = sectorId
                         )
                     )
+                },
+                onOpenRetSession = { siteId, sectorId ->
+                    navController.navigate(
+                        QuartzDestination.RetGuidedSession.routeFor(
+                            siteId = siteId,
+                            sectorId = sectorId
+                        )
+                    )
                 }
             )
         }
@@ -91,6 +100,21 @@ fun QuartzNavHost() {
             )
         ) {
             XfeederGuidedSessionRoute(
+                onBack = { navController.popBackStack() },
+                onOpenDraft = { draftId ->
+                    navController.navigate(QuartzDestination.ReportDraft.routeFor(draftId))
+                }
+            )
+        }
+
+        composable(
+            route = QuartzDestination.RetGuidedSession.route,
+            arguments = listOf(
+                navArgument(QuartzDestination.RetGuidedSession.ARG_SITE_ID) { type = NavType.StringType },
+                navArgument(QuartzDestination.RetGuidedSession.ARG_SECTOR_ID) { type = NavType.StringType }
+            )
+        ) {
+            RetGuidedSessionRoute(
                 onBack = { navController.popBackStack() },
                 onOpenDraft = { draftId ->
                     navController.navigate(QuartzDestination.ReportDraft.routeFor(draftId))

@@ -2,6 +2,7 @@ package com.quartz.platform.data.repository
 
 import com.google.common.truth.Truth.assertThat
 import com.quartz.platform.data.local.entity.XfeederSessionEntity
+import com.quartz.platform.domain.model.XfeederGeospatialPolicy
 import com.quartz.platform.domain.model.XfeederSectorOutcome
 import com.quartz.platform.domain.model.XfeederSessionStatus
 import com.quartz.platform.domain.model.XfeederUnreliableReason
@@ -17,6 +18,9 @@ class XfeederSiteClosureProjectionTest {
                 siteId = "site-1",
                 sectorId = "sector-s0",
                 sectorCode = "S0",
+                measurementZoneRadiusMeters = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
+                measurementZoneExtensionReason = "",
+                proximityModeEnabled = false,
                 status = XfeederSessionStatus.COMPLETED.name,
                 sectorOutcome = XfeederSectorOutcome.CROSSED.name,
                 closureRelatedSectorCode = "S1",
@@ -33,6 +37,9 @@ class XfeederSiteClosureProjectionTest {
                 siteId = "site-1",
                 sectorId = "sector-s0",
                 sectorCode = "S0",
+                measurementZoneRadiusMeters = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
+                measurementZoneExtensionReason = "",
+                proximityModeEnabled = false,
                 status = XfeederSessionStatus.COMPLETED.name,
                 sectorOutcome = XfeederSectorOutcome.UNRELIABLE.name,
                 closureRelatedSectorCode = "",
@@ -49,6 +56,9 @@ class XfeederSiteClosureProjectionTest {
                 siteId = "site-1",
                 sectorId = "sector-s0",
                 sectorCode = "S0",
+                measurementZoneRadiusMeters = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
+                measurementZoneExtensionReason = "",
+                proximityModeEnabled = false,
                 status = XfeederSessionStatus.IN_PROGRESS.name,
                 sectorOutcome = XfeederSectorOutcome.OK.name,
                 closureRelatedSectorCode = "",
@@ -65,6 +75,9 @@ class XfeederSiteClosureProjectionTest {
                 siteId = "site-1",
                 sectorId = "sector-s1",
                 sectorCode = "S1",
+                measurementZoneRadiusMeters = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
+                measurementZoneExtensionReason = "",
+                proximityModeEnabled = false,
                 status = XfeederSessionStatus.COMPLETED.name,
                 sectorOutcome = XfeederSectorOutcome.MIXFEEDER.name,
                 closureRelatedSectorCode = "S0",
@@ -81,6 +94,9 @@ class XfeederSiteClosureProjectionTest {
                 siteId = "site-1",
                 sectorId = "sector-s2",
                 sectorCode = "S2",
+                measurementZoneRadiusMeters = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
+                measurementZoneExtensionReason = "",
+                proximityModeEnabled = false,
                 status = XfeederSessionStatus.CREATED.name,
                 sectorOutcome = XfeederSectorOutcome.NOT_TESTED.name,
                 closureRelatedSectorCode = "",

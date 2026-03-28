@@ -2,10 +2,12 @@ package com.quartz.platform.data.di
 
 import com.quartz.platform.data.bootstrap.LocalDemoSiteSnapshotSource
 import com.quartz.platform.data.repository.OfflineFirstReportDraftRepository
+import com.quartz.platform.data.repository.OfflineFirstRetGuidedSessionRepository
 import com.quartz.platform.data.repository.OfflineFirstSiteRepository
 import com.quartz.platform.data.repository.OfflineFirstSyncRepository
 import com.quartz.platform.data.repository.OfflineFirstXfeederGuidedSessionRepository
 import com.quartz.platform.domain.repository.ReportDraftRepository
+import com.quartz.platform.domain.repository.RetGuidedSessionRepository
 import com.quartz.platform.domain.repository.SiteRepository
 import com.quartz.platform.domain.repository.SiteSnapshotBootstrapSource
 import com.quartz.platform.domain.repository.SyncRepository
@@ -43,4 +45,10 @@ abstract class RepositoryModule {
     abstract fun bindXfeederSessionRepository(
         impl: OfflineFirstXfeederGuidedSessionRepository
     ): XfeederGuidedSessionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindRetSessionRepository(
+        impl: OfflineFirstRetGuidedSessionRepository
+    ): RetGuidedSessionRepository
 }

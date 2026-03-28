@@ -11,6 +11,7 @@ import com.quartz.platform.data.local.mapper.toDomain
 import com.quartz.platform.data.local.mapper.toEntity
 import com.quartz.platform.domain.model.GuidedSessionClosureProjection
 import com.quartz.platform.domain.model.XfeederClosureEvidence
+import com.quartz.platform.domain.model.XfeederGeospatialPolicy
 import com.quartz.platform.domain.model.XfeederGuidedSession
 import com.quartz.platform.domain.model.XfeederGuidedStep
 import com.quartz.platform.domain.model.XfeederSectorOutcome
@@ -18,6 +19,7 @@ import com.quartz.platform.domain.model.XfeederSessionStatus
 import com.quartz.platform.domain.model.XfeederStepCode
 import com.quartz.platform.domain.model.XfeederStepStatus
 import com.quartz.platform.domain.model.validateClosureEvidenceForFinalization
+import com.quartz.platform.domain.model.workflow.WorkflowCompletionGuard
 import com.quartz.platform.domain.repository.XfeederGuidedSessionRepository
 import java.util.UUID
 import javax.inject.Inject
@@ -72,6 +74,9 @@ class OfflineFirstXfeederGuidedSessionRepository @Inject constructor(
             siteId = siteId,
             sectorId = sectorId,
             sectorCode = sectorCode,
+            measurementZoneRadiusMeters = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
+            measurementZoneExtensionReason = "",
+            proximityModeEnabled = false,
             status = XfeederSessionStatus.CREATED,
             sectorOutcome = XfeederSectorOutcome.NOT_TESTED,
             closureEvidence = XfeederClosureEvidence(
@@ -177,6 +182,23 @@ class OfflineFirstXfeederGuidedSessionRepository @Inject constructor(
         )
     }
 
+    override suspend fun updateSessionGeospatialContext(
+        sessionId: String,
+        measurementZoneRadiusMeters: Int,
+        measurementZoneExtensionReason: String,
+        proximityModeEnabled: Boolean
+    ) {
+        sessionDao.updateGeospatialContext(
+            sessionId = sessionId,
+            measurementZoneRadiusMeters = XfeederGeospatialPolicy.clampMeasurementZoneRadius(
+                measurementZoneRadiusMeters
+            ),
+            measurementZoneExtensionReason = measurementZoneExtensionReason.trim(),
+            proximityModeEnabled = proximityModeEnabled,
+            updatedAtEpochMillis = System.currentTimeMillis()
+        )
+    }
+
     private fun defaultGuidedSteps(): List<XfeederGuidedStep> {
         return listOf(
             XfeederGuidedStep(
@@ -216,9 +238,15 @@ class OfflineFirstXfeederGuidedSessionRepository @Inject constructor(
 internal fun hasIncompleteRequiredSteps(
     steps: List<XfeederStepEntity>
 ): Boolean {
-    return steps.any { step ->
-        step.required && step.status != XfeederStepStatus.DONE.name
-    }
+    return !buildCompletionGuard(steps).canComplete
+}
+
+internal fun buildCompletionGuard(steps: List<XfeederStepEntity>): WorkflowCompletionGuard {
+    return WorkflowCompletionGuard.fromRequiredStatuses(
+        stepStatuses = steps.map { step ->
+            step.required to XfeederStepStatus.valueOf(step.status)
+        }
+    )
 }
 
 private fun sanitizeClosureEvidenceForOutcome(

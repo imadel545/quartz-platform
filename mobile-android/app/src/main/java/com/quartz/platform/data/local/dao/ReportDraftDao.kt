@@ -24,12 +24,18 @@ interface ReportDraftDao {
     @Query(
         """
         SELECT * FROM report_drafts
-        WHERE siteId = :siteId AND originSessionId = :originSessionId
+        WHERE siteId = :siteId
+          AND originSessionId = :originSessionId
+          AND originWorkflowType IS :originWorkflowType
         ORDER BY updatedAtEpochMillis DESC
         LIMIT 1
         """
     )
-    suspend fun findLatestLinkedBySession(siteId: String, originSessionId: String): ReportDraftEntity?
+    suspend fun findLatestLinkedBySession(
+        siteId: String,
+        originSessionId: String,
+        originWorkflowType: String?
+    ): ReportDraftEntity?
 
     @Query("SELECT revision FROM report_drafts WHERE id = :draftId LIMIT 1")
     suspend fun getRevision(draftId: String): Int?

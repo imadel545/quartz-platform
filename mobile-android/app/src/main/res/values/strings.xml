@@ -7,6 +7,7 @@
     <string name="title_report_draft">Brouillon de rapport</string>
     <string name="title_local_reports">Rapports locaux</string>
     <string name="title_xfeeder_guided_session">Session guidée XFeeder / MixFeeder</string>
+    <string name="title_ret_guided_session">Session guidée RET</string>
 
     <string name="action_back_to_list">Retour à la liste</string>
     <string name="action_back_to_site">Retour au site</string>
@@ -20,6 +21,7 @@
     <string name="action_create_local_draft_loading">Création en cours...</string>
     <string name="action_open_site_local_reports">Voir tous les rapports locaux</string>
     <string name="action_open_xfeeder_guided_session">Ouvrir la session guidée secteur</string>
+    <string name="action_open_ret_guided_session">Ouvrir la session guidée RET</string>
     <string name="action_open_site_reports">Voir tous les rapports du site</string>
     <string name="action_save_local_draft">Enregistrer localement</string>
     <string name="action_save_local_draft_loading">Enregistrement...</string>
@@ -130,6 +132,33 @@
     <string name="xfeeder_action_create_report_draft">Créer un brouillon rapport depuis cette session</string>
     <string name="xfeeder_action_create_report_draft_loading">Création brouillon session...</string>
     <string name="xfeeder_label_history_item">Statut: %1$s | Mis à jour: %2$s</string>
+    <string name="xfeeder_header_geospatial_surface">Surface géospatiale session</string>
+    <string name="xfeeder_label_measurement_zone_radius">Rayon zone de mesure: %1$d m</string>
+    <string name="xfeeder_label_sector_azimuth">Azimut secteur: %1$s</string>
+    <string name="xfeeder_label_distance_to_zone">Distance à la zone cible: %1$s m</string>
+    <string name="xfeeder_label_zone_membership">Position vs zone: %1$s</string>
+    <string name="xfeeder_value_inside_zone">Dans la zone</string>
+    <string name="xfeeder_value_outside_zone">Hors zone</string>
+    <string name="xfeeder_label_proximity_eligibility">Mode proximité: %1$s</string>
+    <string name="xfeeder_value_proximity_eligible">Éligible</string>
+    <string name="xfeeder_value_proximity_not_eligible">Non éligible</string>
+    <string name="xfeeder_input_zone_extension_reason">Motif extension zone</string>
+    <string name="xfeeder_hint_zone_extension_reason">Exemple: zone initiale inaccessible (route, rivière, obstacle)</string>
+    <string name="xfeeder_action_extend_zone">Étendre la zone (+30m)</string>
+    <string name="xfeeder_action_reset_zone">Réinitialiser la zone</string>
+    <string name="xfeeder_action_refresh_position">Actualiser la position</string>
+    <string name="xfeeder_action_open_navigation_to_zone">Navigation vers la zone</string>
+    <string name="xfeeder_action_enable_proximity">Activer le mode proximité</string>
+    <string name="xfeeder_action_disable_proximity">Désactiver le mode proximité</string>
+    <string name="xfeeder_map_marker_site">Site</string>
+    <string name="xfeeder_map_marker_zone_target">Zone cible de mesure</string>
+    <string name="xfeeder_header_sector_cells_context">Contexte systèmes/opérateurs du secteur</string>
+    <string name="xfeeder_empty_sector_system_context">Aucun système/cellule disponible sur ce secteur.</string>
+    <string name="xfeeder_label_system_context_item">%1$s | %2$s | %3$s - Cellules connectées: %4$d/%5$d</string>
+    <string name="xfeeder_header_linked_cells">Cellules rattachées au secteur</string>
+    <string name="xfeeder_label_cell_context_item">%1$s - %2$s | %3$s | %4$s - %5$s</string>
+    <string name="xfeeder_value_cell_connected">connectée</string>
+    <string name="xfeeder_value_cell_not_connected">non connectée</string>
 
     <string name="xfeeder_status_created">CREATED</string>
     <string name="xfeeder_status_in_progress">IN_PROGRESS</string>
@@ -156,6 +185,52 @@
     <string name="xfeeder_step_check_crossing">Vérifier un éventuel croisement de secteur</string>
     <string name="xfeeder_step_check_mixfeeder">Vérifier une alternance MixFeeder potentielle</string>
     <string name="xfeeder_step_finalize_summary">Finaliser le résumé secteur</string>
+
+    <string name="ret_shell_disclaimer">Shell guidé local RET: exécution assistée sans automatisation radio OEM.</string>
+    <string name="ret_label_site_sector">Site: %1$s | Secteur: %2$s</string>
+    <string name="ret_label_session_status">Statut session RET: %1$s</string>
+    <string name="ret_label_status_update">Mettre à jour le statut session RET</string>
+    <string name="ret_label_result_outcome">Résultat RET: %1$s</string>
+    <string name="ret_label_step_status">Statut étape: %1$s</string>
+    <string name="ret_label_required_step">Étape obligatoire</string>
+    <string name="ret_label_optional_step">Étape optionnelle</string>
+    <string name="ret_header_checklist">Checklist guidée RET</string>
+    <string name="ret_header_session_history">Historique sessions RET secteur (%1$d)</string>
+    <string name="ret_empty_session">Aucune session RET locale sur ce secteur. Créez une session pour démarrer.</string>
+    <string name="ret_entry_choice_title">Choix session RET secteur</string>
+    <string name="ret_action_resume_latest">Reprendre la dernière session RET</string>
+    <string name="ret_action_create_session">Créer une session RET locale</string>
+    <string name="ret_action_create_session_loading">Création session RET...</string>
+    <string name="ret_action_open_session">Ouvrir cette session RET</string>
+    <string name="ret_action_session_opened">Session RET ouverte</string>
+    <string name="ret_action_save_summary">Enregistrer le statut et le résumé RET</string>
+    <string name="ret_action_save_summary_loading">Enregistrement session RET...</string>
+    <string name="ret_action_create_report_draft">Créer un brouillon rapport depuis cette session RET</string>
+    <string name="ret_action_create_report_draft_loading">Création brouillon RET...</string>
+    <string name="ret_label_history_item">Statut: %1$s | Mis à jour: %2$s</string>
+
+    <string name="ret_status_created">CREATED</string>
+    <string name="ret_status_in_progress">IN_PROGRESS</string>
+    <string name="ret_status_completed">COMPLETED</string>
+    <string name="ret_status_cancelled">CANCELLED</string>
+
+    <string name="ret_result_not_run">NOT_RUN</string>
+    <string name="ret_result_pass">PASS</string>
+    <string name="ret_result_fail">FAIL</string>
+    <string name="ret_result_inconclusive">INCONCLUSIVE</string>
+
+    <string name="ret_step_status_todo">TODO</string>
+    <string name="ret_step_status_in_progress">IN_PROGRESS</string>
+    <string name="ret_step_status_done">DONE</string>
+    <string name="ret_step_status_blocked">BLOCKED</string>
+    <string name="ret_step_calibration_precheck">Précheck calibration RET</string>
+    <string name="ret_step_validation_capture">Validation terrain et capture RET</string>
+    <string name="ret_step_restore_tilt_and_result">Restauration tilt et clôture résultat</string>
+    <string name="ret_step_instruction_calibration">Vérifier prérequis radio, baseline tilt et conditions de mesure avant action.</string>
+    <string name="ret_step_instruction_validation">Réaliser la validation guidée RET et noter les écarts observés.</string>
+    <string name="ret_step_instruction_restore">Restaurer l\'état prévu puis consigner le résultat final local.</string>
+    <string name="ret_input_notes">Notes terrain RET</string>
+    <string name="ret_input_result_summary">Résumé résultat RET</string>
 
     <string name="message_draft_not_found_in_cache">Brouillon introuvable dans le cache local.</string>
     <string name="message_unsaved_local_changes">Modifications locales non enregistrées</string>
@@ -196,6 +271,14 @@
     <string name="info_xfeeder_session_created">Session guidée locale créée.</string>
     <string name="info_xfeeder_summary_saved">Session guidée enregistrée localement.</string>
     <string name="info_xfeeder_opened_linked_draft">Brouillon déjà lié à cette session: ouverture du brouillon existant.</string>
+    <string name="info_xfeeder_user_location_unavailable">Position utilisateur indisponible pour la session XFeeder.</string>
+    <string name="info_xfeeder_zone_extension_saved">Contexte géospatial session mis à jour.</string>
+    <string name="info_xfeeder_zone_extension_reset">Zone de mesure réinitialisée au rayon par défaut.</string>
+    <string name="info_xfeeder_proximity_enabled">Mode proximité activé pour cette session locale.</string>
+    <string name="info_xfeeder_proximity_disabled">Mode proximité désactivé pour cette session locale.</string>
+    <string name="info_ret_session_created">Session RET locale créée.</string>
+    <string name="info_ret_summary_saved">Session RET enregistrée localement.</string>
+    <string name="info_ret_opened_linked_draft">Brouillon déjà lié à cette session RET: ouverture du brouillon existant.</string>
 
     <string name="error_load_demo_snapshot">Impossible de charger le snapshot de démo.</string>
     <string name="error_load_cached_sites">Impossible de charger les sites en cache.</string>
@@ -216,9 +299,22 @@
     <string name="error_xfeeder_create_session">Impossible de créer la session guidée locale.</string>
     <string name="error_xfeeder_update_step">Impossible de mettre à jour l’étape guidée.</string>
     <string name="error_xfeeder_save_summary">Impossible d’enregistrer le résumé guidé.</string>
+    <string name="error_xfeeder_save_geospatial_context">Impossible d’enregistrer le contexte géospatial de la session.</string>
     <string name="error_xfeeder_create_report_draft">Impossible de créer le brouillon rapport depuis la session guidée.</string>
+    <string name="error_xfeeder_measurement_zone_unavailable">Zone de mesure indisponible pour ce secteur.</string>
+    <string name="error_xfeeder_zone_extension_reason_required">Renseignez un motif avant d’étendre la zone de mesure.</string>
+    <string name="error_xfeeder_zone_extension_requires_proximity_off">Désactivez le mode proximité avant d’étendre la zone de mesure.</string>
+    <string name="error_xfeeder_proximity_not_eligible">Mode proximité non activable: rapprochez-vous de la zone cible (≤ 70m).</string>
     <string name="error_xfeeder_complete_requires_required_steps">Impossible de clôturer la session: terminez toutes les étapes obligatoires.</string>
     <string name="error_xfeeder_closure_requires_related_sector">Impossible de clôturer: renseignez le secteur lié pour ce résultat.</string>
     <string name="error_xfeeder_closure_requires_unreliable_reason">Impossible de clôturer: sélectionnez le motif mesures non fiables.</string>
     <string name="error_xfeeder_closure_requires_observed_sector_count">Impossible de clôturer: indiquez un nombre de secteurs observés supérieur ou égal à 2.</string>
+    <string name="error_navigation_app_unavailable">Aucune application de navigation disponible sur cet appareil.</string>
+    <string name="error_ret_observe_session">Impossible de charger la session RET secteur.</string>
+    <string name="error_ret_sector_not_found">Secteur introuvable dans le snapshot technique local pour RET.</string>
+    <string name="error_ret_create_session">Impossible de créer la session RET locale.</string>
+    <string name="error_ret_update_step">Impossible de mettre à jour l’étape RET.</string>
+    <string name="error_ret_save_summary">Impossible d’enregistrer le résumé RET.</string>
+    <string name="error_ret_create_report_draft">Impossible de créer le brouillon rapport depuis la session RET.</string>
+    <string name="error_ret_complete_requires_required_steps">Impossible de clôturer la session RET: terminez toutes les étapes obligatoires.</string>
 </resources>

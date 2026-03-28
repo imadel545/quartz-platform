@@ -5,9 +5,12 @@ import com.google.common.truth.Truth.assertThat
 import com.quartz.platform.MainDispatcherRule
 import com.quartz.platform.TestUiStrings
 import com.quartz.platform.domain.model.ReportDraft
+import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.model.SiteDetail
 import com.quartz.platform.domain.model.SiteSector
 import com.quartz.platform.domain.model.SiteSummary
+import com.quartz.platform.domain.model.UserLocation
+import com.quartz.platform.domain.model.XfeederGeospatialPolicy
 import com.quartz.platform.domain.model.XfeederGuidedSession
 import com.quartz.platform.domain.model.XfeederGuidedStep
 import com.quartz.platform.domain.model.GuidedSessionClosureProjection
@@ -17,14 +20,17 @@ import com.quartz.platform.domain.model.XfeederStepCode
 import com.quartz.platform.domain.model.XfeederStepStatus
 import com.quartz.platform.domain.model.XfeederClosureEvidence
 import com.quartz.platform.domain.repository.ReportDraftRepository
+import com.quartz.platform.domain.repository.LocationRepository
 import com.quartz.platform.domain.repository.SiteRepository
 import com.quartz.platform.domain.repository.XfeederGuidedSessionRepository
 import com.quartz.platform.domain.usecase.CreateSectorXfeederSessionUseCase
+import com.quartz.platform.domain.usecase.GetLastKnownUserLocationUseCase
 import com.quartz.platform.domain.usecase.OpenOrCreateGuidedSessionReportDraftUseCase
 import com.quartz.platform.domain.usecase.ObserveSectorXfeederSessionHistoryUseCase
 import com.quartz.platform.domain.usecase.ObserveSiteDetailUseCase
 import com.quartz.platform.domain.usecase.UpdateXfeederSessionSummaryUseCase
 import com.quartz.platform.domain.usecase.UpdateXfeederStepStatusUseCase
+import com.quartz.platform.domain.usecase.UpdateXfeederSessionGeospatialContextUseCase
 import com.quartz.platform.presentation.navigation.QuartzDestination
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -101,6 +107,41 @@ class XfeederGuidedSessionViewModelTest {
         val state = viewModel.uiState.value
         assertThat(state.selectedStatus).isEqualTo(XfeederSessionStatus.CREATED)
         assertThat(state.completionGuardMessage).contains("Impossible de clôturer")
+    }
+
+    @Test
+    fun `zone extension requires explicit reason before persisting`() = runTest {
+        val siteRepository = FakeSiteRepository(site = sampleSiteDetail())
+        val guidedRepository = FakeXfeederRepository()
+        val viewModel = buildViewModel(siteRepository, guidedRepository)
+
+        advanceUntilIdle()
+        viewModel.onCreateSessionClicked()
+        advanceUntilIdle()
+
+        viewModel.onExtendMeasurementZoneClicked()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertThat(state.errorMessage).isNotNull()
+        assertThat(state.session?.measurementZoneRadiusMeters)
+            .isEqualTo(XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS)
+    }
+
+    @Test
+    fun `proximity mode can be enabled when sector distance is eligible`() = runTest {
+        val siteRepository = FakeSiteRepository(site = sampleSiteDetail())
+        val guidedRepository = FakeXfeederRepository()
+        val viewModel = buildViewModel(siteRepository, guidedRepository)
+
+        advanceUntilIdle()
+        viewModel.onCreateSessionClicked()
+        advanceUntilIdle()
+
+        viewModel.onToggleProximityModeClicked(true)
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.session?.proximityModeEnabled).isTrue()
     }
 
     @Test
@@ -214,6 +255,7 @@ class XfeederGuidedSessionViewModelTest {
         assertThat(reportDraftRepository.lastCreateSiteId).isEqualTo("site-1")
         assertThat(reportDraftRepository.lastOriginSessionId).isEqualTo(latestSession!!.id)
         assertThat(reportDraftRepository.lastOriginSectorId).isEqualTo(latestSession.sectorId)
+        assertThat(reportDraftRepository.lastOriginWorkflowType).isEqualTo(ReportDraftOriginWorkflowType.XFEEDER)
         assertThat(viewModel.uiState.value.isCreatingDraft).isFalse()
         assertThat(openedDraftId).isEqualTo("draft-1")
         assertThat(reportDraftRepository.createDraftCalls).isEqualTo(1)
@@ -240,6 +282,7 @@ class XfeederGuidedSessionViewModelTest {
                 siteId = session.siteId,
                 originSessionId = session.id,
                 originSectorId = session.sectorId,
+                originWorkflowType = ReportDraftOriginWorkflowType.XFEEDER,
                 title = "Draft existant",
                 observation = "Observation",
                 revision = 2,
@@ -282,7 +325,21 @@ class XfeederGuidedSessionViewModelTest {
             observeSiteDetailUseCase = ObserveSiteDetailUseCase(siteRepository),
             observeSectorXfeederSessionHistoryUseCase = ObserveSectorXfeederSessionHistoryUseCase(guidedRepository),
             createSectorXfeederSessionUseCase = CreateSectorXfeederSessionUseCase(guidedRepository),
+            getLastKnownUserLocationUseCase = GetLastKnownUserLocationUseCase(
+                locationRepository = object : LocationRepository {
+                    override suspend fun getLastKnownLocation(): UserLocation? {
+                        return UserLocation(
+                            latitude = 34.0005,
+                            longitude = -6.8002,
+                            capturedAtEpochMillis = 10L
+                        )
+                    }
+                }
+            ),
             updateXfeederStepStatusUseCase = UpdateXfeederStepStatusUseCase(guidedRepository),
+            updateXfeederSessionGeospatialContextUseCase = UpdateXfeederSessionGeospatialContextUseCase(
+                guidedRepository
+            ),
             updateXfeederSessionSummaryUseCase = UpdateXfeederSessionSummaryUseCase(guidedRepository),
             openOrCreateGuidedSessionReportDraftUseCase = OpenOrCreateGuidedSessionReportDraftUseCase(reportDraftRepository),
             uiStrings = TestUiStrings()
@@ -333,6 +390,9 @@ class XfeederGuidedSessionViewModelTest {
                 siteId = siteId,
                 sectorId = sectorId,
                 sectorCode = sectorCode,
+                measurementZoneRadiusMeters = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
+                measurementZoneExtensionReason = "",
+                proximityModeEnabled = false,
                 status = XfeederSessionStatus.CREATED,
                 sectorOutcome = XfeederSectorOutcome.NOT_TESTED,
                 closureEvidence = XfeederClosureEvidence(
@@ -415,6 +475,28 @@ class XfeederGuidedSessionViewModelTest {
             }
         }
 
+        override suspend fun updateSessionGeospatialContext(
+            sessionId: String,
+            measurementZoneRadiusMeters: Int,
+            measurementZoneExtensionReason: String,
+            proximityModeEnabled: Boolean
+        ) {
+            historyBySector.values.forEach { flow ->
+                flow.value = flow.value.map { session ->
+                    if (session.id != sessionId) {
+                        session
+                    } else {
+                        session.copy(
+                            measurementZoneRadiusMeters = measurementZoneRadiusMeters,
+                            measurementZoneExtensionReason = measurementZoneExtensionReason,
+                            proximityModeEnabled = proximityModeEnabled,
+                            updatedAtEpochMillis = session.updatedAtEpochMillis + 1
+                        )
+                    }
+                }.sortedByDescending { it.createdAtEpochMillis }
+            }
+        }
+
         private fun key(siteId: String, sectorId: String): String = "$siteId::$sectorId"
     }
 
@@ -424,21 +506,25 @@ class XfeederGuidedSessionViewModelTest {
         var lastCreateSiteId: String? = null
         var lastOriginSessionId: String? = null
         var lastOriginSectorId: String? = null
+        var lastOriginWorkflowType: ReportDraftOriginWorkflowType? = null
 
         override suspend fun createDraft(
             siteId: String,
             originSessionId: String?,
-            originSectorId: String?
+            originSectorId: String?,
+            originWorkflowType: ReportDraftOriginWorkflowType?
         ): ReportDraft {
             createDraftCalls += 1
             lastCreateSiteId = siteId
             lastOriginSessionId = originSessionId
             lastOriginSectorId = originSectorId
+            lastOriginWorkflowType = originWorkflowType
             val created = ReportDraft(
                 id = "draft-1",
                 siteId = siteId,
                 originSessionId = originSessionId,
                 originSectorId = originSectorId,
+                originWorkflowType = originWorkflowType,
                 title = "Brouillon session",
                 observation = "",
                 revision = 1,
@@ -451,9 +537,17 @@ class XfeederGuidedSessionViewModelTest {
 
         override suspend fun updateDraft(draftId: String, title: String, observation: String): ReportDraft? = null
 
-        override suspend fun findLatestLinkedDraft(siteId: String, originSessionId: String): ReportDraft? {
+        override suspend fun findLatestLinkedDraft(
+            siteId: String,
+            originSessionId: String,
+            originWorkflowType: ReportDraftOriginWorkflowType?
+        ): ReportDraft? {
             return drafts.value
-                .filter { draft -> draft.siteId == siteId && draft.originSessionId == originSessionId }
+                .filter { draft ->
+                    draft.siteId == siteId &&
+                        draft.originSessionId == originSessionId &&
+                        draft.originWorkflowType == originWorkflowType
+                }
                 .maxByOrNull { draft -> draft.updatedAtEpochMillis }
         }
 

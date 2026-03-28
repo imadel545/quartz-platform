@@ -4,9 +4,15 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.quartz.platform.R
+import com.quartz.platform.core.geo.GeoMath
 import com.quartz.platform.core.text.UiStrings
+import com.quartz.platform.domain.model.GeoCoordinate
+import com.quartz.platform.domain.model.SiteCell
+import com.quartz.platform.domain.model.SiteSector
+import com.quartz.platform.domain.model.UserLocation
 import com.quartz.platform.domain.model.XfeederClosureEvidence
 import com.quartz.platform.domain.model.XfeederClosureEvidenceIssue
+import com.quartz.platform.domain.model.XfeederGeospatialPolicy
 import com.quartz.platform.domain.model.XfeederGuidedSession
 import com.quartz.platform.domain.model.XfeederSectorOutcome
 import com.quartz.platform.domain.model.XfeederSessionStatus
@@ -14,10 +20,13 @@ import com.quartz.platform.domain.model.XfeederStepCode
 import com.quartz.platform.domain.model.XfeederStepStatus
 import com.quartz.platform.domain.model.XfeederUnreliableReason
 import com.quartz.platform.domain.model.validateClosureEvidenceForFinalization
+import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.usecase.CreateSectorXfeederSessionUseCase
+import com.quartz.platform.domain.usecase.GetLastKnownUserLocationUseCase
 import com.quartz.platform.domain.usecase.OpenOrCreateGuidedSessionReportDraftUseCase
 import com.quartz.platform.domain.usecase.ObserveSectorXfeederSessionHistoryUseCase
 import com.quartz.platform.domain.usecase.ObserveSiteDetailUseCase
+import com.quartz.platform.domain.usecase.UpdateXfeederSessionGeospatialContextUseCase
 import com.quartz.platform.domain.usecase.UpdateXfeederSessionSummaryUseCase
 import com.quartz.platform.domain.usecase.UpdateXfeederStepStatusUseCase
 import com.quartz.platform.presentation.navigation.QuartzDestination
@@ -40,7 +49,9 @@ class XfeederGuidedSessionViewModel @Inject constructor(
     private val observeSiteDetailUseCase: ObserveSiteDetailUseCase,
     private val observeSectorXfeederSessionHistoryUseCase: ObserveSectorXfeederSessionHistoryUseCase,
     private val createSectorXfeederSessionUseCase: CreateSectorXfeederSessionUseCase,
+    private val getLastKnownUserLocationUseCase: GetLastKnownUserLocationUseCase,
     private val updateXfeederStepStatusUseCase: UpdateXfeederStepStatusUseCase,
+    private val updateXfeederSessionGeospatialContextUseCase: UpdateXfeederSessionGeospatialContextUseCase,
     private val updateXfeederSessionSummaryUseCase: UpdateXfeederSessionSummaryUseCase,
     private val openOrCreateGuidedSessionReportDraftUseCase: OpenOrCreateGuidedSessionReportDraftUseCase,
     private val uiStrings: UiStrings
@@ -62,9 +73,11 @@ class XfeederGuidedSessionViewModel @Inject constructor(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     val events = _events.asSharedFlow()
+    private val userLocation = MutableStateFlow<UserLocation?>(null)
 
     init {
         observeContext()
+        refreshUserLocation()
     }
 
     fun onCreateSessionClicked() {
@@ -267,6 +280,109 @@ class XfeederGuidedSessionViewModel @Inject constructor(
         }
     }
 
+    fun onMeasurementZoneExtensionReasonChanged(value: String) {
+        mutableState.update { state ->
+            state.copy(
+                measurementZoneExtensionReasonInput = value,
+                infoMessage = null,
+                errorMessage = null
+            )
+        }
+    }
+
+    fun onExtendMeasurementZoneClicked() {
+        val current = mutableState.value
+        val session = current.session ?: return
+        if (current.proximityModeEnabled) {
+            mutableState.update { state ->
+                state.copy(errorMessage = uiStrings.get(R.string.error_xfeeder_zone_extension_requires_proximity_off))
+            }
+            return
+        }
+
+        val nextRadius = XfeederGeospatialPolicy.clampMeasurementZoneRadius(
+            current.measurementZoneRadiusMeters + XfeederGeospatialPolicy.MEASUREMENT_ZONE_EXTENSION_STEP_METERS
+        )
+        val extensionReason = current.measurementZoneExtensionReasonInput.trim()
+        if (XfeederGeospatialPolicy.isExtensionReasonRequired(nextRadius) && extensionReason.isBlank()) {
+            mutableState.update { state ->
+                state.copy(errorMessage = uiStrings.get(R.string.error_xfeeder_zone_extension_reason_required))
+            }
+            return
+        }
+        persistGeospatialContext(
+            sessionId = session.id,
+            measurementZoneRadiusMeters = nextRadius,
+            measurementZoneExtensionReason = extensionReason,
+            proximityModeEnabled = current.proximityModeEnabled,
+            successMessageRes = R.string.info_xfeeder_zone_extension_saved
+        )
+    }
+
+    fun onResetMeasurementZoneClicked() {
+        val current = mutableState.value
+        val session = current.session ?: return
+        persistGeospatialContext(
+            sessionId = session.id,
+            measurementZoneRadiusMeters = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
+            measurementZoneExtensionReason = "",
+            proximityModeEnabled = current.proximityModeEnabled,
+            successMessageRes = R.string.info_xfeeder_zone_extension_reset
+        )
+    }
+
+    fun onToggleProximityModeClicked(enabled: Boolean) {
+        val current = mutableState.value
+        val session = current.session ?: return
+        if (enabled && current.isProximityEligible != true) {
+            mutableState.update { state ->
+                state.copy(errorMessage = uiStrings.get(R.string.error_xfeeder_proximity_not_eligible))
+            }
+            return
+        }
+
+        persistGeospatialContext(
+            sessionId = session.id,
+            measurementZoneRadiusMeters = current.measurementZoneRadiusMeters,
+            measurementZoneExtensionReason = current.measurementZoneExtensionReasonInput.trim(),
+            proximityModeEnabled = enabled,
+            successMessageRes = if (enabled) {
+                R.string.info_xfeeder_proximity_enabled
+            } else {
+                R.string.info_xfeeder_proximity_disabled
+            }
+        )
+    }
+
+    fun onRefreshUserLocationClicked() {
+        refreshUserLocation()
+    }
+
+    fun onOpenNavigationToMeasurementZoneClicked() {
+        val current = mutableState.value
+        val latitude = current.measurementZoneLatitude
+        val longitude = current.measurementZoneLongitude
+        if (latitude == null || longitude == null) {
+            mutableState.update { state ->
+                state.copy(errorMessage = uiStrings.get(R.string.error_xfeeder_measurement_zone_unavailable))
+            }
+            return
+        }
+        _events.tryEmit(
+            XfeederGuidedSessionEvent.OpenNavigationToMeasurementZone(
+                latitude = latitude,
+                longitude = longitude,
+                label = "Quartz ${current.sectorCode.ifBlank { current.sectorId }}"
+            )
+        )
+    }
+
+    fun onNavigationUnavailable() {
+        mutableState.update { state ->
+            state.copy(errorMessage = uiStrings.get(R.string.error_navigation_app_unavailable))
+        }
+    }
+
     fun onSaveSummaryClicked() {
         val current = mutableState.value
         val session = current.session ?: return
@@ -336,7 +452,8 @@ class XfeederGuidedSessionViewModel @Inject constructor(
                 openOrCreateGuidedSessionReportDraftUseCase(
                     siteId = currentSession.siteId,
                     originSessionId = currentSession.id,
-                    originSectorId = currentSession.sectorId
+                    originSectorId = currentSession.sectorId,
+                    originWorkflowType = ReportDraftOriginWorkflowType.XFEEDER
                 )
             }.onFailure { throwable ->
                 mutableState.update { state ->
@@ -365,8 +482,9 @@ class XfeederGuidedSessionViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 observeSiteDetailUseCase(siteId),
-                observeSectorXfeederSessionHistoryUseCase(siteId, sectorId)
-            ) { site, history ->
+                observeSectorXfeederSessionHistoryUseCase(siteId, sectorId),
+                userLocation
+            ) { site, history, currentUserLocation ->
                 mutableState.update { current ->
                     val siteName = site?.name.orEmpty()
                     val siteCode = site?.externalCode.orEmpty()
@@ -378,14 +496,61 @@ class XfeederGuidedSessionViewModel @Inject constructor(
                     val selectedSession = history.firstOrNull { it.id == selectedSessionId }
                     val shouldHydrate = selectedSession != null &&
                         (!current.hasUnsavedChanges || current.session?.id != selectedSession.id)
+                    val shouldHydrateGeospatialReason = shouldHydrate &&
+                        (current.session?.id != selectedSession.id ||
+                            current.measurementZoneExtensionReasonInput ==
+                            selectedSession.measurementZoneExtensionReason)
+                    val measurementZoneRadius = selectedSession?.measurementZoneRadiusMeters
+                        ?: XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS
+                    val siteCoordinate = site?.let { GeoCoordinate(it.latitude, it.longitude) }
+                    val targetCoordinate = buildMeasurementTargetCoordinate(siteCoordinate, sector)
+                    val distanceMeters = if (targetCoordinate != null && currentUserLocation != null) {
+                        GeoMath.distanceMeters(
+                            targetCoordinate,
+                            GeoCoordinate(currentUserLocation.latitude, currentUserLocation.longitude)
+                        )
+                    } else {
+                        null
+                    }
+                    val cells = sector.orEmptyCells()
 
                     current.copy(
                         isLoading = false,
                         siteLabel = listOf(siteName, siteCode).filter { it.isNotBlank() }.joinToString(" - "),
+                        siteLatitude = site?.latitude,
+                        siteLongitude = site?.longitude,
                         sectorCode = sectorCode,
+                        sectorAzimuthDegrees = sector?.azimuthDegrees,
                         sessionHistory = history,
                         latestSessionId = selectedSessionId,
                         session = selectedSession,
+                        userLocation = currentUserLocation,
+                        measurementZoneLatitude = targetCoordinate?.latitude,
+                        measurementZoneLongitude = targetCoordinate?.longitude,
+                        measurementZoneRadiusMeters = if (shouldHydrate) {
+                            measurementZoneRadius
+                        } else {
+                            current.measurementZoneRadiusMeters
+                        },
+                        measurementZoneExtensionReasonInput = if (shouldHydrate) {
+                            if (shouldHydrateGeospatialReason) {
+                                selectedSession?.measurementZoneExtensionReason.orEmpty()
+                            } else {
+                                current.measurementZoneExtensionReasonInput
+                            }
+                        } else {
+                            current.measurementZoneExtensionReasonInput
+                        },
+                        proximityModeEnabled = if (shouldHydrate) {
+                            selectedSession?.proximityModeEnabled == true
+                        } else {
+                            current.proximityModeEnabled
+                        },
+                        distanceToMeasurementZoneMeters = distanceMeters,
+                        isInsideMeasurementZone = distanceMeters?.let { it <= measurementZoneRadius },
+                        isProximityEligible = XfeederGeospatialPolicy.isProximityEligible(distanceMeters),
+                        sectorCells = cells.map { cell -> cell.toUiCellContext() },
+                        systemOperatorContexts = buildSystemOperatorContexts(cells),
                         selectedStatus = if (shouldHydrate) {
                             selectedSession.status
                         } else {
@@ -419,6 +584,7 @@ class XfeederGuidedSessionViewModel @Inject constructor(
                         },
                         hasUnsavedChanges = if (shouldHydrate) false else current.hasUnsavedChanges,
                         completionGuardMessage = if (shouldHydrate) null else current.completionGuardMessage,
+                        isRefreshingLocation = false,
                         errorMessage = if (site == null || sector == null) {
                             uiStrings.get(R.string.error_xfeeder_sector_not_found)
                         } else {
@@ -439,10 +605,100 @@ class XfeederGuidedSessionViewModel @Inject constructor(
         }
     }
 
-    private fun hasIncompleteRequiredSteps(session: XfeederGuidedSession): Boolean {
-        return session.steps.any { step ->
-            step.required && step.status != XfeederStepStatus.DONE
+    private fun refreshUserLocation() {
+        viewModelScope.launch {
+            mutableState.update { state ->
+                state.copy(isRefreshingLocation = true, errorMessage = null, infoMessage = null)
+            }
+            val location = runCatching { getLastKnownUserLocationUseCase() }.getOrNull()
+            userLocation.value = location
+            mutableState.update { state ->
+                state.copy(
+                    isRefreshingLocation = false,
+                    infoMessage = if (location == null) {
+                        uiStrings.get(R.string.info_xfeeder_user_location_unavailable)
+                    } else {
+                        null
+                    }
+                )
+            }
         }
+    }
+
+    private fun persistGeospatialContext(
+        sessionId: String,
+        measurementZoneRadiusMeters: Int,
+        measurementZoneExtensionReason: String,
+        proximityModeEnabled: Boolean,
+        successMessageRes: Int
+    ) {
+        viewModelScope.launch {
+            runCatching {
+                updateXfeederSessionGeospatialContextUseCase(
+                    sessionId = sessionId,
+                    measurementZoneRadiusMeters = measurementZoneRadiusMeters,
+                    measurementZoneExtensionReason = measurementZoneExtensionReason,
+                    proximityModeEnabled = proximityModeEnabled
+                )
+            }.onFailure { throwable ->
+                mutableState.update { state ->
+                    state.copy(
+                        errorMessage = throwable.message ?: uiStrings.get(R.string.error_xfeeder_save_geospatial_context)
+                    )
+                }
+            }.onSuccess {
+                mutableState.update { state ->
+                    state.copy(
+                        infoMessage = uiStrings.get(successMessageRes),
+                        errorMessage = null
+                    )
+                }
+            }
+        }
+    }
+
+    private fun buildMeasurementTargetCoordinate(
+        siteCoordinate: GeoCoordinate?,
+        sector: SiteSector?
+    ): GeoCoordinate? {
+        if (siteCoordinate == null) return null
+        val azimuth = sector?.azimuthDegrees ?: return siteCoordinate
+        return GeoMath.offset(
+            origin = siteCoordinate,
+            bearingDegrees = azimuth.toDouble(),
+            distanceMeters = XfeederGeospatialPolicy.TARGET_OFFSET_FROM_SITE_METERS
+        )
+    }
+
+    private fun SiteSector?.orEmptyCells(): List<SiteCell> = this?.cells.orEmpty()
+
+    private fun SiteCell.toUiCellContext(): XfeederSectorCellContextItem {
+        return XfeederSectorCellContextItem(
+            label = label,
+            technology = technology,
+            operatorName = operatorName,
+            band = band,
+            isConnected = isConnected
+        )
+    }
+
+    private fun buildSystemOperatorContexts(cells: List<SiteCell>): List<XfeederSystemOperatorContextItem> {
+        return cells
+            .groupBy { Triple(it.technology, it.operatorName, it.band) }
+            .map { (key, groupedCells) ->
+                XfeederSystemOperatorContextItem(
+                    technology = key.first,
+                    operatorName = key.second,
+                    band = key.third,
+                    totalCells = groupedCells.size,
+                    connectedCells = groupedCells.count { it.isConnected }
+                )
+            }
+            .sortedWith(
+                compareBy<XfeederSystemOperatorContextItem> { it.operatorName }
+                    .thenBy { it.technology }
+                    .thenBy { it.band }
+            )
     }
 
     private fun buildClosureEvidence(state: XfeederGuidedSessionUiState): XfeederClosureEvidence {
@@ -461,7 +717,7 @@ class XfeederGuidedSessionViewModel @Inject constructor(
     ): String? {
         if (status != XfeederSessionStatus.COMPLETED) return null
 
-        if (hasIncompleteRequiredSteps(session)) {
+        if (!session.completionGuard().canComplete) {
             return uiStrings.get(R.string.error_xfeeder_complete_requires_required_steps)
         }
 
@@ -488,6 +744,9 @@ class XfeederGuidedSessionViewModel @Inject constructor(
             state.copy(
                 latestSessionId = sessionId,
                 session = selected,
+                measurementZoneRadiusMeters = selected.measurementZoneRadiusMeters,
+                measurementZoneExtensionReasonInput = selected.measurementZoneExtensionReason,
+                proximityModeEnabled = selected.proximityModeEnabled,
                 selectedStatus = selected.status,
                 selectedOutcome = selected.sectorOutcome,
                 relatedSectorCodeInput = selected.closureEvidence.relatedSectorCode,
@@ -506,4 +765,9 @@ class XfeederGuidedSessionViewModel @Inject constructor(
 
 sealed interface XfeederGuidedSessionEvent {
     data class OpenDraft(val draftId: String) : XfeederGuidedSessionEvent
+    data class OpenNavigationToMeasurementZone(
+        val latitude: Double,
+        val longitude: Double,
+        val label: String
+    ) : XfeederGuidedSessionEvent
 }

@@ -70,4 +70,22 @@ interface XfeederSessionDao {
         updatedAtEpochMillis: Long,
         completedAtEpochMillis: Long?
     )
+
+    @Query(
+        """
+        UPDATE xfeeder_sessions
+        SET measurementZoneRadiusMeters = :measurementZoneRadiusMeters,
+            measurementZoneExtensionReason = :measurementZoneExtensionReason,
+            proximityModeEnabled = :proximityModeEnabled,
+            updatedAtEpochMillis = :updatedAtEpochMillis
+        WHERE id = :sessionId
+        """
+    )
+    suspend fun updateGeospatialContext(
+        sessionId: String,
+        measurementZoneRadiusMeters: Int,
+        measurementZoneExtensionReason: String,
+        proximityModeEnabled: Boolean,
+        updatedAtEpochMillis: Long
+    )
 }

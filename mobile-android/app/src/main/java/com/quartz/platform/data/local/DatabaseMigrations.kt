@@ -287,4 +287,180 @@ object DatabaseMigrations {
             )
         }
     }
+
+    val MIGRATION_7_8: Migration = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS ret_sessions (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    siteId TEXT NOT NULL,
+                    sectorId TEXT NOT NULL,
+                    sectorCode TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    resultOutcome TEXT NOT NULL,
+                    notes TEXT NOT NULL,
+                    resultSummary TEXT NOT NULL,
+                    createdAtEpochMillis INTEGER NOT NULL,
+                    updatedAtEpochMillis INTEGER NOT NULL,
+                    completedAtEpochMillis INTEGER,
+                    FOREIGN KEY(siteId) REFERENCES sites(id) ON DELETE CASCADE,
+                    FOREIGN KEY(sectorId) REFERENCES site_sectors(id) ON DELETE CASCADE
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_ret_sessions_siteId
+                ON ret_sessions(siteId)
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_ret_sessions_sectorId
+                ON ret_sessions(sectorId)
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_ret_sessions_siteId_sectorId_createdAtEpochMillis
+                ON ret_sessions(siteId, sectorId, createdAtEpochMillis)
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS ret_steps (
+                    sessionId TEXT NOT NULL,
+                    code TEXT NOT NULL,
+                    required INTEGER NOT NULL,
+                    status TEXT NOT NULL,
+                    displayOrder INTEGER NOT NULL,
+                    PRIMARY KEY(sessionId, code),
+                    FOREIGN KEY(sessionId) REFERENCES ret_sessions(id) ON DELETE CASCADE
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_ret_steps_sessionId
+                ON ret_steps(sessionId)
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_ret_steps_sessionId_displayOrder
+                ON ret_steps(sessionId, displayOrder)
+                """.trimIndent()
+            )
+        }
+    }
+
+    val MIGRATION_8_9: Migration = object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                ALTER TABLE report_drafts
+                ADD COLUMN originWorkflowType TEXT
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                UPDATE report_drafts
+                SET originWorkflowType = 'XFEEDER'
+                WHERE originSessionId IS NOT NULL
+                  AND originWorkflowType IS NULL
+                  AND EXISTS (
+                    SELECT 1
+                    FROM xfeeder_sessions x
+                    WHERE x.id = report_drafts.originSessionId
+                  )
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                UPDATE report_drafts
+                SET originWorkflowType = 'RET'
+                WHERE originSessionId IS NOT NULL
+                  AND originWorkflowType IS NULL
+                  AND EXISTS (
+                    SELECT 1
+                    FROM ret_sessions r
+                    WHERE r.id = report_drafts.originSessionId
+                  )
+                """.trimIndent()
+            )
+
+            db.execSQL("DROP INDEX IF EXISTS index_report_drafts_siteId_originSessionId")
+            db.execSQL(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS index_report_drafts_siteId_originSessionId_originWorkflowType
+                ON report_drafts(siteId, originSessionId, originWorkflowType)
+                """.trimIndent()
+            )
+        }
+    }
+
+    val MIGRATION_9_10: Migration = object : Migration(9, 10) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // Defensive cleanup in case of unexpected legacy/manual values.
+            db.execSQL(
+                """
+                UPDATE report_drafts
+                SET originWorkflowType = NULL
+                WHERE originWorkflowType IS NOT NULL
+                  AND originWorkflowType NOT IN ('XFEEDER', 'RET')
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE TRIGGER IF NOT EXISTS trg_report_drafts_origin_workflow_type_insert
+                BEFORE INSERT ON report_drafts
+                WHEN NEW.originWorkflowType IS NOT NULL
+                     AND NEW.originWorkflowType NOT IN ('XFEEDER', 'RET')
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid originWorkflowType');
+                END
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE TRIGGER IF NOT EXISTS trg_report_drafts_origin_workflow_type_update
+                BEFORE UPDATE OF originWorkflowType ON report_drafts
+                WHEN NEW.originWorkflowType IS NOT NULL
+                     AND NEW.originWorkflowType NOT IN ('XFEEDER', 'RET')
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid originWorkflowType');
+                END
+                """.trimIndent()
+            )
+        }
+    }
+
+    val MIGRATION_10_11: Migration = object : Migration(10, 11) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                ALTER TABLE xfeeder_sessions
+                ADD COLUMN measurementZoneRadiusMeters INTEGER NOT NULL DEFAULT 120
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                ALTER TABLE xfeeder_sessions
+                ADD COLUMN measurementZoneExtensionReason TEXT NOT NULL DEFAULT ''
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                ALTER TABLE xfeeder_sessions
+                ADD COLUMN proximityModeEnabled INTEGER NOT NULL DEFAULT 0
+                """.trimIndent()
+            )
+        }
+    }
 }

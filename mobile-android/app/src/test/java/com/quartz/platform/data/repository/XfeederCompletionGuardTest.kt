@@ -32,6 +32,12 @@ class XfeederCompletionGuardTest {
             )
         )
 
+        val guard = buildCompletionGuard(steps)
+
+        assertThat(guard.requiredStepCount).isEqualTo(1)
+        assertThat(guard.completedRequiredStepCount).isEqualTo(0)
+        assertThat(guard.missingRequiredStepCount).isEqualTo(1)
+        assertThat(guard.canComplete).isFalse()
         assertThat(hasIncompleteRequiredSteps(steps)).isTrue()
     }
 
@@ -54,6 +60,12 @@ class XfeederCompletionGuardTest {
             )
         )
 
+        val guard = buildCompletionGuard(steps)
+
+        assertThat(guard.requiredStepCount).isEqualTo(2)
+        assertThat(guard.completedRequiredStepCount).isEqualTo(2)
+        assertThat(guard.missingRequiredStepCount).isEqualTo(0)
+        assertThat(guard.canComplete).isTrue()
         assertThat(hasIncompleteRequiredSteps(steps)).isFalse()
     }
 

@@ -1,0 +1,27 @@
+package com.quartz.platform.domain.repository
+
+import com.quartz.platform.domain.model.RetGuidedSession
+import com.quartz.platform.domain.model.RetResultOutcome
+import com.quartz.platform.domain.model.RetSessionStatus
+import com.quartz.platform.domain.model.RetStepCode
+import com.quartz.platform.domain.model.RetStepStatus
+import kotlinx.coroutines.flow.Flow
+
+interface RetGuidedSessionRepository {
+    fun observeSectorSessionHistory(siteId: String, sectorId: String): Flow<List<RetGuidedSession>>
+    fun observeLatestSectorSession(siteId: String, sectorId: String): Flow<RetGuidedSession?>
+    suspend fun createSession(siteId: String, sectorId: String, sectorCode: String): RetGuidedSession
+    suspend fun updateStepStatus(
+        sessionId: String,
+        stepCode: RetStepCode,
+        status: RetStepStatus
+    )
+
+    suspend fun updateSessionSummary(
+        sessionId: String,
+        status: RetSessionStatus,
+        resultOutcome: RetResultOutcome,
+        notes: String,
+        resultSummary: String
+    )
+}

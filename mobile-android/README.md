@@ -73,6 +73,25 @@ yes | sdkmanager --sdk_root=/opt/homebrew/share/android-commandlinetools \
 - `./gradlew :app:testDebugUnitTest`
 - `./gradlew :app:lintDebug`
 
+## Sequential quality gate (recommended)
+
+Run from repository root:
+
+1. `./scripts/android-quality-gate.sh`
+2. Optional connected run (device/emulator online): `./scripts/android-quality-gate.sh --with-connected`
+
+What it executes in deterministic order:
+- `:app:assembleDebug`
+- `:app:testDebugUnitTest`
+- `:app:lintDebug`
+- `:app:compileDebugAndroidTestKotlin`
+- `:app:connectedDebugAndroidTest` (only with `--with-connected`)
+
+Notes:
+- The script fails fast on low disk space and missing SDK path.
+- It runs Gradle with `--no-daemon` by default for stability.
+- It does not suppress lint checks.
+
 ## Connected instrumentation tests (VS Code + terminal)
 
 Run from repository root:
