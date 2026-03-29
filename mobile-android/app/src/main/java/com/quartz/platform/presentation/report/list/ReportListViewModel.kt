@@ -23,15 +23,23 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class ReportListViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     private val observeSiteReportListUseCase: ObserveSiteReportListUseCase,
     private val retryFailedReportDraftSyncUseCase: RetryFailedReportDraftSyncUseCase,
     private val uiStrings: UiStrings
 ) : ViewModel() {
 
     private val siteId: String = checkNotNull(savedStateHandle[QuartzDestination.ReportList.ARG_SITE_ID])
+    private val restoredFilter: ReportListFilter = ReportListFilter.fromPersistedNameOrDefault(
+        savedStateHandle[STATE_SELECTED_FILTER]
+    )
 
-    private val _uiState = MutableStateFlow(ReportListUiState(siteId = siteId))
+    private val _uiState = MutableStateFlow(
+        ReportListUiState(
+            siteId = siteId,
+            selectedFilter = restoredFilter
+        )
+    )
     val uiState: StateFlow<ReportListUiState> = _uiState.asStateFlow()
 
     private val _events = MutableSharedFlow<ReportListEvent>(
@@ -47,6 +55,17 @@ class ReportListViewModel @Inject constructor(
 
     fun onOpenDraftClicked(draftId: String) {
         _events.tryEmit(ReportListEvent.OpenDraft(draftId))
+    }
+
+    fun onFilterSelected(filter: ReportListFilter) {
+        _uiState.update { state ->
+            if (state.selectedFilter == filter) {
+                state
+            } else {
+                savedStateHandle[STATE_SELECTED_FILTER] = filter.name
+                state.copy(selectedFilter = filter)
+            }
+        }
     }
 
     fun onRetryFailedSyncClicked(draftId: String) {
@@ -113,6 +132,8 @@ class ReportListViewModel @Inject constructor(
         }
     }
 }
+
+internal const val STATE_SELECTED_FILTER = "state_selected_filter"
 
 sealed interface ReportListEvent {
     data class OpenDraft(val draftId: String) : ReportListEvent
