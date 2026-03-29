@@ -16,6 +16,16 @@ Android foundation for Quartz Platform (Kotlin + Compose + MVVM + Clean Architec
 - `HomeMapScreen`: map-centered home shell with local site markers, search/filter, selected-site navigation, and recenter baseline.
 - `SiteDetailScreen`: technical site snapshot (`sectors/antennas/cells`) + local draft list + sector entry point to guided XFeeder/MixFeeder sessions.
 - `XfeederGuidedSessionScreen`: local-first guided shell for sector workflow (session history, resume latest or start new, checklist step status, completion guard on required steps, sector outcome, structured closure evidence summary, notes and result summary), explicitly non-automated radio logic.
+- XFeeder geospatial session context persists per session (measurement radius, extension reason, proximity toggle, effective reference altitude + explicit source tracking).
+- Proximity reference altitude is now modeled with explicit local source states:
+  - `TECHNICAL_DEFAULT`: read-only technical altitude sourced from local sector/antenna data when available
+  - `OPERATOR_OVERRIDE`: manual operator override captured explicitly
+  - `UNAVAILABLE`: no technical source and no operator override
+- XFeeder proximity eligibility is now explicit and bounded with four states:
+  - `UNAVAILABLE`: location/altitude data cannot reliably evaluate proximity,
+  - `SUPPORTED`: proximity engine is available but no effective reference altitude is currently available,
+  - `INELIGIBLE`: distance and/or altitude rule is not satisfied,
+  - `ELIGIBLE`: distance and altitude rules are both satisfied.
 - `ReportDraftScreen`: offline draft editing + sync state visibility (`LOCAL_ONLY`, `PENDING`, `SYNCED`, `FAILED`) + local projection of guided-session closure evidence (sector outcome / related sector / unreliable reason / observed sector count).
 - `ReportListScreen`: local-first list of site reports/drafts with sync-state visibility and failed-sync retry action.
 - Sync traceability is persisted per draft job: last attempt timestamp, retry count, and short failure reason.
@@ -123,3 +133,4 @@ Common failure taxonomy:
 - If `sdk.dir` is missing, Gradle fails with `SDK location not found`.
 - `StubSyncGateway` is demo-only and must be replaced by a real API adapter for production sync behavior.
 - If you hit stale resource merge issues, run `./gradlew clean` once and retry.
+- Proximity altitude handling is intentionally bounded: it does not implement OEM/barometric calibration, terrain correction, or full drive/proximity automation.

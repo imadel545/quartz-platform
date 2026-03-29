@@ -7,6 +7,7 @@ import com.quartz.platform.domain.model.XfeederClosureEvidence
 import com.quartz.platform.domain.model.XfeederSessionStatus
 import com.quartz.platform.domain.model.XfeederStepCode
 import com.quartz.platform.domain.model.XfeederStepStatus
+import com.quartz.platform.domain.model.XfeederReferenceAltitudeSourceState
 import kotlinx.coroutines.flow.Flow
 
 interface XfeederGuidedSessionRepository {
@@ -33,6 +34,8 @@ interface XfeederGuidedSessionRepository {
         sessionId: String,
         measurementZoneRadiusMeters: Int,
         measurementZoneExtensionReason: String,
-        proximityModeEnabled: Boolean
+        proximityModeEnabled: Boolean,
+        proximityReferenceAltitudeMeters: Double?,
+        proximityReferenceAltitudeSource: XfeederReferenceAltitudeSourceState
     )
 }

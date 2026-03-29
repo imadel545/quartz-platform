@@ -14,6 +14,7 @@ import com.quartz.platform.domain.model.XfeederClosureEvidence
 import com.quartz.platform.domain.model.XfeederGeospatialPolicy
 import com.quartz.platform.domain.model.XfeederGuidedSession
 import com.quartz.platform.domain.model.XfeederGuidedStep
+import com.quartz.platform.domain.model.XfeederReferenceAltitudeSourceState
 import com.quartz.platform.domain.model.XfeederSectorOutcome
 import com.quartz.platform.domain.model.XfeederSessionStatus
 import com.quartz.platform.domain.model.XfeederStepCode
@@ -77,6 +78,8 @@ class OfflineFirstXfeederGuidedSessionRepository @Inject constructor(
             measurementZoneRadiusMeters = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
             measurementZoneExtensionReason = "",
             proximityModeEnabled = false,
+            proximityReferenceAltitudeMeters = null,
+            proximityReferenceAltitudeSource = XfeederReferenceAltitudeSourceState.UNAVAILABLE,
             status = XfeederSessionStatus.CREATED,
             sectorOutcome = XfeederSectorOutcome.NOT_TESTED,
             closureEvidence = XfeederClosureEvidence(
@@ -186,7 +189,9 @@ class OfflineFirstXfeederGuidedSessionRepository @Inject constructor(
         sessionId: String,
         measurementZoneRadiusMeters: Int,
         measurementZoneExtensionReason: String,
-        proximityModeEnabled: Boolean
+        proximityModeEnabled: Boolean,
+        proximityReferenceAltitudeMeters: Double?,
+        proximityReferenceAltitudeSource: XfeederReferenceAltitudeSourceState
     ) {
         sessionDao.updateGeospatialContext(
             sessionId = sessionId,
@@ -195,6 +200,8 @@ class OfflineFirstXfeederGuidedSessionRepository @Inject constructor(
             ),
             measurementZoneExtensionReason = measurementZoneExtensionReason.trim(),
             proximityModeEnabled = proximityModeEnabled,
+            proximityReferenceAltitudeMeters = proximityReferenceAltitudeMeters,
+            proximityReferenceAltitudeSource = proximityReferenceAltitudeSource.name,
             updatedAtEpochMillis = System.currentTimeMillis()
         )
     }

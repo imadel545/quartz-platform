@@ -8,6 +8,7 @@ import com.quartz.platform.domain.model.XfeederSectorOutcome
 import com.quartz.platform.domain.model.XfeederSessionStatus
 import com.quartz.platform.domain.model.XfeederStepCode
 import com.quartz.platform.domain.model.XfeederStepStatus
+import com.quartz.platform.domain.model.XfeederReferenceAltitudeSourceState
 import org.junit.Test
 
 class XfeederSessionMapperTest {
@@ -22,6 +23,8 @@ class XfeederSessionMapperTest {
             measurementZoneRadiusMeters = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
             measurementZoneExtensionReason = "",
             proximityModeEnabled = false,
+            proximityReferenceAltitudeMeters = null,
+            proximityReferenceAltitudeSource = XfeederReferenceAltitudeSourceState.UNAVAILABLE.name,
             status = XfeederSessionStatus.IN_PROGRESS.name,
             sectorOutcome = XfeederSectorOutcome.CROSSED.name,
             closureRelatedSectorCode = "S1",
@@ -48,6 +51,8 @@ class XfeederSessionMapperTest {
         assertThat(domain.status).isEqualTo(XfeederSessionStatus.IN_PROGRESS)
         assertThat(domain.sectorOutcome).isEqualTo(XfeederSectorOutcome.CROSSED)
         assertThat(domain.closureEvidence.relatedSectorCode).isEqualTo("S1")
+        assertThat(domain.proximityReferenceAltitudeSource)
+            .isEqualTo(XfeederReferenceAltitudeSourceState.UNAVAILABLE)
         assertThat(domain.steps.single().status).isEqualTo(XfeederStepStatus.DONE)
     }
 }

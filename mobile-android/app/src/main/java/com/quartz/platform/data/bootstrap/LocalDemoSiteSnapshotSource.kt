@@ -254,6 +254,7 @@ class LocalDemoSiteSnapshotSource @Inject constructor() : SiteSnapshotBootstrapS
                     id = "$siteId-antenna-$code-0",
                     sectorId = "$siteId-sector-$code",
                     reference = antennaRef,
+                    referenceAltitudeMeters = if (status == "FORECAST") null else 120.0,
                     installedState = if (status == "FORECAST") "PLANNED" else "INSTALLED",
                     forecastState = if (status == "FORECAST") "FORECAST" else null,
                     tiltConfiguredDegrees = if (status == "FORECAST") null else 4.0,

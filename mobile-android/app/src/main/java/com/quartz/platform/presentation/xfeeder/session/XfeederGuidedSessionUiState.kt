@@ -2,6 +2,8 @@ package com.quartz.platform.presentation.xfeeder.session
 
 import com.quartz.platform.domain.model.XfeederGuidedSession
 import com.quartz.platform.domain.model.XfeederGeospatialPolicy
+import com.quartz.platform.domain.model.XfeederProximityEligibilityState
+import com.quartz.platform.domain.model.XfeederReferenceAltitudeSourceState
 import com.quartz.platform.domain.model.XfeederSectorOutcome
 import com.quartz.platform.domain.model.XfeederSessionStatus
 import com.quartz.platform.domain.model.XfeederUnreliableReason
@@ -43,11 +45,18 @@ data class XfeederGuidedSessionUiState(
     val measurementZoneLongitude: Double? = null,
     val measurementZoneRadiusMeters: Int = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
     val measurementZoneExtensionReasonInput: String = "",
+    val proximityReferenceAltitudeInput: String = "",
+    val technicalReferenceAltitudeMeters: Double? = null,
+    val effectiveReferenceAltitudeMeters: Double? = null,
+    val proximityReferenceAltitudeSource: XfeederReferenceAltitudeSourceState =
+        XfeederReferenceAltitudeSourceState.UNAVAILABLE,
     val proximityModeEnabled: Boolean = false,
     val userLocation: UserLocation? = null,
+    val userAltitudeMeters: Double? = null,
+    val userAltitudeVerticalAccuracyMeters: Float? = null,
     val distanceToMeasurementZoneMeters: Int? = null,
     val isInsideMeasurementZone: Boolean? = null,
-    val isProximityEligible: Boolean? = null,
+    val proximityEligibilityState: XfeederProximityEligibilityState = XfeederProximityEligibilityState.UNAVAILABLE,
     val sectorAzimuthDegrees: Int? = null,
     val sectorCells: List<XfeederSectorCellContextItem> = emptyList(),
     val systemOperatorContexts: List<XfeederSystemOperatorContextItem> = emptyList(),

@@ -16,6 +16,27 @@ The roadmap prioritizes:
 - MVP delivery
 - advanced feature hardening later
 
+## Current checkpoint (validated)
+
+- Android emulator runtime path is operational.
+- Android quality gate is green in both modes:
+  - base: assemble + unit tests + lint + androidTest compile
+  - connected: instrumentation tests on emulator
+- Implemented workflow coverage:
+  - map/site shell
+  - technical site detail
+  - guided XFeeder + guided RET shells
+  - shared workflow/session core reused by multiple guided flows
+  - local report-draft continuity with typed provenance
+  - XFeeder geospatial session context with bounded altitude-aware proximity eligibility
+  - explicit reference-altitude provenance (`TECHNICAL_DEFAULT`, `OPERATOR_OVERRIDE`, `UNAVAILABLE`)
+
+## Next major roadmap items (after current lot)
+
+1. Backend sync/auth foundation aligned with mobile offline contracts.
+2. End-to-end report synchronization with conflict handling and observability.
+3. Progressive hardening of advanced telecom workflows (RET/QoS/drive) without collapsing modular boundaries.
+
 ---
 
 ## Phase 0 — framing and repository governance

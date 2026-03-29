@@ -56,6 +56,8 @@ import com.quartz.platform.domain.model.XfeederSessionStatus
 import com.quartz.platform.domain.model.XfeederStepCode
 import com.quartz.platform.domain.model.XfeederStepStatus
 import com.quartz.platform.domain.model.XfeederUnreliableReason
+import com.quartz.platform.domain.model.XfeederProximityEligibilityState
+import com.quartz.platform.domain.model.XfeederReferenceAltitudeSourceState
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -114,6 +116,7 @@ fun XfeederGuidedSessionRoute(
         onUnreliableReasonSelected = viewModel::onUnreliableReasonSelected,
         onObservedSectorCountChanged = viewModel::onObservedSectorCountChanged,
         onMeasurementZoneExtensionReasonChanged = viewModel::onMeasurementZoneExtensionReasonChanged,
+        onProximityReferenceAltitudeChanged = viewModel::onProximityReferenceAltitudeChanged,
         onExtendMeasurementZoneClicked = viewModel::onExtendMeasurementZoneClicked,
         onResetMeasurementZoneClicked = viewModel::onResetMeasurementZoneClicked,
         onToggleProximityModeClicked = viewModel::onToggleProximityModeClicked,
@@ -160,6 +163,7 @@ fun XfeederGuidedSessionScreen(
     onUnreliableReasonSelected: (XfeederUnreliableReason?) -> Unit,
     onObservedSectorCountChanged: (String) -> Unit,
     onMeasurementZoneExtensionReasonChanged: (String) -> Unit,
+    onProximityReferenceAltitudeChanged: (String) -> Unit,
     onExtendMeasurementZoneClicked: () -> Unit,
     onResetMeasurementZoneClicked: () -> Unit,
     onToggleProximityModeClicked: (Boolean) -> Unit,
@@ -286,9 +290,10 @@ fun XfeederGuidedSessionScreen(
 
                         item {
                             GeospatialSessionSurfaceCard(
-                                state = state,
-                                onMeasurementZoneExtensionReasonChanged = onMeasurementZoneExtensionReasonChanged,
-                                onExtendMeasurementZoneClicked = onExtendMeasurementZoneClicked,
+                            state = state,
+                            onMeasurementZoneExtensionReasonChanged = onMeasurementZoneExtensionReasonChanged,
+                            onProximityReferenceAltitudeChanged = onProximityReferenceAltitudeChanged,
+                            onExtendMeasurementZoneClicked = onExtendMeasurementZoneClicked,
                                 onResetMeasurementZoneClicked = onResetMeasurementZoneClicked,
                                 onToggleProximityModeClicked = onToggleProximityModeClicked,
                                 onRefreshUserLocationClicked = onRefreshUserLocationClicked,
@@ -478,6 +483,7 @@ private fun ClosureEvidenceCard(
 private fun GeospatialSessionSurfaceCard(
     state: XfeederGuidedSessionUiState,
     onMeasurementZoneExtensionReasonChanged: (String) -> Unit,
+    onProximityReferenceAltitudeChanged: (String) -> Unit,
     onExtendMeasurementZoneClicked: () -> Unit,
     onResetMeasurementZoneClicked: () -> Unit,
     onToggleProximityModeClicked: (Boolean) -> Unit,
@@ -528,12 +534,85 @@ private fun GeospatialSessionSurfaceCard(
             Text(
                 text = stringResource(
                     R.string.xfeeder_label_proximity_eligibility,
-                    when (state.isProximityEligible) {
-                        true -> stringResource(R.string.xfeeder_value_proximity_eligible)
-                        false -> stringResource(R.string.xfeeder_value_proximity_not_eligible)
-                        null -> stringResource(R.string.value_not_available)
+                    when (state.proximityEligibilityState) {
+                        XfeederProximityEligibilityState.ELIGIBLE -> {
+                            stringResource(R.string.xfeeder_value_proximity_eligible)
+                        }
+                        XfeederProximityEligibilityState.INELIGIBLE -> {
+                            stringResource(R.string.xfeeder_value_proximity_ineligible)
+                        }
+                        XfeederProximityEligibilityState.SUPPORTED -> {
+                            stringResource(R.string.xfeeder_value_proximity_supported)
+                        }
+                        XfeederProximityEligibilityState.UNAVAILABLE -> {
+                            stringResource(R.string.xfeeder_value_proximity_unavailable)
+                        }
                     }
                 ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.xfeeder_label_user_altitude,
+                    state.userAltitudeMeters?.let { String.format("%.1f", it) }
+                        ?: stringResource(R.string.value_not_available)
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.xfeeder_label_effective_reference_altitude,
+                    state.effectiveReferenceAltitudeMeters?.let { String.format("%.1f", it) }
+                        ?: stringResource(R.string.value_not_available)
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.xfeeder_label_technical_reference_altitude,
+                    state.technicalReferenceAltitudeMeters?.let { String.format("%.1f", it) }
+                        ?: stringResource(R.string.value_not_available)
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.xfeeder_label_reference_altitude_source,
+                    when (state.proximityReferenceAltitudeSource) {
+                        XfeederReferenceAltitudeSourceState.TECHNICAL_DEFAULT ->
+                            stringResource(R.string.xfeeder_value_reference_altitude_source_technical_default)
+                        XfeederReferenceAltitudeSourceState.OPERATOR_OVERRIDE ->
+                            stringResource(R.string.xfeeder_value_reference_altitude_source_operator_override)
+                        XfeederReferenceAltitudeSourceState.UNAVAILABLE ->
+                            stringResource(R.string.xfeeder_value_reference_altitude_source_unavailable)
+                    }
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.xfeeder_label_operator_override_altitude,
+                    state.proximityReferenceAltitudeInput.ifBlank {
+                        stringResource(R.string.value_not_available)
+                    }
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = when (state.proximityEligibilityState) {
+                    XfeederProximityEligibilityState.ELIGIBLE -> {
+                        stringResource(R.string.xfeeder_helper_proximity_eligible)
+                    }
+                    XfeederProximityEligibilityState.INELIGIBLE -> {
+                        stringResource(R.string.xfeeder_helper_proximity_ineligible)
+                    }
+                    XfeederProximityEligibilityState.SUPPORTED -> {
+                        stringResource(R.string.xfeeder_helper_proximity_supported)
+                    }
+                    XfeederProximityEligibilityState.UNAVAILABLE -> {
+                        stringResource(R.string.xfeeder_helper_proximity_unavailable)
+                    }
+                },
                 style = MaterialTheme.typography.bodySmall
             )
 
@@ -557,6 +636,14 @@ private fun GeospatialSessionSurfaceCard(
                 onValueChange = onMeasurementZoneExtensionReasonChanged,
                 label = { Text(stringResource(R.string.xfeeder_input_zone_extension_reason)) },
                 supportingText = { Text(stringResource(R.string.xfeeder_hint_zone_extension_reason)) }
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = state.proximityReferenceAltitudeInput,
+                onValueChange = onProximityReferenceAltitudeChanged,
+                label = { Text(stringResource(R.string.xfeeder_input_reference_altitude_override)) },
+                supportingText = { Text(stringResource(R.string.xfeeder_hint_reference_altitude_override)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
 
             Row(
@@ -619,6 +706,7 @@ private fun GeospatialSessionSurfaceCard(
 }
 
 @Composable
+@Suppress("DEPRECATION")
 private fun XfeederSessionMapView(
     modifier: Modifier,
     siteLatitude: Double?,
@@ -706,9 +794,9 @@ private fun XfeederSessionMapView(
                 map.overlays.add(
                     Polygon(map).apply {
                         points = Polygon.pointsAsCircle(zonePoint, measurementZoneRadiusMeters.toDouble())
-                        fillColor = 0x220099FF
-                        strokeColor = 0x990066CC.toInt()
-                        strokeWidth = 2f
+                        setFillColor(0x220099FF)
+                        setStrokeColor(0x990066CC.toInt())
+                        setStrokeWidth(2f)
                     }
                 )
             }

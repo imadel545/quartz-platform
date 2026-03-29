@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
+import androidx.core.location.LocationCompat
 import androidx.core.content.ContextCompat
 import com.quartz.platform.domain.model.UserLocation
 import com.quartz.platform.domain.repository.LocationRepository
@@ -34,7 +35,10 @@ class AndroidLocationRepository @Inject constructor(
         return UserLocation(
             latitude = latest.latitude,
             longitude = latest.longitude,
-            capturedAtEpochMillis = latest.time.takeIf { it > 0L }
+            capturedAtEpochMillis = latest.time.takeIf { it > 0L },
+            altitudeMeters = latest.altitude.takeIf { latest.hasAltitude() },
+            verticalAccuracyMeters = LocationCompat.getVerticalAccuracyMeters(latest)
+                .takeIf { LocationCompat.hasVerticalAccuracy(latest) }
         )
     }
 

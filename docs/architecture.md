@@ -32,6 +32,28 @@ The product scope comes from a Quartz operational guide describing:
 
 The new implementation must preserve the business intent while modernizing architecture, quality, maintainability, observability, and scalability.
 
+## 2.1 Current Android workflow coverage snapshot (validated)
+
+Current Android implementation covers a bounded local-first workflow baseline:
+- home map + site selection
+- site detail with sectors / antennas / cells
+- guided XFeeder workflow with persisted geospatial session context
+- guided RET workflow reusing shared workflow/session core
+- local report draft continuity with workflow-typed provenance
+
+For XFeeder proximity, implementation is intentionally explicit and bounded:
+- `UNAVAILABLE`: location/altitude data cannot be trusted for eligibility
+- `SUPPORTED`: proximity evaluation is available but no effective reference altitude is currently available
+- `INELIGIBLE`: distance and/or altitude constraints are not satisfied
+- `ELIGIBLE`: distance and altitude constraints are satisfied
+
+Reference altitude provenance is explicit and local-first:
+- `TECHNICAL_DEFAULT`: read-only local technical source from sector/antenna data
+- `OPERATOR_OVERRIDE`: explicit operator-entered override
+- `UNAVAILABLE`: no technical source and no override
+
+This keeps product feedback honest without claiming full telecom-grade altitude precision or drive automation.
+
 ---
 
 ## 3. High-level system architecture

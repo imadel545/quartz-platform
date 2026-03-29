@@ -73,6 +73,8 @@ The mobile application must support structured field sessions with:
 - resumable workflows
 - final reporting
 
+Current validated guided-session coverage includes XFeeder and RET shells with local persistence/resume, completion guards, and report-draft continuity. XFeeder proximity handling is altitude-aware with explicit local reference-altitude provenance (technical default vs operator override vs unavailable), while remaining intentionally bounded (no full telecom automation claims).
+
 ### 4. Throughput and QoS testing
 The system should support:
 - latency checks

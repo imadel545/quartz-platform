@@ -35,6 +35,8 @@ data class XfeederSessionEntity(
     val measurementZoneRadiusMeters: Int,
     val measurementZoneExtensionReason: String,
     val proximityModeEnabled: Boolean,
+    val proximityReferenceAltitudeMeters: Double? = null,
+    val proximityReferenceAltitudeSource: String,
     val status: String,
     val sectorOutcome: String,
     val closureRelatedSectorCode: String,

@@ -463,4 +463,39 @@ object DatabaseMigrations {
             )
         }
     }
+
+    val MIGRATION_11_12: Migration = object : Migration(11, 12) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                ALTER TABLE xfeeder_sessions
+                ADD COLUMN proximityReferenceAltitudeMeters REAL
+                """.trimIndent()
+            )
+        }
+    }
+
+    val MIGRATION_12_13: Migration = object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                ALTER TABLE site_antennas
+                ADD COLUMN referenceAltitudeMeters REAL
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                ALTER TABLE xfeeder_sessions
+                ADD COLUMN proximityReferenceAltitudeSource TEXT NOT NULL DEFAULT 'UNAVAILABLE'
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                UPDATE xfeeder_sessions
+                SET proximityReferenceAltitudeSource = 'OPERATOR_OVERRIDE'
+                WHERE proximityReferenceAltitudeMeters IS NOT NULL
+                """.trimIndent()
+            )
+        }
+    }
 }

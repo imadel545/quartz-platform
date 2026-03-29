@@ -6,6 +6,7 @@ import com.quartz.platform.domain.model.GuidedSessionClosureProjection
 import com.quartz.platform.domain.model.XfeederClosureEvidence
 import com.quartz.platform.domain.model.XfeederGuidedSession
 import com.quartz.platform.domain.model.XfeederGuidedStep
+import com.quartz.platform.domain.model.XfeederReferenceAltitudeSourceState
 import com.quartz.platform.domain.model.XfeederSectorOutcome
 import com.quartz.platform.domain.model.XfeederSessionStatus
 import com.quartz.platform.domain.model.XfeederStepCode
@@ -21,6 +22,10 @@ fun XfeederSessionEntity.toDomain(steps: List<XfeederStepEntity>): XfeederGuided
         measurementZoneRadiusMeters = measurementZoneRadiusMeters,
         measurementZoneExtensionReason = measurementZoneExtensionReason,
         proximityModeEnabled = proximityModeEnabled,
+        proximityReferenceAltitudeMeters = proximityReferenceAltitudeMeters,
+        proximityReferenceAltitudeSource = runCatching {
+            XfeederReferenceAltitudeSourceState.valueOf(proximityReferenceAltitudeSource)
+        }.getOrDefault(XfeederReferenceAltitudeSourceState.UNAVAILABLE),
         status = XfeederSessionStatus.valueOf(status),
         sectorOutcome = XfeederSectorOutcome.valueOf(sectorOutcome),
         closureEvidence = XfeederClosureEvidence(
@@ -52,6 +57,8 @@ fun XfeederGuidedSession.toEntity(): XfeederSessionEntity {
         measurementZoneRadiusMeters = measurementZoneRadiusMeters,
         measurementZoneExtensionReason = measurementZoneExtensionReason,
         proximityModeEnabled = proximityModeEnabled,
+        proximityReferenceAltitudeMeters = proximityReferenceAltitudeMeters,
+        proximityReferenceAltitudeSource = proximityReferenceAltitudeSource.name,
         status = status.name,
         sectorOutcome = sectorOutcome.name,
         closureRelatedSectorCode = closureEvidence.relatedSectorCode,

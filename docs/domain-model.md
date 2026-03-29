@@ -188,6 +188,14 @@ Suggested fields:
 - localOnly
 - syncStatus
 
+For guided geospatial sessions (for example XFeeder), a bounded geospatial context is tracked locally:
+- measurement zone radius
+- extension reason
+- proximity mode flag
+- effective proximity reference altitude
+- reference altitude source (`TECHNICAL_DEFAULT`, `OPERATOR_OVERRIDE`, `UNAVAILABLE`)
+- computed proximity eligibility state (`SUPPORTED`, `UNAVAILABLE`, `INELIGIBLE`, `ELIGIBLE`)
+
 Possible status values:
 - CREATED
 - IN_PROGRESS

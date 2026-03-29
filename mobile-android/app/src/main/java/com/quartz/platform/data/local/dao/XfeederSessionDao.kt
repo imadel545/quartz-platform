@@ -77,6 +77,8 @@ interface XfeederSessionDao {
         SET measurementZoneRadiusMeters = :measurementZoneRadiusMeters,
             measurementZoneExtensionReason = :measurementZoneExtensionReason,
             proximityModeEnabled = :proximityModeEnabled,
+            proximityReferenceAltitudeMeters = :proximityReferenceAltitudeMeters,
+            proximityReferenceAltitudeSource = :proximityReferenceAltitudeSource,
             updatedAtEpochMillis = :updatedAtEpochMillis
         WHERE id = :sessionId
         """
@@ -86,6 +88,8 @@ interface XfeederSessionDao {
         measurementZoneRadiusMeters: Int,
         measurementZoneExtensionReason: String,
         proximityModeEnabled: Boolean,
+        proximityReferenceAltitudeMeters: Double?,
+        proximityReferenceAltitudeSource: String,
         updatedAtEpochMillis: Long
     )
 }

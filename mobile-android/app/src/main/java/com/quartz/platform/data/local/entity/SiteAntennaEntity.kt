@@ -32,6 +32,7 @@ data class SiteAntennaEntity(
     val siteId: String,
     val sectorId: String,
     val reference: String,
+    val referenceAltitudeMeters: Double?,
     val installedState: String,
     val forecastState: String?,
     val tiltConfiguredDegrees: Double?,

@@ -15,6 +15,9 @@ data class XfeederGuidedSession(
     val measurementZoneRadiusMeters: Int,
     val measurementZoneExtensionReason: String,
     val proximityModeEnabled: Boolean,
+    val proximityReferenceAltitudeMeters: Double? = null,
+    val proximityReferenceAltitudeSource: XfeederReferenceAltitudeSourceState =
+        XfeederReferenceAltitudeSourceState.UNAVAILABLE,
     val status: XfeederSessionStatus,
     val sectorOutcome: XfeederSectorOutcome,
     val closureEvidence: XfeederClosureEvidence,

@@ -341,6 +341,104 @@ class QuartzDatabaseMigrationTest {
 
         migrated.close()
     }
+
+    @Test
+    fun migration_11_12_adds_proximity_reference_altitude_column() {
+        val dbName = "quartz-migration-11-12-test"
+
+        migrationTestHelper.createDatabase(dbName, 11).apply {
+            insertXfeederSessionV11(
+                id = "xfeeder-session-proximity-1",
+                siteId = "site-1",
+                sectorId = "sector-a"
+            )
+            close()
+        }
+
+        val migrated = migrationTestHelper.runMigrationsAndValidate(
+            dbName,
+            12,
+            true,
+            DatabaseMigrations.MIGRATION_11_12
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM pragma_table_info('xfeeder_sessions')
+                WHERE name = 'proximityReferenceAltitudeMeters'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM xfeeder_sessions
+                WHERE id = 'xfeeder-session-proximity-1'
+                  AND proximityReferenceAltitudeMeters IS NULL
+                """.trimIndent()
+            )
+        )
+
+        migrated.close()
+    }
+
+    @Test
+    fun migration_12_13_adds_technical_altitude_source_columns_and_backfills_session_source() {
+        val dbName = "quartz-migration-12-13-test"
+
+        migrationTestHelper.createDatabase(dbName, 12).apply {
+            insertXfeederSessionV12(
+                id = "xfeeder-session-altitude-source-1",
+                siteId = "site-1",
+                sectorId = "sector-a",
+                proximityReferenceAltitudeMeters = 119.5
+            )
+            close()
+        }
+
+        val migrated = migrationTestHelper.runMigrationsAndValidate(
+            dbName,
+            13,
+            true,
+            DatabaseMigrations.MIGRATION_12_13
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM pragma_table_info('site_antennas')
+                WHERE name = 'referenceAltitudeMeters'
+                """.trimIndent()
+            )
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM pragma_table_info('xfeeder_sessions')
+                WHERE name = 'proximityReferenceAltitudeSource'
+                """.trimIndent()
+            )
+        )
+
+        assertEquals(
+            "OPERATOR_OVERRIDE",
+            migrated.stringQuery(
+                """
+                SELECT proximityReferenceAltitudeSource
+                FROM xfeeder_sessions
+                WHERE id = 'xfeeder-session-altitude-source-1'
+                """.trimIndent()
+            )
+        )
+
+        migrated.close()
+    }
 }
 
 private fun SupportSQLiteDatabase.insertDraft(
@@ -447,6 +545,107 @@ private fun SupportSQLiteDatabase.insertXfeederSession(
             siteId,
             sectorId,
             "S0",
+            "CREATED",
+            "NOT_TESTED",
+            "",
+            "",
+            "",
+            null,
+            null,
+            100L,
+            100L,
+            null
+        )
+    )
+}
+
+private fun SupportSQLiteDatabase.insertXfeederSessionV11(
+    id: String,
+    siteId: String,
+    sectorId: String
+) {
+    execSQL(
+        """
+        INSERT INTO xfeeder_sessions(
+            id,
+            siteId,
+            sectorId,
+            sectorCode,
+            measurementZoneRadiusMeters,
+            measurementZoneExtensionReason,
+            proximityModeEnabled,
+            status,
+            sectorOutcome,
+            notes,
+            resultSummary,
+            closureRelatedSectorCode,
+            closureUnreliableReason,
+            closureObservedSectorCount,
+            createdAtEpochMillis,
+            updatedAtEpochMillis,
+            completedAtEpochMillis
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """.trimIndent(),
+        arrayOf(
+            id,
+            siteId,
+            sectorId,
+            "S0",
+            120,
+            "",
+            0,
+            "CREATED",
+            "NOT_TESTED",
+            "",
+            "",
+            "",
+            null,
+            null,
+            100L,
+            100L,
+            null
+        )
+    )
+}
+
+private fun SupportSQLiteDatabase.insertXfeederSessionV12(
+    id: String,
+    siteId: String,
+    sectorId: String,
+    proximityReferenceAltitudeMeters: Double?
+) {
+    execSQL(
+        """
+        INSERT INTO xfeeder_sessions(
+            id,
+            siteId,
+            sectorId,
+            sectorCode,
+            measurementZoneRadiusMeters,
+            measurementZoneExtensionReason,
+            proximityModeEnabled,
+            proximityReferenceAltitudeMeters,
+            status,
+            sectorOutcome,
+            notes,
+            resultSummary,
+            closureRelatedSectorCode,
+            closureUnreliableReason,
+            closureObservedSectorCount,
+            createdAtEpochMillis,
+            updatedAtEpochMillis,
+            completedAtEpochMillis
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """.trimIndent(),
+        arrayOf(
+            id,
+            siteId,
+            sectorId,
+            "S0",
+            120,
+            "",
+            0,
+            proximityReferenceAltitudeMeters,
             "CREATED",
             "NOT_TESTED",
             "",

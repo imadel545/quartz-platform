@@ -6,6 +6,7 @@ import com.quartz.platform.MainDispatcherRule
 import com.quartz.platform.TestUiStrings
 import com.quartz.platform.domain.model.ReportDraft
 import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
+import com.quartz.platform.domain.model.SiteAntenna
 import com.quartz.platform.domain.model.SiteDetail
 import com.quartz.platform.domain.model.SiteSector
 import com.quartz.platform.domain.model.SiteSummary
@@ -14,6 +15,8 @@ import com.quartz.platform.domain.model.XfeederGeospatialPolicy
 import com.quartz.platform.domain.model.XfeederGuidedSession
 import com.quartz.platform.domain.model.XfeederGuidedStep
 import com.quartz.platform.domain.model.GuidedSessionClosureProjection
+import com.quartz.platform.domain.model.XfeederProximityEligibilityState
+import com.quartz.platform.domain.model.XfeederReferenceAltitudeSourceState
 import com.quartz.platform.domain.model.XfeederSectorOutcome
 import com.quartz.platform.domain.model.XfeederSessionStatus
 import com.quartz.platform.domain.model.XfeederStepCode
@@ -129,8 +132,22 @@ class XfeederGuidedSessionViewModelTest {
     }
 
     @Test
-    fun `proximity mode can be enabled when sector distance is eligible`() = runTest {
-        val siteRepository = FakeSiteRepository(site = sampleSiteDetail())
+    fun `proximity stays supported until operator provides reference altitude`() = runTest {
+        val siteRepository = FakeSiteRepository(site = sampleSiteDetail(withTechnicalReferenceAltitude = false))
+        val guidedRepository = FakeXfeederRepository()
+        val viewModel = buildViewModel(siteRepository, guidedRepository)
+
+        advanceUntilIdle()
+        viewModel.onCreateSessionClicked()
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.proximityEligibilityState)
+            .isEqualTo(XfeederProximityEligibilityState.SUPPORTED)
+    }
+
+    @Test
+    fun `proximity mode requires reference altitude before enabling`() = runTest {
+        val siteRepository = FakeSiteRepository(site = sampleSiteDetail(withTechnicalReferenceAltitude = false))
         val guidedRepository = FakeXfeederRepository()
         val viewModel = buildViewModel(siteRepository, guidedRepository)
 
@@ -141,7 +158,47 @@ class XfeederGuidedSessionViewModelTest {
         viewModel.onToggleProximityModeClicked(true)
         advanceUntilIdle()
 
+        assertThat(viewModel.uiState.value.session?.proximityModeEnabled).isFalse()
+        assertThat(viewModel.uiState.value.errorMessage).contains("altitude antenne")
+    }
+
+    @Test
+    fun `proximity mode can be enabled when distance and altitude are eligible`() = runTest {
+        val siteRepository = FakeSiteRepository(site = sampleSiteDetail())
+        val guidedRepository = FakeXfeederRepository()
+        val viewModel = buildViewModel(siteRepository, guidedRepository)
+
+        advanceUntilIdle()
+        viewModel.onCreateSessionClicked()
+        advanceUntilIdle()
+
+        viewModel.onProximityReferenceAltitudeChanged("110")
+        advanceUntilIdle()
+
+        viewModel.onToggleProximityModeClicked(true)
+        advanceUntilIdle()
+
         assertThat(viewModel.uiState.value.session?.proximityModeEnabled).isTrue()
+        assertThat(viewModel.uiState.value.proximityEligibilityState)
+            .isEqualTo(XfeederProximityEligibilityState.ELIGIBLE)
+    }
+
+    @Test
+    fun `technical reference altitude is used by default when available`() = runTest {
+        val siteRepository = FakeSiteRepository(site = sampleSiteDetail(withTechnicalReferenceAltitude = true))
+        val guidedRepository = FakeXfeederRepository()
+        val viewModel = buildViewModel(siteRepository, guidedRepository)
+
+        advanceUntilIdle()
+        viewModel.onCreateSessionClicked()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertThat(state.technicalReferenceAltitudeMeters).isEqualTo(118.0)
+        assertThat(state.effectiveReferenceAltitudeMeters).isEqualTo(118.0)
+        assertThat(state.proximityReferenceAltitudeSource)
+            .isEqualTo(XfeederReferenceAltitudeSourceState.TECHNICAL_DEFAULT)
+        assertThat(state.proximityReferenceAltitudeInput).isEmpty()
     }
 
     @Test
@@ -331,7 +388,9 @@ class XfeederGuidedSessionViewModelTest {
                         return UserLocation(
                             latitude = 34.0005,
                             longitude = -6.8002,
-                            capturedAtEpochMillis = 10L
+                            capturedAtEpochMillis = 10L,
+                            altitudeMeters = 120.0f.toDouble(),
+                            verticalAccuracyMeters = 4f
                         )
                     }
                 }
@@ -393,6 +452,8 @@ class XfeederGuidedSessionViewModelTest {
                 measurementZoneRadiusMeters = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
                 measurementZoneExtensionReason = "",
                 proximityModeEnabled = false,
+                proximityReferenceAltitudeMeters = null,
+                proximityReferenceAltitudeSource = XfeederReferenceAltitudeSourceState.UNAVAILABLE,
                 status = XfeederSessionStatus.CREATED,
                 sectorOutcome = XfeederSectorOutcome.NOT_TESTED,
                 closureEvidence = XfeederClosureEvidence(
@@ -479,7 +540,9 @@ class XfeederGuidedSessionViewModelTest {
             sessionId: String,
             measurementZoneRadiusMeters: Int,
             measurementZoneExtensionReason: String,
-            proximityModeEnabled: Boolean
+            proximityModeEnabled: Boolean,
+            proximityReferenceAltitudeMeters: Double?,
+            proximityReferenceAltitudeSource: XfeederReferenceAltitudeSourceState
         ) {
             historyBySector.values.forEach { flow ->
                 flow.value = flow.value.map { session ->
@@ -490,6 +553,8 @@ class XfeederGuidedSessionViewModelTest {
                             measurementZoneRadiusMeters = measurementZoneRadiusMeters,
                             measurementZoneExtensionReason = measurementZoneExtensionReason,
                             proximityModeEnabled = proximityModeEnabled,
+                            proximityReferenceAltitudeMeters = proximityReferenceAltitudeMeters,
+                            proximityReferenceAltitudeSource = proximityReferenceAltitudeSource,
                             updatedAtEpochMillis = session.updatedAtEpochMillis + 1
                         )
                     }
@@ -561,7 +626,7 @@ class XfeederGuidedSessionViewModelTest {
         }
     }
 
-    private fun sampleSiteDetail(): SiteDetail {
+    private fun sampleSiteDetail(withTechnicalReferenceAltitude: Boolean = true): SiteDetail {
         return SiteDetail(
             id = "site-1",
             externalCode = "QRTZ-001",
@@ -580,7 +645,20 @@ class XfeederGuidedSessionViewModelTest {
                     code = "S0",
                     azimuthDegrees = 0,
                     status = "IN_SERVICE",
-                    hasConnectedCell = true
+                    hasConnectedCell = true,
+                    antennas = listOf(
+                        SiteAntenna(
+                            id = "site-1-antenna-S0-0",
+                            sectorId = "site-1-sector-S0",
+                            reference = "ANT-RB-S0",
+                            referenceAltitudeMeters = if (withTechnicalReferenceAltitude) 118.0 else null,
+                            installedState = "INSTALLED",
+                            forecastState = null,
+                            tiltConfiguredDegrees = 4.0,
+                            tiltObservedDegrees = 3.5,
+                            documentationRef = "DOC-ANT-RB-S0"
+                        )
+                    )
                 )
             )
         )

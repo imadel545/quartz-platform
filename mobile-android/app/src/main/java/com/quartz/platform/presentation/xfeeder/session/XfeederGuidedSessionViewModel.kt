@@ -14,6 +14,8 @@ import com.quartz.platform.domain.model.XfeederClosureEvidence
 import com.quartz.platform.domain.model.XfeederClosureEvidenceIssue
 import com.quartz.platform.domain.model.XfeederGeospatialPolicy
 import com.quartz.platform.domain.model.XfeederGuidedSession
+import com.quartz.platform.domain.model.XfeederProximityEligibilityState
+import com.quartz.platform.domain.model.XfeederReferenceAltitudeSourceState
 import com.quartz.platform.domain.model.XfeederSectorOutcome
 import com.quartz.platform.domain.model.XfeederSessionStatus
 import com.quartz.platform.domain.model.XfeederStepCode
@@ -290,9 +292,38 @@ class XfeederGuidedSessionViewModel @Inject constructor(
         }
     }
 
+    fun onProximityReferenceAltitudeChanged(value: String) {
+        val sanitized = value
+            .replace(',', '.')
+            .filterIndexed { index, character ->
+                character.isDigit() || character == '.' || (character == '-' && index == 0)
+            }
+        val currentState = mutableState.value
+        val altitudeResolution = resolveReferenceAltitude(
+            proximityReferenceAltitudeInput = sanitized,
+            technicalReferenceAltitudeMeters = currentState.technicalReferenceAltitudeMeters
+        )
+        mutableState.update { state ->
+            state.copy(
+                proximityReferenceAltitudeInput = sanitized,
+                effectiveReferenceAltitudeMeters = altitudeResolution.effectiveAltitudeMeters,
+                proximityReferenceAltitudeSource = altitudeResolution.sourceState,
+                proximityEligibilityState = XfeederGeospatialPolicy.evaluateProximityEligibility(
+                    distanceMeters = state.distanceToMeasurementZoneMeters,
+                    userAltitudeMeters = state.userAltitudeMeters,
+                    userVerticalAccuracyMeters = state.userAltitudeVerticalAccuracyMeters,
+                    referenceAltitudeMeters = altitudeResolution.effectiveAltitudeMeters
+                ),
+                infoMessage = null,
+                errorMessage = null
+            )
+        }
+    }
+
     fun onExtendMeasurementZoneClicked() {
         val current = mutableState.value
         val session = current.session ?: return
+        val altitudeResolution = resolveReferenceAltitudeForPersistence(current) ?: return
         if (current.proximityModeEnabled) {
             mutableState.update { state ->
                 state.copy(errorMessage = uiStrings.get(R.string.error_xfeeder_zone_extension_requires_proximity_off))
@@ -315,6 +346,8 @@ class XfeederGuidedSessionViewModel @Inject constructor(
             measurementZoneRadiusMeters = nextRadius,
             measurementZoneExtensionReason = extensionReason,
             proximityModeEnabled = current.proximityModeEnabled,
+            proximityReferenceAltitudeMeters = altitudeResolution.effectiveAltitudeMeters,
+            proximityReferenceAltitudeSource = altitudeResolution.sourceState,
             successMessageRes = R.string.info_xfeeder_zone_extension_saved
         )
     }
@@ -322,11 +355,14 @@ class XfeederGuidedSessionViewModel @Inject constructor(
     fun onResetMeasurementZoneClicked() {
         val current = mutableState.value
         val session = current.session ?: return
+        val altitudeResolution = resolveReferenceAltitudeForPersistence(current) ?: return
         persistGeospatialContext(
             sessionId = session.id,
             measurementZoneRadiusMeters = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
             measurementZoneExtensionReason = "",
             proximityModeEnabled = current.proximityModeEnabled,
+            proximityReferenceAltitudeMeters = altitudeResolution.effectiveAltitudeMeters,
+            proximityReferenceAltitudeSource = altitudeResolution.sourceState,
             successMessageRes = R.string.info_xfeeder_zone_extension_reset
         )
     }
@@ -334,9 +370,24 @@ class XfeederGuidedSessionViewModel @Inject constructor(
     fun onToggleProximityModeClicked(enabled: Boolean) {
         val current = mutableState.value
         val session = current.session ?: return
-        if (enabled && current.isProximityEligible != true) {
+        val altitudeResolution = resolveReferenceAltitudeForPersistence(current) ?: return
+        if (enabled && current.proximityEligibilityState != XfeederProximityEligibilityState.ELIGIBLE) {
+            val messageRes = when (current.proximityEligibilityState) {
+                XfeederProximityEligibilityState.SUPPORTED -> {
+                    R.string.error_xfeeder_proximity_requires_reference_altitude
+                }
+                XfeederProximityEligibilityState.UNAVAILABLE -> {
+                    R.string.error_xfeeder_proximity_altitude_unavailable
+                }
+                XfeederProximityEligibilityState.INELIGIBLE -> {
+                    R.string.error_xfeeder_proximity_not_eligible
+                }
+                XfeederProximityEligibilityState.ELIGIBLE -> {
+                    R.string.error_xfeeder_proximity_not_eligible
+                }
+            }
             mutableState.update { state ->
-                state.copy(errorMessage = uiStrings.get(R.string.error_xfeeder_proximity_not_eligible))
+                state.copy(errorMessage = uiStrings.get(messageRes))
             }
             return
         }
@@ -346,6 +397,8 @@ class XfeederGuidedSessionViewModel @Inject constructor(
             measurementZoneRadiusMeters = current.measurementZoneRadiusMeters,
             measurementZoneExtensionReason = current.measurementZoneExtensionReasonInput.trim(),
             proximityModeEnabled = enabled,
+            proximityReferenceAltitudeMeters = altitudeResolution.effectiveAltitudeMeters,
+            proximityReferenceAltitudeSource = altitudeResolution.sourceState,
             successMessageRes = if (enabled) {
                 R.string.info_xfeeder_proximity_enabled
             } else {
@@ -500,6 +553,18 @@ class XfeederGuidedSessionViewModel @Inject constructor(
                         (current.session?.id != selectedSession.id ||
                             current.measurementZoneExtensionReasonInput ==
                             selectedSession.measurementZoneExtensionReason)
+                    val technicalReferenceAltitude = sector?.resolveTechnicalReferenceAltitude()
+                    val nextReferenceAltitudeInput = if (shouldHydrate) {
+                        if (selectedSession?.proximityReferenceAltitudeSource ==
+                            XfeederReferenceAltitudeSourceState.OPERATOR_OVERRIDE
+                        ) {
+                            formatOptionalAltitude(selectedSession.proximityReferenceAltitudeMeters)
+                        } else {
+                            ""
+                        }
+                    } else {
+                        current.proximityReferenceAltitudeInput
+                    }
                     val measurementZoneRadius = selectedSession?.measurementZoneRadiusMeters
                         ?: XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS
                     val siteCoordinate = site?.let { GeoCoordinate(it.latitude, it.longitude) }
@@ -513,6 +578,16 @@ class XfeederGuidedSessionViewModel @Inject constructor(
                         null
                     }
                     val cells = sector.orEmptyCells()
+                    val altitudeResolution = resolveReferenceAltitude(
+                        proximityReferenceAltitudeInput = nextReferenceAltitudeInput,
+                        technicalReferenceAltitudeMeters = technicalReferenceAltitude
+                    )
+                    val proximityEligibilityState = XfeederGeospatialPolicy.evaluateProximityEligibility(
+                        distanceMeters = distanceMeters,
+                        userAltitudeMeters = currentUserLocation?.altitudeMeters,
+                        userVerticalAccuracyMeters = currentUserLocation?.verticalAccuracyMeters,
+                        referenceAltitudeMeters = altitudeResolution.effectiveAltitudeMeters
+                    )
 
                     current.copy(
                         isLoading = false,
@@ -541,6 +616,10 @@ class XfeederGuidedSessionViewModel @Inject constructor(
                         } else {
                             current.measurementZoneExtensionReasonInput
                         },
+                        proximityReferenceAltitudeInput = nextReferenceAltitudeInput,
+                        technicalReferenceAltitudeMeters = technicalReferenceAltitude,
+                        effectiveReferenceAltitudeMeters = altitudeResolution.effectiveAltitudeMeters,
+                        proximityReferenceAltitudeSource = altitudeResolution.sourceState,
                         proximityModeEnabled = if (shouldHydrate) {
                             selectedSession?.proximityModeEnabled == true
                         } else {
@@ -548,7 +627,9 @@ class XfeederGuidedSessionViewModel @Inject constructor(
                         },
                         distanceToMeasurementZoneMeters = distanceMeters,
                         isInsideMeasurementZone = distanceMeters?.let { it <= measurementZoneRadius },
-                        isProximityEligible = XfeederGeospatialPolicy.isProximityEligible(distanceMeters),
+                        userAltitudeMeters = currentUserLocation?.altitudeMeters,
+                        userAltitudeVerticalAccuracyMeters = currentUserLocation?.verticalAccuracyMeters,
+                        proximityEligibilityState = proximityEligibilityState,
                         sectorCells = cells.map { cell -> cell.toUiCellContext() },
                         systemOperatorContexts = buildSystemOperatorContexts(cells),
                         selectedStatus = if (shouldHydrate) {
@@ -630,6 +711,8 @@ class XfeederGuidedSessionViewModel @Inject constructor(
         measurementZoneRadiusMeters: Int,
         measurementZoneExtensionReason: String,
         proximityModeEnabled: Boolean,
+        proximityReferenceAltitudeMeters: Double?,
+        proximityReferenceAltitudeSource: XfeederReferenceAltitudeSourceState,
         successMessageRes: Int
     ) {
         viewModelScope.launch {
@@ -638,7 +721,9 @@ class XfeederGuidedSessionViewModel @Inject constructor(
                     sessionId = sessionId,
                     measurementZoneRadiusMeters = measurementZoneRadiusMeters,
                     measurementZoneExtensionReason = measurementZoneExtensionReason,
-                    proximityModeEnabled = proximityModeEnabled
+                    proximityModeEnabled = proximityModeEnabled,
+                    proximityReferenceAltitudeMeters = proximityReferenceAltitudeMeters,
+                    proximityReferenceAltitudeSource = proximityReferenceAltitudeSource
                 )
             }.onFailure { throwable ->
                 mutableState.update { state ->
@@ -701,6 +786,62 @@ class XfeederGuidedSessionViewModel @Inject constructor(
             )
     }
 
+    private fun SiteSector.resolveTechnicalReferenceAltitude(): Double? {
+        return antennas.firstNotNullOfOrNull { antenna -> antenna.referenceAltitudeMeters }
+    }
+
+    private fun resolveReferenceAltitudeForPersistence(
+        state: XfeederGuidedSessionUiState
+    ): ReferenceAltitudeResolution? {
+        val parsedOverride = parseOptionalAltitudeInput(state.proximityReferenceAltitudeInput)
+        if (state.proximityReferenceAltitudeInput.isNotBlank() && parsedOverride == null) {
+            mutableState.update { currentState ->
+                currentState.copy(
+                    errorMessage = uiStrings.get(R.string.error_xfeeder_proximity_reference_altitude_invalid)
+                )
+            }
+            return null
+        }
+        return resolveReferenceAltitude(
+            proximityReferenceAltitudeInput = state.proximityReferenceAltitudeInput,
+            technicalReferenceAltitudeMeters = state.technicalReferenceAltitudeMeters
+        )
+    }
+
+    private fun resolveReferenceAltitude(
+        proximityReferenceAltitudeInput: String,
+        technicalReferenceAltitudeMeters: Double?
+    ): ReferenceAltitudeResolution {
+        val operatorOverrideAltitude = parseOptionalAltitudeInput(proximityReferenceAltitudeInput)
+        val sourceState = XfeederGeospatialPolicy.resolveReferenceAltitudeSource(
+            technicalReferenceAltitudeMeters = technicalReferenceAltitudeMeters,
+            operatorOverrideAltitudeMeters = operatorOverrideAltitude
+        )
+        val effectiveAltitude = XfeederGeospatialPolicy.resolveEffectiveReferenceAltitudeMeters(
+            sourceState = sourceState,
+            technicalReferenceAltitudeMeters = technicalReferenceAltitudeMeters,
+            operatorOverrideAltitudeMeters = operatorOverrideAltitude
+        )
+        return ReferenceAltitudeResolution(
+            sourceState = sourceState,
+            effectiveAltitudeMeters = effectiveAltitude
+        )
+    }
+
+    private fun parseOptionalAltitudeInput(raw: String): Double? {
+        val trimmed = raw.trim()
+        if (trimmed.isBlank()) return null
+        return trimmed.toDoubleOrNull()
+    }
+
+    private fun formatOptionalAltitude(value: Double?): String {
+        return when {
+            value == null -> ""
+            value % 1.0 == 0.0 -> value.toInt().toString()
+            else -> value.toString()
+        }
+    }
+
     private fun buildClosureEvidence(state: XfeederGuidedSessionUiState): XfeederClosureEvidence {
         return XfeederClosureEvidence(
             relatedSectorCode = state.relatedSectorCodeInput.trim(),
@@ -741,11 +882,25 @@ class XfeederGuidedSessionViewModel @Inject constructor(
     private fun selectSessionById(sessionId: String) {
         mutableState.update { state ->
             val selected = state.sessionHistory.firstOrNull { it.id == sessionId } ?: return@update state
+            val nextReferenceInput = if (
+                selected.proximityReferenceAltitudeSource == XfeederReferenceAltitudeSourceState.OPERATOR_OVERRIDE
+            ) {
+                formatOptionalAltitude(selected.proximityReferenceAltitudeMeters)
+            } else {
+                ""
+            }
+            val altitudeResolution = resolveReferenceAltitude(
+                proximityReferenceAltitudeInput = nextReferenceInput,
+                technicalReferenceAltitudeMeters = state.technicalReferenceAltitudeMeters
+            )
             state.copy(
                 latestSessionId = sessionId,
                 session = selected,
                 measurementZoneRadiusMeters = selected.measurementZoneRadiusMeters,
                 measurementZoneExtensionReasonInput = selected.measurementZoneExtensionReason,
+                proximityReferenceAltitudeInput = nextReferenceInput,
+                effectiveReferenceAltitudeMeters = altitudeResolution.effectiveAltitudeMeters,
+                proximityReferenceAltitudeSource = altitudeResolution.sourceState,
                 proximityModeEnabled = selected.proximityModeEnabled,
                 selectedStatus = selected.status,
                 selectedOutcome = selected.sectorOutcome,
@@ -762,6 +917,11 @@ class XfeederGuidedSessionViewModel @Inject constructor(
         }
     }
 }
+
+private data class ReferenceAltitudeResolution(
+    val sourceState: XfeederReferenceAltitudeSourceState,
+    val effectiveAltitudeMeters: Double?
+)
 
 sealed interface XfeederGuidedSessionEvent {
     data class OpenDraft(val draftId: String) : XfeederGuidedSessionEvent

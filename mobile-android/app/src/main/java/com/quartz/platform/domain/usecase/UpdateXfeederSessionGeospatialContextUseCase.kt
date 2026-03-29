@@ -1,6 +1,7 @@
 package com.quartz.platform.domain.usecase
 
 import com.quartz.platform.domain.repository.XfeederGuidedSessionRepository
+import com.quartz.platform.domain.model.XfeederReferenceAltitudeSourceState
 import javax.inject.Inject
 
 class UpdateXfeederSessionGeospatialContextUseCase @Inject constructor(
@@ -10,13 +11,17 @@ class UpdateXfeederSessionGeospatialContextUseCase @Inject constructor(
         sessionId: String,
         measurementZoneRadiusMeters: Int,
         measurementZoneExtensionReason: String,
-        proximityModeEnabled: Boolean
+        proximityModeEnabled: Boolean,
+        proximityReferenceAltitudeMeters: Double?,
+        proximityReferenceAltitudeSource: XfeederReferenceAltitudeSourceState
     ) {
         repository.updateSessionGeospatialContext(
             sessionId = sessionId,
             measurementZoneRadiusMeters = measurementZoneRadiusMeters,
             measurementZoneExtensionReason = measurementZoneExtensionReason,
-            proximityModeEnabled = proximityModeEnabled
+            proximityModeEnabled = proximityModeEnabled,
+            proximityReferenceAltitudeMeters = proximityReferenceAltitudeMeters,
+            proximityReferenceAltitudeSource = proximityReferenceAltitudeSource
         )
     }
 }
