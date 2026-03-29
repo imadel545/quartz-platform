@@ -498,4 +498,46 @@ object DatabaseMigrations {
             )
         }
     }
+
+    val MIGRATION_13_14: Migration = object : Migration(13, 14) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                ALTER TABLE ret_sessions
+                ADD COLUMN measurementZoneRadiusMeters INTEGER NOT NULL DEFAULT 120
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                ALTER TABLE ret_sessions
+                ADD COLUMN measurementZoneExtensionReason TEXT NOT NULL DEFAULT ''
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                ALTER TABLE ret_sessions
+                ADD COLUMN proximityModeEnabled INTEGER NOT NULL DEFAULT 0
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                ALTER TABLE ret_sessions
+                ADD COLUMN proximityReferenceAltitudeMeters REAL
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                ALTER TABLE ret_sessions
+                ADD COLUMN proximityReferenceAltitudeSource TEXT NOT NULL DEFAULT 'UNAVAILABLE'
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                UPDATE ret_sessions
+                SET proximityReferenceAltitudeSource = 'OPERATOR_OVERRIDE'
+                WHERE proximityReferenceAltitudeMeters IS NOT NULL
+                """.trimIndent()
+            )
+        }
+    }
 }

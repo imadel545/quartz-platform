@@ -55,4 +55,26 @@ interface RetSessionDao {
         updatedAtEpochMillis: Long,
         completedAtEpochMillis: Long?
     )
+
+    @Query(
+        """
+        UPDATE ret_sessions
+        SET measurementZoneRadiusMeters = :measurementZoneRadiusMeters,
+            measurementZoneExtensionReason = :measurementZoneExtensionReason,
+            proximityModeEnabled = :proximityModeEnabled,
+            proximityReferenceAltitudeMeters = :proximityReferenceAltitudeMeters,
+            proximityReferenceAltitudeSource = :proximityReferenceAltitudeSource,
+            updatedAtEpochMillis = :updatedAtEpochMillis
+        WHERE id = :sessionId
+        """
+    )
+    suspend fun updateGeospatialContext(
+        sessionId: String,
+        measurementZoneRadiusMeters: Int,
+        measurementZoneExtensionReason: String,
+        proximityModeEnabled: Boolean,
+        proximityReferenceAltitudeMeters: Double?,
+        proximityReferenceAltitudeSource: String,
+        updatedAtEpochMillis: Long
+    )
 }

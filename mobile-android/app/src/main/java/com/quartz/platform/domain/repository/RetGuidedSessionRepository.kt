@@ -1,6 +1,7 @@
 package com.quartz.platform.domain.repository
 
 import com.quartz.platform.domain.model.RetGuidedSession
+import com.quartz.platform.domain.model.RetReferenceAltitudeSourceState
 import com.quartz.platform.domain.model.RetResultOutcome
 import com.quartz.platform.domain.model.RetSessionStatus
 import com.quartz.platform.domain.model.RetStepCode
@@ -23,5 +24,14 @@ interface RetGuidedSessionRepository {
         resultOutcome: RetResultOutcome,
         notes: String,
         resultSummary: String
+    )
+
+    suspend fun updateSessionGeospatialContext(
+        sessionId: String,
+        measurementZoneRadiusMeters: Int,
+        measurementZoneExtensionReason: String,
+        proximityModeEnabled: Boolean,
+        proximityReferenceAltitudeMeters: Double?,
+        proximityReferenceAltitudeSource: RetReferenceAltitudeSourceState
     )
 }

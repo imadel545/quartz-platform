@@ -1,13 +1,8 @@
 package com.quartz.platform.domain.model
 
 import com.quartz.platform.domain.model.workflow.WorkflowGeospatialPolicy
-import com.quartz.platform.domain.model.workflow.WorkflowProximityEligibilityState
-import com.quartz.platform.domain.model.workflow.WorkflowReferenceAltitudeSourceState
 
-typealias XfeederProximityEligibilityState = WorkflowProximityEligibilityState
-typealias XfeederReferenceAltitudeSourceState = WorkflowReferenceAltitudeSourceState
-
-object XfeederGeospatialPolicy {
+object RetGeospatialPolicy {
     const val DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS =
         WorkflowGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS
     const val MEASUREMENT_ZONE_EXTENSION_STEP_METERS =
@@ -32,7 +27,7 @@ object XfeederGeospatialPolicy {
         userAltitudeMeters: Double?,
         userVerticalAccuracyMeters: Float?,
         referenceAltitudeMeters: Double?
-    ): XfeederProximityEligibilityState {
+    ): RetProximityEligibilityState {
         return WorkflowGeospatialPolicy.evaluateProximityEligibility(
             distanceMeters = distanceMeters,
             userAltitudeMeters = userAltitudeMeters,
@@ -44,7 +39,7 @@ object XfeederGeospatialPolicy {
     fun resolveReferenceAltitudeSource(
         technicalReferenceAltitudeMeters: Double?,
         operatorOverrideAltitudeMeters: Double?
-    ): XfeederReferenceAltitudeSourceState {
+    ): RetReferenceAltitudeSourceState {
         return WorkflowGeospatialPolicy.resolveReferenceAltitudeSource(
             technicalReferenceAltitudeMeters = technicalReferenceAltitudeMeters,
             operatorOverrideAltitudeMeters = operatorOverrideAltitudeMeters
@@ -52,7 +47,7 @@ object XfeederGeospatialPolicy {
     }
 
     fun resolveEffectiveReferenceAltitudeMeters(
-        sourceState: XfeederReferenceAltitudeSourceState,
+        sourceState: RetReferenceAltitudeSourceState,
         technicalReferenceAltitudeMeters: Double?,
         operatorOverrideAltitudeMeters: Double?
     ): Double? {

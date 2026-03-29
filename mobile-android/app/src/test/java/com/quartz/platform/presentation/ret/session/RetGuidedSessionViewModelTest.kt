@@ -6,22 +6,30 @@ import com.quartz.platform.MainDispatcherRule
 import com.quartz.platform.TestUiStrings
 import com.quartz.platform.domain.model.ReportDraft
 import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
+import com.quartz.platform.domain.model.RetGeospatialPolicy
 import com.quartz.platform.domain.model.RetGuidedSession
 import com.quartz.platform.domain.model.RetGuidedStep
+import com.quartz.platform.domain.model.RetProximityEligibilityState
+import com.quartz.platform.domain.model.RetReferenceAltitudeSourceState
 import com.quartz.platform.domain.model.RetResultOutcome
 import com.quartz.platform.domain.model.RetSessionStatus
 import com.quartz.platform.domain.model.RetStepCode
 import com.quartz.platform.domain.model.RetStepStatus
+import com.quartz.platform.domain.model.SiteAntenna
 import com.quartz.platform.domain.model.SiteDetail
 import com.quartz.platform.domain.model.SiteSector
 import com.quartz.platform.domain.model.SiteSummary
+import com.quartz.platform.domain.model.UserLocation
+import com.quartz.platform.domain.repository.LocationRepository
 import com.quartz.platform.domain.repository.ReportDraftRepository
 import com.quartz.platform.domain.repository.RetGuidedSessionRepository
 import com.quartz.platform.domain.repository.SiteRepository
 import com.quartz.platform.domain.usecase.CreateSectorRetSessionUseCase
+import com.quartz.platform.domain.usecase.GetLastKnownUserLocationUseCase
 import com.quartz.platform.domain.usecase.OpenOrCreateGuidedSessionReportDraftUseCase
 import com.quartz.platform.domain.usecase.ObserveSectorRetSessionHistoryUseCase
 import com.quartz.platform.domain.usecase.ObserveSiteDetailUseCase
+import com.quartz.platform.domain.usecase.UpdateRetSessionGeospatialContextUseCase
 import com.quartz.platform.domain.usecase.UpdateRetSessionSummaryUseCase
 import com.quartz.platform.domain.usecase.UpdateRetStepStatusUseCase
 import com.quartz.platform.presentation.navigation.QuartzDestination
@@ -58,6 +66,43 @@ class RetGuidedSessionViewModelTest {
         assertThat(state.session!!.steps).hasSize(3)
         assertThat(state.sessionHistory).hasSize(1)
         assertThat(state.session!!.status).isEqualTo(RetSessionStatus.CREATED)
+    }
+
+    @Test
+    fun proximity_requires_reference_altitude_before_enabling() = runTest {
+        val siteRepository = FakeSiteRepository(sampleSiteDetail(withTechnicalReferenceAltitude = false))
+        val retRepository = FakeRetRepository()
+        val viewModel = buildViewModel(siteRepository, retRepository)
+
+        advanceUntilIdle()
+        viewModel.onCreateSessionClicked()
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.proximityEligibilityState)
+            .isEqualTo(RetProximityEligibilityState.SUPPORTED)
+
+        viewModel.onToggleProximityModeClicked(true)
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.session?.proximityModeEnabled).isFalse()
+        assertThat(viewModel.uiState.value.errorMessage).contains("altitude antenne")
+    }
+
+    @Test
+    fun technical_reference_altitude_is_applied_by_default_for_ret() = runTest {
+        val siteRepository = FakeSiteRepository(sampleSiteDetail(withTechnicalReferenceAltitude = true))
+        val retRepository = FakeRetRepository()
+        val viewModel = buildViewModel(siteRepository, retRepository)
+
+        advanceUntilIdle()
+        viewModel.onCreateSessionClicked()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertThat(state.technicalReferenceAltitudeMeters).isEqualTo(118.0)
+        assertThat(state.effectiveReferenceAltitudeMeters).isEqualTo(118.0)
+        assertThat(state.proximityReferenceAltitudeSource)
+            .isEqualTo(RetReferenceAltitudeSourceState.TECHNICAL_DEFAULT)
     }
 
     @Test
@@ -171,7 +216,8 @@ class RetGuidedSessionViewModelTest {
     private fun buildViewModel(
         siteRepository: FakeSiteRepository,
         retRepository: FakeRetRepository,
-        reportDraftRepository: FakeReportDraftRepository = FakeReportDraftRepository()
+        reportDraftRepository: FakeReportDraftRepository = FakeReportDraftRepository(),
+        locationRepository: FakeLocationRepository = FakeLocationRepository()
     ): RetGuidedSessionViewModel {
         return RetGuidedSessionViewModel(
             savedStateHandle = SavedStateHandle(
@@ -183,7 +229,11 @@ class RetGuidedSessionViewModelTest {
             observeSiteDetailUseCase = ObserveSiteDetailUseCase(siteRepository),
             observeSectorRetSessionHistoryUseCase = ObserveSectorRetSessionHistoryUseCase(retRepository),
             createSectorRetSessionUseCase = CreateSectorRetSessionUseCase(retRepository),
+            getLastKnownUserLocationUseCase = GetLastKnownUserLocationUseCase(locationRepository),
             updateRetStepStatusUseCase = UpdateRetStepStatusUseCase(retRepository),
+            updateRetSessionGeospatialContextUseCase = UpdateRetSessionGeospatialContextUseCase(
+                retRepository
+            ),
             updateRetSessionSummaryUseCase = UpdateRetSessionSummaryUseCase(retRepository),
             openOrCreateGuidedSessionReportDraftUseCase = OpenOrCreateGuidedSessionReportDraftUseCase(
                 reportDraftRepository
@@ -208,6 +258,18 @@ class RetGuidedSessionViewModelTest {
         }
     }
 
+    private class FakeLocationRepository : LocationRepository {
+        override suspend fun getLastKnownLocation(): UserLocation? {
+            return UserLocation(
+                latitude = 33.5901,
+                longitude = -7.6038,
+                capturedAtEpochMillis = 1L,
+                altitudeMeters = 120.0,
+                verticalAccuracyMeters = 4f
+            )
+        }
+    }
+
     private class FakeRetRepository : RetGuidedSessionRepository {
         private val historyBySector = mutableMapOf<String, MutableStateFlow<List<RetGuidedSession>>>()
         private var sequence = 0L
@@ -227,6 +289,11 @@ class RetGuidedSessionViewModelTest {
                 siteId = siteId,
                 sectorId = sectorId,
                 sectorCode = sectorCode,
+                measurementZoneRadiusMeters = RetGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
+                measurementZoneExtensionReason = "",
+                proximityModeEnabled = false,
+                proximityReferenceAltitudeMeters = null,
+                proximityReferenceAltitudeSource = RetReferenceAltitudeSourceState.UNAVAILABLE,
                 status = RetSessionStatus.CREATED,
                 resultOutcome = RetResultOutcome.NOT_RUN,
                 notes = "",
@@ -281,6 +348,26 @@ class RetGuidedSessionViewModelTest {
                     } else {
                         null
                     }
+                )
+            }
+        }
+
+        override suspend fun updateSessionGeospatialContext(
+            sessionId: String,
+            measurementZoneRadiusMeters: Int,
+            measurementZoneExtensionReason: String,
+            proximityModeEnabled: Boolean,
+            proximityReferenceAltitudeMeters: Double?,
+            proximityReferenceAltitudeSource: RetReferenceAltitudeSourceState
+        ) {
+            mutateSession(sessionId) { session ->
+                session.copy(
+                    measurementZoneRadiusMeters = measurementZoneRadiusMeters,
+                    measurementZoneExtensionReason = measurementZoneExtensionReason,
+                    proximityModeEnabled = proximityModeEnabled,
+                    proximityReferenceAltitudeMeters = proximityReferenceAltitudeMeters,
+                    proximityReferenceAltitudeSource = proximityReferenceAltitudeSource,
+                    updatedAtEpochMillis = session.updatedAtEpochMillis + 1
                 )
             }
         }
@@ -409,7 +496,24 @@ class RetGuidedSessionViewModelTest {
         }
     }
 
-    private fun sampleSiteDetail(): SiteDetail {
+    private fun sampleSiteDetail(withTechnicalReferenceAltitude: Boolean = true): SiteDetail {
+        val antennas = if (withTechnicalReferenceAltitude) {
+            listOf(
+                SiteAntenna(
+                    id = "ant-1",
+                    sectorId = "site-1-sector-S0",
+                    reference = "RET-A1",
+                    referenceAltitudeMeters = 118.0,
+                    installedState = "INSTALLED",
+                    forecastState = null,
+                    tiltConfiguredDegrees = null,
+                    tiltObservedDegrees = null,
+                    documentationRef = null
+                )
+            )
+        } else {
+            emptyList()
+        }
         return SiteDetail(
             id = "site-1",
             externalCode = "QZ-001",
@@ -428,7 +532,8 @@ class RetGuidedSessionViewModelTest {
                     code = "S0",
                     azimuthDegrees = 30,
                     status = "ACTIVE",
-                    hasConnectedCell = true
+                    hasConnectedCell = true,
+                    antennas = antennas
                 )
             )
         )

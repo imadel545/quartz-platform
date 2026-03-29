@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,15 +24,19 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
 import com.quartz.platform.domain.model.RetGuidedSession
+import com.quartz.platform.domain.model.RetProximityEligibilityState
+import com.quartz.platform.domain.model.RetReferenceAltitudeSourceState
 import com.quartz.platform.domain.model.RetResultOutcome
 import com.quartz.platform.domain.model.RetSessionStatus
 import com.quartz.platform.domain.model.RetStepCode
 import com.quartz.platform.domain.model.RetStepStatus
+import androidx.compose.foundation.text.KeyboardOptions
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -60,6 +65,12 @@ fun RetGuidedSessionRoute(
         onResumeLatestClicked = viewModel::onResumeLatestClicked,
         onSelectHistorySessionClicked = viewModel::onSelectHistorySessionClicked,
         onStepStatusSelected = viewModel::onStepStatusSelected,
+        onMeasurementZoneExtensionReasonChanged = viewModel::onMeasurementZoneExtensionReasonChanged,
+        onProximityReferenceAltitudeChanged = viewModel::onProximityReferenceAltitudeChanged,
+        onExtendMeasurementZoneClicked = viewModel::onExtendMeasurementZoneClicked,
+        onResetMeasurementZoneClicked = viewModel::onResetMeasurementZoneClicked,
+        onToggleProximityModeClicked = viewModel::onToggleProximityModeClicked,
+        onRefreshUserLocationClicked = viewModel::onRefreshUserLocationClicked,
         onSessionStatusSelected = viewModel::onSessionStatusSelected,
         onResultOutcomeSelected = viewModel::onResultOutcomeSelected,
         onNotesChanged = viewModel::onNotesChanged,
@@ -78,6 +89,12 @@ fun RetGuidedSessionScreen(
     onResumeLatestClicked: () -> Unit,
     onSelectHistorySessionClicked: (String) -> Unit,
     onStepStatusSelected: (RetStepCode, RetStepStatus) -> Unit,
+    onMeasurementZoneExtensionReasonChanged: (String) -> Unit,
+    onProximityReferenceAltitudeChanged: (String) -> Unit,
+    onExtendMeasurementZoneClicked: () -> Unit,
+    onResetMeasurementZoneClicked: () -> Unit,
+    onToggleProximityModeClicked: (Boolean) -> Unit,
+    onRefreshUserLocationClicked: () -> Unit,
     onSessionStatusSelected: (RetSessionStatus) -> Unit,
     onResultOutcomeSelected: (RetResultOutcome) -> Unit,
     onNotesChanged: (String) -> Unit,
@@ -166,6 +183,18 @@ fun RetGuidedSessionScreen(
                                 session = historyItem,
                                 isSelected = historyItem.id == state.session.id,
                                 onSelectHistorySessionClicked = onSelectHistorySessionClicked
+                            )
+                        }
+
+                        item {
+                            RetGeospatialSessionSurfaceCard(
+                                state = state,
+                                onMeasurementZoneExtensionReasonChanged = onMeasurementZoneExtensionReasonChanged,
+                                onProximityReferenceAltitudeChanged = onProximityReferenceAltitudeChanged,
+                                onExtendMeasurementZoneClicked = onExtendMeasurementZoneClicked,
+                                onResetMeasurementZoneClicked = onResetMeasurementZoneClicked,
+                                onToggleProximityModeClicked = onToggleProximityModeClicked,
+                                onRefreshUserLocationClicked = onRefreshUserLocationClicked
                             )
                         }
 
@@ -288,6 +317,177 @@ fun RetGuidedSessionScreen(
                             Text(stringResource(R.string.action_back_to_site))
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RetGeospatialSessionSurfaceCard(
+    state: RetGuidedSessionUiState,
+    onMeasurementZoneExtensionReasonChanged: (String) -> Unit,
+    onProximityReferenceAltitudeChanged: (String) -> Unit,
+    onExtendMeasurementZoneClicked: () -> Unit,
+    onResetMeasurementZoneClicked: () -> Unit,
+    onToggleProximityModeClicked: (Boolean) -> Unit,
+    onRefreshUserLocationClicked: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.ret_header_geospatial),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.ret_label_zone_radius,
+                    state.measurementZoneRadiusMeters
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.ret_label_distance_to_zone,
+                    state.distanceToMeasurementZoneMeters?.toString()
+                        ?: stringResource(R.string.value_not_available)
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.ret_label_inside_zone,
+                    when (state.isInsideMeasurementZone) {
+                        true -> stringResource(R.string.value_yes)
+                        false -> stringResource(R.string.value_no)
+                        null -> stringResource(R.string.value_not_available)
+                    }
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.ret_label_proximity_eligibility,
+                    when (state.proximityEligibilityState) {
+                        RetProximityEligibilityState.ELIGIBLE ->
+                            stringResource(R.string.ret_value_proximity_eligible)
+                        RetProximityEligibilityState.INELIGIBLE ->
+                            stringResource(R.string.ret_value_proximity_ineligible)
+                        RetProximityEligibilityState.SUPPORTED ->
+                            stringResource(R.string.ret_value_proximity_supported)
+                        RetProximityEligibilityState.UNAVAILABLE ->
+                            stringResource(R.string.ret_value_proximity_unavailable)
+                    }
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.ret_label_user_altitude,
+                    state.userAltitudeMeters?.let { String.format("%.1f", it) }
+                        ?: stringResource(R.string.value_not_available)
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.ret_label_effective_reference_altitude,
+                    state.effectiveReferenceAltitudeMeters?.let { String.format("%.1f", it) }
+                        ?: stringResource(R.string.value_not_available)
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.ret_label_technical_reference_altitude,
+                    state.technicalReferenceAltitudeMeters?.let { String.format("%.1f", it) }
+                        ?: stringResource(R.string.value_not_available)
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.ret_label_reference_altitude_source,
+                    when (state.proximityReferenceAltitudeSource) {
+                        RetReferenceAltitudeSourceState.TECHNICAL_DEFAULT ->
+                            stringResource(R.string.ret_value_reference_altitude_source_technical_default)
+                        RetReferenceAltitudeSourceState.OPERATOR_OVERRIDE ->
+                            stringResource(R.string.ret_value_reference_altitude_source_operator_override)
+                        RetReferenceAltitudeSourceState.UNAVAILABLE ->
+                            stringResource(R.string.ret_value_reference_altitude_source_unavailable)
+                    }
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = when (state.proximityEligibilityState) {
+                    RetProximityEligibilityState.ELIGIBLE ->
+                        stringResource(R.string.ret_helper_proximity_eligible)
+                    RetProximityEligibilityState.INELIGIBLE ->
+                        stringResource(R.string.ret_helper_proximity_ineligible)
+                    RetProximityEligibilityState.SUPPORTED ->
+                        stringResource(R.string.ret_helper_proximity_supported)
+                    RetProximityEligibilityState.UNAVAILABLE ->
+                        stringResource(R.string.ret_helper_proximity_unavailable)
+                },
+                style = MaterialTheme.typography.bodySmall
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = state.measurementZoneExtensionReasonInput,
+                onValueChange = onMeasurementZoneExtensionReasonChanged,
+                label = { Text(stringResource(R.string.ret_input_zone_extension_reason)) },
+                supportingText = { Text(stringResource(R.string.ret_hint_zone_extension_reason)) }
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = state.proximityReferenceAltitudeInput,
+                onValueChange = onProximityReferenceAltitudeChanged,
+                label = { Text(stringResource(R.string.ret_input_reference_altitude_override)) },
+                supportingText = { Text(stringResource(R.string.ret_hint_reference_altitude_override)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    modifier = Modifier.weight(1f),
+                    onClick = onExtendMeasurementZoneClicked
+                ) {
+                    Text(stringResource(R.string.ret_action_extend_zone))
+                }
+                Button(
+                    modifier = Modifier.weight(1f),
+                    onClick = onResetMeasurementZoneClicked
+                ) {
+                    Text(stringResource(R.string.ret_action_reset_zone))
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    modifier = Modifier.weight(1f),
+                    onClick = { onToggleProximityModeClicked(!state.proximityModeEnabled) }
+                ) {
+                    Text(
+                        if (state.proximityModeEnabled) {
+                            stringResource(R.string.ret_action_disable_proximity)
+                        } else {
+                            stringResource(R.string.ret_action_enable_proximity)
+                        }
+                    )
+                }
+                Button(
+                    modifier = Modifier.weight(1f),
+                    onClick = onRefreshUserLocationClicked
+                ) {
+                    Text(stringResource(R.string.ret_action_refresh_position))
                 }
             }
         }

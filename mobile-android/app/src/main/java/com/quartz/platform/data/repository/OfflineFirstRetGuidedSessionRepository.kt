@@ -9,10 +9,12 @@ import com.quartz.platform.data.local.mapper.toDomain
 import com.quartz.platform.data.local.mapper.toEntity
 import com.quartz.platform.domain.model.RetGuidedSession
 import com.quartz.platform.domain.model.RetGuidedStep
+import com.quartz.platform.domain.model.RetReferenceAltitudeSourceState
 import com.quartz.platform.domain.model.RetResultOutcome
 import com.quartz.platform.domain.model.RetSessionStatus
 import com.quartz.platform.domain.model.RetStepCode
 import com.quartz.platform.domain.model.RetStepStatus
+import com.quartz.platform.domain.model.workflow.WorkflowGeospatialPolicy
 import com.quartz.platform.domain.model.workflow.WorkflowCompletionGuard
 import com.quartz.platform.domain.repository.RetGuidedSessionRepository
 import java.util.UUID
@@ -63,6 +65,11 @@ class OfflineFirstRetGuidedSessionRepository @Inject constructor(
             siteId = siteId,
             sectorId = sectorId,
             sectorCode = sectorCode,
+            measurementZoneRadiusMeters = WorkflowGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
+            measurementZoneExtensionReason = "",
+            proximityModeEnabled = false,
+            proximityReferenceAltitudeMeters = null,
+            proximityReferenceAltitudeSource = RetReferenceAltitudeSourceState.UNAVAILABLE,
             status = RetSessionStatus.CREATED,
             resultOutcome = RetResultOutcome.NOT_RUN,
             notes = "",
@@ -141,6 +148,27 @@ class OfflineFirstRetGuidedSessionRepository @Inject constructor(
             resultSummary = resultSummary.trim(),
             updatedAtEpochMillis = now,
             completedAtEpochMillis = if (status == RetSessionStatus.COMPLETED) now else null
+        )
+    }
+
+    override suspend fun updateSessionGeospatialContext(
+        sessionId: String,
+        measurementZoneRadiusMeters: Int,
+        measurementZoneExtensionReason: String,
+        proximityModeEnabled: Boolean,
+        proximityReferenceAltitudeMeters: Double?,
+        proximityReferenceAltitudeSource: RetReferenceAltitudeSourceState
+    ) {
+        sessionDao.updateGeospatialContext(
+            sessionId = sessionId,
+            measurementZoneRadiusMeters = WorkflowGeospatialPolicy.clampMeasurementZoneRadius(
+                measurementZoneRadiusMeters
+            ),
+            measurementZoneExtensionReason = measurementZoneExtensionReason.trim(),
+            proximityModeEnabled = proximityModeEnabled,
+            proximityReferenceAltitudeMeters = proximityReferenceAltitudeMeters,
+            proximityReferenceAltitudeSource = proximityReferenceAltitudeSource.name,
+            updatedAtEpochMillis = System.currentTimeMillis()
         )
     }
 

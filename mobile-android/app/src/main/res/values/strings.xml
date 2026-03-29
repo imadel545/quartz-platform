@@ -88,6 +88,8 @@
     <string name="label_sync_state">État sync: %1$s</string>
     <string name="label_user_position_marker">Position utilisateur</string>
     <string name="value_not_available">N/A</string>
+    <string name="value_yes">Oui</string>
+    <string name="value_no">Non</string>
 
     <string name="input_label_report_title">Titre</string>
     <string name="input_label_report_observation">Observation terrain</string>
@@ -208,6 +210,26 @@
     <string name="ret_label_status_update">Mettre à jour le statut session RET</string>
     <string name="ret_label_result_outcome">Résultat RET: %1$s</string>
     <string name="ret_label_step_status">Statut étape: %1$s</string>
+    <string name="ret_header_geospatial">Surface géospatiale RET</string>
+    <string name="ret_label_zone_radius">Rayon zone de mesure: %1$d m</string>
+    <string name="ret_label_distance_to_zone">Distance à la zone: %1$s m</string>
+    <string name="ret_label_inside_zone">Dans la zone: %1$s</string>
+    <string name="ret_label_proximity_eligibility">Mode proximité RET: %1$s</string>
+    <string name="ret_value_proximity_eligible">Éligible</string>
+    <string name="ret_value_proximity_ineligible">Non éligible</string>
+    <string name="ret_value_proximity_supported">Supporté (altitude à renseigner)</string>
+    <string name="ret_value_proximity_unavailable">Indisponible</string>
+    <string name="ret_label_user_altitude">Altitude utilisateur: %1$s m</string>
+    <string name="ret_label_effective_reference_altitude">Altitude de référence effective: %1$s m</string>
+    <string name="ret_label_technical_reference_altitude">Altitude technique (lecture seule): %1$s m</string>
+    <string name="ret_label_reference_altitude_source">Source altitude référence: %1$s</string>
+    <string name="ret_value_reference_altitude_source_technical_default">Source technique locale</string>
+    <string name="ret_value_reference_altitude_source_operator_override">Override opérateur</string>
+    <string name="ret_value_reference_altitude_source_unavailable">Source technique indisponible</string>
+    <string name="ret_helper_proximity_eligible">Conditions RET validées: distance et altitude conformes.</string>
+    <string name="ret_helper_proximity_ineligible">Conditions RET non validées: rapprochez-vous de la zone et vérifiez l’altitude.</string>
+    <string name="ret_helper_proximity_supported">Altitude device disponible. Utilisez la source technique locale ou renseignez un override opérateur.</string>
+    <string name="ret_helper_proximity_unavailable">Altitude indisponible ou imprécise. Impossible de valider la proximité automatiquement.</string>
     <string name="ret_label_required_step">Étape obligatoire</string>
     <string name="ret_label_optional_step">Étape optionnelle</string>
     <string name="ret_header_checklist">Checklist guidée RET</string>
@@ -247,6 +269,15 @@
     <string name="ret_step_instruction_restore">Restaurer l\'état prévu puis consigner le résultat final local.</string>
     <string name="ret_input_notes">Notes terrain RET</string>
     <string name="ret_input_result_summary">Résumé résultat RET</string>
+    <string name="ret_input_zone_extension_reason">Motif extension zone RET</string>
+    <string name="ret_hint_zone_extension_reason">Exemple: zone cible inaccessible, obstacle terrain, sécurité.</string>
+    <string name="ret_input_reference_altitude_override">Override altitude antenne RET (m)</string>
+    <string name="ret_hint_reference_altitude_override">Optionnel. Laisser vide pour utiliser l’altitude technique locale quand disponible.</string>
+    <string name="ret_action_extend_zone">Étendre la zone (+30m)</string>
+    <string name="ret_action_reset_zone">Réinitialiser la zone</string>
+    <string name="ret_action_enable_proximity">Activer mode proximité RET</string>
+    <string name="ret_action_disable_proximity">Désactiver mode proximité RET</string>
+    <string name="ret_action_refresh_position">Actualiser la position</string>
 
     <string name="message_draft_not_found_in_cache">Brouillon introuvable dans le cache local.</string>
     <string name="message_unsaved_local_changes">Modifications locales non enregistrées</string>
@@ -295,6 +326,12 @@
     <string name="info_ret_session_created">Session RET locale créée.</string>
     <string name="info_ret_summary_saved">Session RET enregistrée localement.</string>
     <string name="info_ret_opened_linked_draft">Brouillon déjà lié à cette session RET: ouverture du brouillon existant.</string>
+    <string name="info_ret_zone_extension_saved">Contexte géospatial RET mis à jour.</string>
+    <string name="info_ret_zone_extension_reset">Zone RET réinitialisée au rayon par défaut.</string>
+    <string name="info_ret_proximity_enabled">Mode proximité RET activé pour cette session locale.</string>
+    <string name="info_ret_proximity_disabled">Mode proximité RET désactivé pour cette session locale.</string>
+    <string name="info_ret_zone_extension_max_reached">Rayon maximum RET atteint (300m).</string>
+    <string name="info_ret_user_location_unavailable">Position utilisateur indisponible pour la session RET.</string>
 
     <string name="error_load_demo_snapshot">Impossible de charger le snapshot de démo.</string>
     <string name="error_load_cached_sites">Impossible de charger les sites en cache.</string>
@@ -333,7 +370,14 @@
     <string name="error_ret_sector_not_found">Secteur introuvable dans le snapshot technique local pour RET.</string>
     <string name="error_ret_create_session">Impossible de créer la session RET locale.</string>
     <string name="error_ret_update_step">Impossible de mettre à jour l’étape RET.</string>
+    <string name="error_ret_update_geospatial_context">Impossible d’enregistrer le contexte géospatial RET.</string>
     <string name="error_ret_save_summary">Impossible d’enregistrer le résumé RET.</string>
     <string name="error_ret_create_report_draft">Impossible de créer le brouillon rapport depuis la session RET.</string>
+    <string name="error_ret_zone_extension_reason_required">Renseignez un motif avant d’étendre la zone RET.</string>
+    <string name="error_ret_zone_extension_requires_proximity_off">Désactivez le mode proximité RET avant d’étendre la zone.</string>
+    <string name="error_ret_proximity_not_eligible">Mode proximité RET non activable: rapprochez-vous de la zone cible (≤ 70m).</string>
+    <string name="error_ret_proximity_altitude_unavailable">Mode proximité RET non activable: altitude indisponible ou imprécise.</string>
+    <string name="error_ret_proximity_requires_reference_altitude">Mode proximité RET non activable: renseignez l’altitude antenne de référence.</string>
+    <string name="error_ret_proximity_reference_altitude_invalid">Altitude antenne RET invalide: utilisez une valeur numérique (mètres).</string>
     <string name="error_ret_complete_requires_required_steps">Impossible de clôturer la session RET: terminez toutes les étapes obligatoires.</string>
 </resources>

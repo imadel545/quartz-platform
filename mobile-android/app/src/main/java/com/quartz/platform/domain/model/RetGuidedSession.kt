@@ -2,6 +2,9 @@ package com.quartz.platform.domain.model
 
 import com.quartz.platform.domain.model.workflow.WorkflowClosureSummary
 import com.quartz.platform.domain.model.workflow.WorkflowCompletionGuard
+import com.quartz.platform.domain.model.workflow.WorkflowGeospatialPolicy
+import com.quartz.platform.domain.model.workflow.WorkflowProximityEligibilityState
+import com.quartz.platform.domain.model.workflow.WorkflowReferenceAltitudeSourceState
 import com.quartz.platform.domain.model.workflow.WorkflowSessionIdentity
 import com.quartz.platform.domain.model.workflow.WorkflowSessionStatus
 import com.quartz.platform.domain.model.workflow.WorkflowStepState
@@ -12,6 +15,12 @@ data class RetGuidedSession(
     val siteId: String,
     val sectorId: String,
     val sectorCode: String,
+    val measurementZoneRadiusMeters: Int = WorkflowGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
+    val measurementZoneExtensionReason: String = "",
+    val proximityModeEnabled: Boolean = false,
+    val proximityReferenceAltitudeMeters: Double? = null,
+    val proximityReferenceAltitudeSource: RetReferenceAltitudeSourceState =
+        RetReferenceAltitudeSourceState.UNAVAILABLE,
     val status: RetSessionStatus,
     val resultOutcome: RetResultOutcome,
     val notes: String,
@@ -42,6 +51,8 @@ data class RetGuidedSession(
 typealias RetSessionStatus = WorkflowSessionStatus
 typealias RetStepStatus = WorkflowStepStatus
 typealias RetGuidedStep = WorkflowStepState<RetStepCode>
+typealias RetProximityEligibilityState = WorkflowProximityEligibilityState
+typealias RetReferenceAltitudeSourceState = WorkflowReferenceAltitudeSourceState
 
 enum class RetResultOutcome {
     NOT_RUN,

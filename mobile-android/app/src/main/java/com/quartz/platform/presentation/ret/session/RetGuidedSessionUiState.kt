@@ -1,8 +1,13 @@
 package com.quartz.platform.presentation.ret.session
 
+import com.quartz.platform.domain.model.GeoCoordinate
+import com.quartz.platform.domain.model.RetProximityEligibilityState
+import com.quartz.platform.domain.model.RetReferenceAltitudeSourceState
 import com.quartz.platform.domain.model.RetGuidedSession
+import com.quartz.platform.domain.model.RetGeospatialPolicy
 import com.quartz.platform.domain.model.RetResultOutcome
 import com.quartz.platform.domain.model.RetSessionStatus
+import com.quartz.platform.domain.model.UserLocation
 
 data class RetGuidedSessionUiState(
     val isLoading: Boolean = true,
@@ -15,6 +20,22 @@ data class RetGuidedSessionUiState(
     val latestSessionId: String? = null,
     val selectedStatus: RetSessionStatus = RetSessionStatus.CREATED,
     val selectedOutcome: RetResultOutcome = RetResultOutcome.NOT_RUN,
+    val siteCoordinate: GeoCoordinate? = null,
+    val measurementZoneCoordinate: GeoCoordinate? = null,
+    val measurementZoneRadiusMeters: Int = RetGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
+    val measurementZoneExtensionReasonInput: String = "",
+    val proximityReferenceAltitudeInput: String = "",
+    val technicalReferenceAltitudeMeters: Double? = null,
+    val effectiveReferenceAltitudeMeters: Double? = null,
+    val proximityReferenceAltitudeSource: RetReferenceAltitudeSourceState =
+        RetReferenceAltitudeSourceState.UNAVAILABLE,
+    val proximityModeEnabled: Boolean = false,
+    val userLocation: UserLocation? = null,
+    val userAltitudeMeters: Double? = null,
+    val userAltitudeVerticalAccuracyMeters: Float? = null,
+    val distanceToMeasurementZoneMeters: Int? = null,
+    val isInsideMeasurementZone: Boolean? = null,
+    val proximityEligibilityState: RetProximityEligibilityState = RetProximityEligibilityState.UNAVAILABLE,
     val notesInput: String = "",
     val resultSummaryInput: String = "",
     val completionGuardMessage: String? = null,

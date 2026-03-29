@@ -439,6 +439,68 @@ class QuartzDatabaseMigrationTest {
 
         migrated.close()
     }
+
+    @Test
+    fun migration_13_14_adds_ret_geospatial_columns_with_safe_defaults() {
+        val dbName = "quartz-migration-13-14-test"
+
+        migrationTestHelper.createDatabase(dbName, 13).apply {
+            insertRetSession(
+                id = "ret-session-geo-1",
+                siteId = "site-1",
+                sectorId = "sector-a"
+            )
+            close()
+        }
+
+        val migrated = migrationTestHelper.runMigrationsAndValidate(
+            dbName,
+            14,
+            true,
+            DatabaseMigrations.MIGRATION_13_14
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM pragma_table_info('ret_sessions')
+                WHERE name = 'measurementZoneRadiusMeters'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM pragma_table_info('ret_sessions')
+                WHERE name = 'proximityReferenceAltitudeSource'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            120L,
+            migrated.longQuery(
+                """
+                SELECT measurementZoneRadiusMeters
+                FROM ret_sessions
+                WHERE id = 'ret-session-geo-1'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            "UNAVAILABLE",
+            migrated.stringQuery(
+                """
+                SELECT proximityReferenceAltitudeSource
+                FROM ret_sessions
+                WHERE id = 'ret-session-geo-1'
+                """.trimIndent()
+            )
+        )
+
+        migrated.close()
+    }
 }
 
 private fun SupportSQLiteDatabase.insertDraft(

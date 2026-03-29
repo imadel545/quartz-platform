@@ -4,6 +4,7 @@ import com.quartz.platform.data.local.entity.RetSessionEntity
 import com.quartz.platform.data.local.entity.RetStepEntity
 import com.quartz.platform.domain.model.RetGuidedSession
 import com.quartz.platform.domain.model.RetGuidedStep
+import com.quartz.platform.domain.model.RetReferenceAltitudeSourceState
 import com.quartz.platform.domain.model.RetResultOutcome
 import com.quartz.platform.domain.model.RetSessionStatus
 import com.quartz.platform.domain.model.RetStepCode
@@ -15,6 +16,13 @@ fun RetSessionEntity.toDomain(steps: List<RetStepEntity>): RetGuidedSession {
         siteId = siteId,
         sectorId = sectorId,
         sectorCode = sectorCode,
+        measurementZoneRadiusMeters = measurementZoneRadiusMeters,
+        measurementZoneExtensionReason = measurementZoneExtensionReason,
+        proximityModeEnabled = proximityModeEnabled,
+        proximityReferenceAltitudeMeters = proximityReferenceAltitudeMeters,
+        proximityReferenceAltitudeSource = runCatching {
+            RetReferenceAltitudeSourceState.valueOf(proximityReferenceAltitudeSource)
+        }.getOrDefault(RetReferenceAltitudeSourceState.UNAVAILABLE),
         status = RetSessionStatus.valueOf(status),
         resultOutcome = RetResultOutcome.valueOf(resultOutcome),
         notes = notes,
@@ -38,6 +46,11 @@ fun RetGuidedSession.toEntity(): RetSessionEntity {
         siteId = siteId,
         sectorId = sectorId,
         sectorCode = sectorCode,
+        measurementZoneRadiusMeters = measurementZoneRadiusMeters,
+        measurementZoneExtensionReason = measurementZoneExtensionReason,
+        proximityModeEnabled = proximityModeEnabled,
+        proximityReferenceAltitudeMeters = proximityReferenceAltitudeMeters,
+        proximityReferenceAltitudeSource = proximityReferenceAltitudeSource.name,
         status = status.name,
         resultOutcome = resultOutcome.name,
         notes = notes,
