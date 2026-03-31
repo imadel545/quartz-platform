@@ -29,6 +29,7 @@ import com.quartz.platform.R
 import com.quartz.platform.data.remote.simulation.SyncSimulationMode
 import com.quartz.platform.domain.model.QosExecutionEventType
 import com.quartz.platform.domain.model.QosExecutionEngineState
+import com.quartz.platform.domain.model.QosRecoveryState
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosReportClosureProjection
 import com.quartz.platform.domain.model.QosTestFamily
@@ -40,6 +41,7 @@ import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.ReportSyncTrace
 import com.quartz.platform.domain.model.XfeederSectorOutcome
 import com.quartz.platform.domain.model.XfeederUnreliableReason
+import com.quartz.platform.domain.model.qosExecutionEventSortOrder
 import com.quartz.platform.presentation.performance.session.performanceSessionStatusLabelRes
 import com.quartz.platform.presentation.performance.session.performanceWorkflowTypeLabelRes
 import com.quartz.platform.presentation.ret.session.retResultOutcomeLabelRes
@@ -623,12 +625,31 @@ private fun QosClosureProjectionContent(
         ),
         style = MaterialTheme.typography.bodySmall
     )
+    if (projection.recoveryState != QosRecoveryState.NONE) {
+        Text(
+            text = stringResource(
+                R.string.report_closure_performance_qos_recovery_state,
+                stringResource(qosRecoveryStateLabelRes(projection.recoveryState))
+            ),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
     projection.activeFamily?.let { activeFamily ->
         Text(
             text = stringResource(
                 R.string.report_closure_performance_qos_active_run,
                 stringResource(qosTestFamilyLabelRes(activeFamily)),
                 projection.activeRepetitionIndex ?: 1
+            ),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    projection.nextFamily?.let { nextFamily ->
+        Text(
+            text = stringResource(
+                R.string.report_closure_performance_qos_next_run,
+                stringResource(qosTestFamilyLabelRes(nextFamily)),
+                projection.nextRepetitionIndex ?: 1
             ),
             style = MaterialTheme.typography.bodySmall
         )
@@ -641,6 +662,13 @@ private fun QosClosureProjectionContent(
         ),
         style = MaterialTheme.typography.bodySmall
     )
+    Text(
+        text = stringResource(
+            R.string.report_closure_performance_qos_checkpoint_count,
+            projection.checkpointCount
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
     if (projection.executionTimelineEvents.isNotEmpty()) {
         Text(
             text = stringResource(R.string.report_closure_performance_qos_timeline_header),
@@ -648,13 +676,15 @@ private fun QosClosureProjectionContent(
         )
         val orderedEvents = projection.executionTimelineEvents.sortedWith(
             compareByDescending<com.quartz.platform.domain.model.QosExecutionTimelineEvent> { event ->
-                event.occurredAtEpochMillis
+                event.checkpointSequence
             }.thenBy { event ->
                 event.family.name
             }.thenBy { event ->
                 event.repetitionIndex
             }.thenBy { event ->
-                event.eventType.name
+                event.occurredAtEpochMillis
+            }.thenBy { event ->
+                qosExecutionEventSortOrder(event.eventType)
             }
         )
         val visibleEvents = orderedEvents.take(12)
@@ -953,6 +983,14 @@ private fun qosEngineStateLabelRes(state: QosExecutionEngineState): Int {
         QosExecutionEngineState.COMPLETED -> R.string.performance_qos_engine_state_completed
         QosExecutionEngineState.FAILED -> R.string.performance_qos_engine_state_failed
         QosExecutionEngineState.BLOCKED -> R.string.performance_qos_engine_state_blocked
+    }
+}
+
+private fun qosRecoveryStateLabelRes(state: QosRecoveryState): Int {
+    return when (state) {
+        QosRecoveryState.NONE -> R.string.performance_qos_recovery_state_none
+        QosRecoveryState.RESUME_AVAILABLE -> R.string.performance_qos_recovery_state_resume_available
+        QosRecoveryState.INVARIANT_BROKEN -> R.string.performance_qos_recovery_state_invariant_broken
     }
 }
 

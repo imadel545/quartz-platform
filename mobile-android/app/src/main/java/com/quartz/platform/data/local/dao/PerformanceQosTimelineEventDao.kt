@@ -13,7 +13,7 @@ interface PerformanceQosTimelineEventDao {
         """
         SELECT * FROM performance_qos_timeline_events
         WHERE sessionId = :sessionId
-        ORDER BY occurredAtEpochMillis DESC, family ASC, repetitionIndex ASC, eventType ASC
+        ORDER BY checkpointSequence DESC, occurredAtEpochMillis DESC, eventId DESC
         """
     )
     fun observeBySession(sessionId: String): Flow<List<PerformanceQosTimelineEventEntity>>
@@ -22,7 +22,7 @@ interface PerformanceQosTimelineEventDao {
         """
         SELECT * FROM performance_qos_timeline_events
         WHERE sessionId IN (:sessionIds)
-        ORDER BY sessionId ASC, occurredAtEpochMillis DESC, family ASC, repetitionIndex ASC, eventType ASC
+        ORDER BY sessionId ASC, checkpointSequence DESC, occurredAtEpochMillis DESC, eventId DESC
         """
     )
     fun observeBySessionIds(sessionIds: List<String>): Flow<List<PerformanceQosTimelineEventEntity>>
@@ -31,7 +31,7 @@ interface PerformanceQosTimelineEventDao {
         """
         SELECT * FROM performance_qos_timeline_events
         WHERE sessionId = :sessionId
-        ORDER BY occurredAtEpochMillis DESC, family ASC, repetitionIndex ASC, eventType ASC
+        ORDER BY checkpointSequence DESC, occurredAtEpochMillis DESC, eventId DESC
         """
     )
     suspend fun listBySession(sessionId: String): List<PerformanceQosTimelineEventEntity>

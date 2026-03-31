@@ -93,6 +93,11 @@ class ReportClosureProjectionMapperPerformanceTest {
         assertThat(qos.requiredRepeatCount).isEqualTo(3)
         assertThat(qos.passFailRunCount).isEqualTo(2)
         assertThat(qos.familiesMeetingRequiredRepeatCount).isEqualTo(0)
+        assertThat(qos.executionEngineState).isEqualTo(QosExecutionEngineState.FAILED)
+        assertThat(qos.recoveryState).isEqualTo(QosRecoveryState.NONE)
+        assertThat(qos.checkpointCount).isEqualTo(3)
+        assertThat(qos.nextFamily).isEqualTo(QosTestFamily.SMS)
+        assertThat(qos.nextRepetitionIndex).isEqualTo(2)
         assertThat(qos.executionTimelineEvents).hasSize(3)
         assertThat(qos.familyExecutionResults).hasSize(2)
     }

@@ -142,7 +142,7 @@
     <string name="report_list_closure_signal_observed_multiple">Plusieurs secteurs observés</string>
     <string name="report_list_closure_signal_ret_steps">%1$d/%2$d étapes obligatoires terminées</string>
     <string name="report_list_closure_signal_performance_throughput">Étapes %1$d/%2$d • Prérequis %3$s • DL/UL/Lat: %4$s/%5$s/%6$s</string>
-    <string name="report_list_closure_signal_performance_qos">Étapes %1$d/%2$d • Prérequis %3$s • Script %4$s • Config %5$s • Tech cible %6$s (Script %7$d, Alignée %8$s) • Familles %9$d (Complétées %10$d / Échecs %11$d / Bloquées %12$d) • Timeline %13$d événements / %14$d familles • Couverture runs %15$d familles à %16$d répétitions • Runs PASS/FAIL %17$d • Runs bloqués %18$d • Plan %19$d (restants %20$d) • Engine %21$s • Actif %22$s #%23$s • Itérations %24$d • OK/NOK %25$d/%26$d</string>
+    <string name="report_list_closure_signal_performance_qos">Étapes %1$d/%2$d • Prérequis %3$s • Script %4$s • Config %5$s • Tech cible %6$s (Script %7$d, Alignée %8$s) • Familles %9$d (Complétées %10$d / Échecs %11$d / Bloquées %12$d) • Timeline %13$d événements / %14$d familles • Couverture runs %15$d familles à %16$d répétitions • Runs PASS/FAIL %17$d • Runs bloqués %18$d • Plan %19$d (restants %20$d) • Engine %21$s • Recovery %22$s • Checkpoints %23$d • Actif %24$s #%25$s • Suivant %26$s #%27$s • Itérations %28$d • OK/NOK %29$d/%30$d</string>
     <string name="label_report_list_filter">Filtrer les brouillons</string>
     <string name="report_list_filter_all">Tous</string>
     <string name="report_list_filter_xfeeder">XFeeder</string>
@@ -204,7 +204,9 @@
     <string name="performance_label_qos_family_status">%1$s: %2$s</string>
     <string name="performance_label_qos_engine_state">Engine QoS: %1$s</string>
     <string name="performance_label_qos_engine_progress">Plan %1$d • Restants %2$d • Running %3$d • Pausés %4$d • Échecs %5$d • Bloqués %6$d</string>
+    <string name="performance_label_qos_engine_recovery_state">Recovery QoS: %1$s</string>
     <string name="performance_label_qos_engine_active_run">Run actif: %1$s • répétition %2$d</string>
+    <string name="performance_label_qos_engine_next_run">Prochain run: %1$s • répétition %2$d</string>
     <string name="performance_label_qos_run_plan_line">%1$s • répétition %2$d • %3$s</string>
     <string name="performance_label_qos_run_plan_more">… %1$d run(s) supplémentaire(s)</string>
     <string name="performance_header_qos_execution_timeline">Timeline exécution QoS (persistée)</string>
@@ -238,6 +240,9 @@
     <string name="performance_qos_engine_state_completed">COMPLETED</string>
     <string name="performance_qos_engine_state_failed">FAILED</string>
     <string name="performance_qos_engine_state_blocked">BLOCKED</string>
+    <string name="performance_qos_recovery_state_none">NONE</string>
+    <string name="performance_qos_recovery_state_resume_available">RESUME_AVAILABLE</string>
+    <string name="performance_qos_recovery_state_invariant_broken">INVARIANT_BROKEN</string>
     <string name="performance_qos_run_plan_status_pending">PENDING</string>
     <string name="performance_qos_run_plan_status_running">RUNNING</string>
     <string name="performance_qos_run_plan_status_paused">PAUSED</string>
@@ -299,8 +304,11 @@
     <string name="performance_label_qos_family_preflight_issue">Préflight: %1$s</string>
     <string name="report_closure_performance_qos_run_coverage">Couverture exécution QoS: %1$d/%2$d familles à %3$d répétitions • Runs PASS/FAIL: %4$d • Bloqués: %5$d</string>
     <string name="report_closure_performance_qos_engine_state">Engine QoS: %1$s</string>
+    <string name="report_closure_performance_qos_recovery_state">Recovery QoS: %1$s</string>
     <string name="report_closure_performance_qos_active_run">Run actif: %1$s • répétition %2$d</string>
+    <string name="report_closure_performance_qos_next_run">Prochain run: %1$s • répétition %2$d</string>
     <string name="report_closure_performance_qos_plan_progress">Plan runs: %1$d • Restants: %2$d</string>
+    <string name="report_closure_performance_qos_checkpoint_count">Checkpoints timeline: %1$d</string>
     <string name="error_performance_save_qos_script">Impossible d’enregistrer le script QoS local.</string>
     <string name="info_performance_saved_qos_script">Script QoS local enregistré et appliqué à la session.</string>
     <string name="qos_test_family_throughput_latency">Débit / Latence</string>

@@ -83,10 +83,12 @@ QoS session closure now enforces bounded family-specific execution rules for rev
 - target technology must align with configured script technologies when present.
 QoS script launch context is persisted as a local snapshot (configured technologies + snapshot timestamp) for deterministic review of what was actually executed.
 QoS execution now keeps a bounded local timeline per selected family (`STARTED`, `PAUSED`, `RESUMED`, `PASSED`, `FAILED`, `BLOCKED`) so operator/supervisor review can inspect execution progression without exposing raw internal session state.
+Timeline persistence is transactional (immutable event identity + ordered checkpoints), which keeps interruption/recovery evidence trustworthy when the same event type happens multiple times.
 QoS execution engine behavior is now explicit and deterministic for runtime/operator clarity:
 - engine state projection (`READY`, `PREFLIGHT_BLOCKED`, `RUNNING`, `PAUSED`, `RESUMED`, `COMPLETED`, `FAILED`, `BLOCKED`),
 - active family/repetition visibility,
 - run-plan coverage visibility (planned vs pending vs terminal),
+- bounded recovery projection (`NONE`, `RESUME_AVAILABLE`, `INVARIANT_BROKEN`) with next-run/checkpoint visibility for restart clarity,
 - local runner-progress persistence during execution updates to improve resume integrity after interruption.
 Current validated local reporting now includes bounded Débit/QoS closure review projection:
 - ReportDraft shows typed performance closure signals (workflow type, execution state, required-step progress, prerequisites, and implemented metrics/results).

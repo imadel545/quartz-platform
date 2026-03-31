@@ -833,4 +833,132 @@ object DatabaseMigrations {
             )
         }
     }
+
+    val MIGRATION_20_21: Migration = object : Migration(20, 21) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS performance_qos_timeline_events_new (
+                    eventId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    sessionId TEXT NOT NULL,
+                    family TEXT NOT NULL,
+                    repetitionIndex INTEGER NOT NULL,
+                    eventType TEXT NOT NULL,
+                    reason TEXT,
+                    occurredAtEpochMillis INTEGER NOT NULL,
+                    checkpointSequence INTEGER NOT NULL,
+                    FOREIGN KEY(sessionId) REFERENCES performance_sessions(id) ON DELETE CASCADE
+                )
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                WITH ordered AS (
+                    SELECT
+                        rowid AS sourceRowId,
+                        sessionId,
+                        family,
+                        repetitionIndex,
+                        eventType,
+                        reason,
+                        occurredAtEpochMillis,
+                        CASE eventType
+                            WHEN 'STARTED' THEN 0
+                            WHEN 'PAUSED' THEN 1
+                            WHEN 'RESUMED' THEN 2
+                            WHEN 'PASSED' THEN 3
+                            WHEN 'FAILED' THEN 4
+                            WHEN 'BLOCKED' THEN 5
+                            ELSE 99
+                        END AS eventOrder
+                    FROM performance_qos_timeline_events
+                ),
+                sequenced AS (
+                    SELECT
+                        o1.sessionId,
+                        o1.family,
+                        o1.repetitionIndex,
+                        o1.eventType,
+                        o1.reason,
+                        o1.occurredAtEpochMillis,
+                        (
+                            SELECT COUNT(*)
+                            FROM ordered o2
+                            WHERE o2.sessionId = o1.sessionId
+                              AND (
+                                  o2.occurredAtEpochMillis < o1.occurredAtEpochMillis
+                                  OR (
+                                      o2.occurredAtEpochMillis = o1.occurredAtEpochMillis
+                                      AND o2.family < o1.family
+                                  )
+                                  OR (
+                                      o2.occurredAtEpochMillis = o1.occurredAtEpochMillis
+                                      AND o2.family = o1.family
+                                      AND o2.repetitionIndex < o1.repetitionIndex
+                                  )
+                                  OR (
+                                      o2.occurredAtEpochMillis = o1.occurredAtEpochMillis
+                                      AND o2.family = o1.family
+                                      AND o2.repetitionIndex = o1.repetitionIndex
+                                      AND o2.eventOrder < o1.eventOrder
+                                  )
+                                  OR (
+                                      o2.occurredAtEpochMillis = o1.occurredAtEpochMillis
+                                      AND o2.family = o1.family
+                                      AND o2.repetitionIndex = o1.repetitionIndex
+                                      AND o2.eventOrder = o1.eventOrder
+                                      AND o2.sourceRowId <= o1.sourceRowId
+                                  )
+                              )
+                        ) AS checkpointSequence
+                    FROM ordered o1
+                )
+                INSERT INTO performance_qos_timeline_events_new (
+                    sessionId,
+                    family,
+                    repetitionIndex,
+                    eventType,
+                    reason,
+                    occurredAtEpochMillis,
+                    checkpointSequence
+                )
+                SELECT
+                    sessionId,
+                    family,
+                    repetitionIndex,
+                    eventType,
+                    reason,
+                    occurredAtEpochMillis,
+                    checkpointSequence
+                FROM sequenced
+                ORDER BY sessionId ASC, checkpointSequence ASC
+                """.trimIndent()
+            )
+
+            db.execSQL("DROP TABLE performance_qos_timeline_events")
+            db.execSQL("ALTER TABLE performance_qos_timeline_events_new RENAME TO performance_qos_timeline_events")
+
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_performance_qos_timeline_events_sessionId
+                ON performance_qos_timeline_events(sessionId)
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_performance_qos_timeline_events_sessionId_occurredAtEpochMillis
+                ON performance_qos_timeline_events(sessionId, occurredAtEpochMillis)
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_performance_qos_timeline_events_sessionId_checkpointSequence
+                ON performance_qos_timeline_events(sessionId, checkpointSequence)
+                """.trimIndent()
+            )
+        }
+    }
 }

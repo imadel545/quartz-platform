@@ -760,6 +760,112 @@ class QuartzDatabaseMigrationTest {
 
         migrated.close()
     }
+
+    @Test
+    fun migration_20_21_makes_qos_timeline_transactional_with_checkpoint_sequence() {
+        val dbName = "quartz-migration-20-21-test"
+
+        migrationTestHelper.createDatabase(dbName, 20).apply {
+            insertPerformanceSessionV19(
+                id = "perf-qos-20",
+                siteId = "site-1",
+                workflowType = "QOS_SCRIPT"
+            )
+            execSQL(
+                """
+                INSERT INTO performance_qos_timeline_events(
+                    sessionId,
+                    family,
+                    repetitionIndex,
+                    eventType,
+                    reason,
+                    occurredAtEpochMillis
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """.trimIndent(),
+                arrayOf("perf-qos-20", "SMS", 1, "STARTED", null, 300L)
+            )
+            close()
+        }
+
+        val migrated = migrationTestHelper.runMigrationsAndValidate(
+            dbName,
+            21,
+            true,
+            DatabaseMigrations.MIGRATION_20_21
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM pragma_table_info('performance_qos_timeline_events')
+                WHERE name = 'eventId'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM pragma_table_info('performance_qos_timeline_events')
+                WHERE name = 'checkpointSequence'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT checkpointSequence FROM performance_qos_timeline_events
+                WHERE sessionId = 'perf-qos-20'
+                  AND family = 'SMS'
+                  AND repetitionIndex = 1
+                  AND eventType = 'STARTED'
+                """.trimIndent()
+            )
+        )
+
+        migrated.execSQL(
+            """
+            INSERT INTO performance_qos_timeline_events(
+                sessionId,
+                family,
+                repetitionIndex,
+                eventType,
+                reason,
+                occurredAtEpochMillis,
+                checkpointSequence
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+            arrayOf("perf-qos-20", "SMS", 1, "STARTED", "duplicate allowed", 400L, 2)
+        )
+
+        assertEquals(
+            2L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM performance_qos_timeline_events
+                WHERE sessionId = 'perf-qos-20'
+                  AND family = 'SMS'
+                  AND repetitionIndex = 1
+                  AND eventType = 'STARTED'
+                """.trimIndent()
+            )
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM sqlite_master
+                WHERE type = 'index'
+                  AND name = 'index_performance_qos_timeline_events_sessionId_checkpointSequence'
+                """.trimIndent()
+            )
+        )
+
+        migrated.close()
+    }
 }
 
 private fun SupportSQLiteDatabase.insertDraft(

@@ -340,21 +340,29 @@ private fun sanitizeTimelineEventsForPersistence(
         .map { event ->
             event.copy(
                 repetitionIndex = event.repetitionIndex.coerceAtLeast(1),
-                occurredAtEpochMillis = event.occurredAtEpochMillis.coerceAtLeast(1L)
+                occurredAtEpochMillis = event.occurredAtEpochMillis.coerceAtLeast(1L),
+                checkpointSequence = event.checkpointSequence.coerceAtLeast(0)
             )
-        }
-        .distinctBy { event ->
-            listOf(event.family, event.repetitionIndex, event.eventType)
         }
 
     if (providedEvents.isNotEmpty()) {
         return providedEvents
             .sortedWith(
                 compareBy<QosExecutionTimelineEvent> { event -> event.occurredAtEpochMillis }
+                    .thenBy { event ->
+                        if (event.checkpointSequence > 0) {
+                            event.checkpointSequence
+                        } else {
+                            Int.MAX_VALUE
+                        }
+                    }
                     .thenBy { event -> event.family.name }
                     .thenBy { event -> event.repetitionIndex }
                     .thenBy { event -> qosExecutionEventSortOrder(event.eventType) }
             )
+            .mapIndexed { index, event ->
+                event.copy(checkpointSequence = index + 1)
+            }
     }
 
     // Backward-compatible fallback for sessions persisted before explicit runner timeline support.
@@ -389,6 +397,9 @@ private fun sanitizeTimelineEventsForPersistence(
                     )
                 )
             }
+        }
+        .mapIndexed { index, event ->
+            event.copy(checkpointSequence = index + 1)
         }
 }
 

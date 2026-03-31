@@ -124,6 +124,7 @@ class ObserveSiteReportListUseCase @Inject constructor(
                         ReportListClosureSummary.Qos(
                             sessionStatus = matched.sessionStatus,
                             executionEngineState = matched.executionEngineState,
+                            recoveryState = matched.recoveryState,
                             preconditionsReady = matched.preconditionsReady,
                             requiredStepCount = matched.requiredStepCount,
                             completedRequiredStepCount = matched.completedRequiredStepCount,
@@ -142,10 +143,13 @@ class ObserveSiteReportListUseCase @Inject constructor(
                             familiesMeetingRequiredRepeatCount = matched.familiesMeetingRequiredRepeatCount,
                             passFailRunCount = matched.passFailRunCount,
                             blockedRunCount = matched.blockedRunCount,
+                            checkpointCount = matched.checkpointCount,
                             plannedRunCount = matched.plannedRunCount,
                             pendingRunCount = matched.pendingRunCount,
                             activeFamily = matched.activeFamily,
                             activeRepetitionIndex = matched.activeRepetitionIndex,
+                            nextFamily = matched.nextFamily,
+                            nextRepetitionIndex = matched.nextRepetitionIndex,
                             iterationCount = matched.iterationCount,
                             successCount = matched.successCount,
                             failureCount = matched.failureCount
@@ -188,6 +192,7 @@ class ObserveSiteReportListUseCase @Inject constructor(
                 ReportListClosureSummary.Qos(
                     sessionStatus = latestPerformanceProjection.sessionStatus,
                     executionEngineState = latestPerformanceProjection.executionEngineState,
+                    recoveryState = latestPerformanceProjection.recoveryState,
                     preconditionsReady = latestPerformanceProjection.preconditionsReady,
                     requiredStepCount = latestPerformanceProjection.requiredStepCount,
                     completedRequiredStepCount = latestPerformanceProjection.completedRequiredStepCount,
@@ -206,10 +211,13 @@ class ObserveSiteReportListUseCase @Inject constructor(
                     familiesMeetingRequiredRepeatCount = latestPerformanceProjection.familiesMeetingRequiredRepeatCount,
                     passFailRunCount = latestPerformanceProjection.passFailRunCount,
                     blockedRunCount = latestPerformanceProjection.blockedRunCount,
+                    checkpointCount = latestPerformanceProjection.checkpointCount,
                     plannedRunCount = latestPerformanceProjection.plannedRunCount,
                     pendingRunCount = latestPerformanceProjection.pendingRunCount,
                     activeFamily = latestPerformanceProjection.activeFamily,
                     activeRepetitionIndex = latestPerformanceProjection.activeRepetitionIndex,
+                    nextFamily = latestPerformanceProjection.nextFamily,
+                    nextRepetitionIndex = latestPerformanceProjection.nextRepetitionIndex,
                     iterationCount = latestPerformanceProjection.iterationCount,
                     successCount = latestPerformanceProjection.successCount,
                     failureCount = latestPerformanceProjection.failureCount

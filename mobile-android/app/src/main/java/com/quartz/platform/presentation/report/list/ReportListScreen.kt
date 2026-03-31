@@ -32,6 +32,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
 import com.quartz.platform.domain.model.QosExecutionEngineState
+import com.quartz.platform.domain.model.QosRecoveryState
 import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ReportListClosureSummary
 import com.quartz.platform.domain.model.ReportSyncState
@@ -422,10 +423,16 @@ private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
                 summary.plannedRunCount,
                 summary.pendingRunCount,
                 stringResource(qosEngineStateLabelRes(summary.executionEngineState)),
+                stringResource(qosRecoveryStateLabelRes(summary.recoveryState)),
+                summary.checkpointCount,
                 summary.activeFamily?.let { family ->
                     stringResource(qosTestFamilyLabelRes(family))
                 } ?: stringResource(R.string.value_not_available),
                 summary.activeRepetitionIndex?.toString() ?: "-",
+                summary.nextFamily?.let { family ->
+                    stringResource(qosTestFamilyLabelRes(family))
+                } ?: stringResource(R.string.value_not_available),
+                summary.nextRepetitionIndex?.toString() ?: "-",
                 summary.iterationCount,
                 summary.successCount,
                 summary.failureCount
@@ -531,5 +538,13 @@ private fun qosTestFamilyLabelRes(family: QosTestFamily): Int {
         QosTestFamily.CSFB_CALL -> R.string.qos_test_family_csfb_call
         QosTestFamily.EMERGENCY_CALL -> R.string.qos_test_family_emergency_call
         QosTestFamily.STANDARD_CALL -> R.string.qos_test_family_standard_call
+    }
+}
+
+private fun qosRecoveryStateLabelRes(state: QosRecoveryState): Int {
+    return when (state) {
+        QosRecoveryState.NONE -> R.string.performance_qos_recovery_state_none
+        QosRecoveryState.RESUME_AVAILABLE -> R.string.performance_qos_recovery_state_resume_available
+        QosRecoveryState.INVARIANT_BROKEN -> R.string.performance_qos_recovery_state_invariant_broken
     }
 }

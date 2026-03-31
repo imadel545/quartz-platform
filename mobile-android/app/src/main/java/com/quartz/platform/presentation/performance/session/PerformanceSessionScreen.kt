@@ -39,6 +39,7 @@ import com.quartz.platform.domain.model.PerformanceStepStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
 import com.quartz.platform.domain.model.QosCompletionIssue
 import com.quartz.platform.domain.model.QosExecutionEngineState
+import com.quartz.platform.domain.model.QosRecoveryState
 import com.quartz.platform.domain.model.QosExecutionSnapshot
 import com.quartz.platform.domain.model.QosFamilyRunCoverage
 import com.quartz.platform.domain.model.QosPreflightIssue
@@ -49,6 +50,7 @@ import com.quartz.platform.domain.model.QosRunPlanItemStatus
 import com.quartz.platform.domain.model.QosScriptDefinition
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosTestFamily
+import com.quartz.platform.domain.model.qosExecutionEventSortOrder
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -876,12 +878,31 @@ private fun QosPanel(
                     ),
                     style = MaterialTheme.typography.bodySmall
                 )
+                if (snapshot.recoveryState != QosRecoveryState.NONE) {
+                    Text(
+                        text = stringResource(
+                            R.string.performance_label_qos_engine_recovery_state,
+                            stringResource(qosRecoveryStateLabelRes(snapshot.recoveryState))
+                        ),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
                 snapshot.activeFamily?.let { activeFamily ->
                     Text(
                         text = stringResource(
                             R.string.performance_label_qos_engine_active_run,
                             stringResource(qosTestFamilyLabelRes(activeFamily)),
                             snapshot.activeRepetitionIndex ?: 1
+                        ),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                snapshot.nextFamily?.let { nextFamily ->
+                    Text(
+                        text = stringResource(
+                            R.string.performance_label_qos_engine_next_run,
+                            stringResource(qosTestFamilyLabelRes(nextFamily)),
+                            snapshot.nextRepetitionIndex ?: 1
                         ),
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -1036,13 +1057,15 @@ private fun QosPanel(
                 timelineEvents
                     .sortedWith(
                         compareByDescending<QosExecutionTimelineEvent> { event ->
-                            event.occurredAtEpochMillis
+                            event.checkpointSequence
                         }.thenBy { event ->
                             event.family.name
                         }.thenBy { event ->
                             event.repetitionIndex
                         }.thenBy { event ->
-                            event.eventType.name
+                            event.occurredAtEpochMillis
+                        }.thenBy { event ->
+                            qosExecutionEventSortOrder(event.eventType)
                         }
                     )
                     .take(8)
@@ -1242,6 +1265,14 @@ private fun qosExecutionEngineStateLabelRes(state: QosExecutionEngineState): Int
         QosExecutionEngineState.COMPLETED -> R.string.performance_qos_engine_state_completed
         QosExecutionEngineState.FAILED -> R.string.performance_qos_engine_state_failed
         QosExecutionEngineState.BLOCKED -> R.string.performance_qos_engine_state_blocked
+    }
+}
+
+private fun qosRecoveryStateLabelRes(state: QosRecoveryState): Int {
+    return when (state) {
+        QosRecoveryState.NONE -> R.string.performance_qos_recovery_state_none
+        QosRecoveryState.RESUME_AVAILABLE -> R.string.performance_qos_recovery_state_resume_available
+        QosRecoveryState.INVARIANT_BROKEN -> R.string.performance_qos_recovery_state_invariant_broken
     }
 }
 

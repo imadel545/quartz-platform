@@ -86,15 +86,18 @@ fun PerformanceSessionEntity.toDomain(
                         QosExecutionEventType.valueOf(event.eventType)
                     }.getOrDefault(QosExecutionEventType.STARTED),
                     reason = event.reason,
-                    occurredAtEpochMillis = event.occurredAtEpochMillis
+                    occurredAtEpochMillis = event.occurredAtEpochMillis,
+                    checkpointSequence = event.checkpointSequence
                 )
             }.sortedWith(
                 compareByDescending<QosExecutionTimelineEvent> { event ->
-                    event.occurredAtEpochMillis
+                    event.checkpointSequence
                 }.thenBy { event ->
                     event.family.name
                 }.thenBy { event ->
                     event.repetitionIndex
+                }.thenBy { event ->
+                    event.occurredAtEpochMillis
                 }.thenBy { event ->
                     qosExecutionEventSortOrder(event.eventType)
                 }
@@ -147,7 +150,8 @@ fun QosExecutionTimelineEvent.toEntity(
         repetitionIndex = repetitionIndex.coerceAtLeast(1),
         eventType = eventType.name,
         reason = reason?.trim()?.takeIf { value -> value.isNotBlank() },
-        occurredAtEpochMillis = occurredAtEpochMillis
+        occurredAtEpochMillis = occurredAtEpochMillis,
+        checkpointSequence = checkpointSequence.coerceAtLeast(1)
     )
 }
 

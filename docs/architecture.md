@@ -53,10 +53,12 @@ Current Android implementation covers a bounded local-first workflow baseline:
   - `NOT_RUN`, `PASSED`, `FAILED`, `BLOCKED`
 - bounded QoS timeline evidence persisted per performance session (`performance_qos_timeline_events`) with typed events:
   - `STARTED`, `PAUSED`, `RESUMED`, `PASSED`, `FAILED`, `BLOCKED`
+  - transactional event persistence with immutable event identity and sequential checkpoint ordering for deterministic replay/recovery
 - bounded QoS execution engine projection derived from session evidence:
   - explicit engine state (`READY`, `PREFLIGHT_BLOCKED`, `RUNNING`, `PAUSED`, `RESUMED`, `COMPLETED`, `FAILED`, `BLOCKED`)
   - active family/repetition visibility
   - deterministic run-plan coverage (planned, pending, terminal)
+  - bounded recovery state projection (`NONE`, `RESUME_AVAILABLE`, `INVARIANT_BROKEN`) with next planned run and checkpoint count
 - `QOS_SCRIPT` completion hardening in repository/domain flow:
   - selected families required
   - each selected family must be completed (`PASSED`/`FAILED`)

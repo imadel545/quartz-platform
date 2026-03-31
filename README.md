@@ -33,7 +33,9 @@ quartz-platform/
   - QoS script launch snapshot integrity is local-first: configured technologies and script snapshot timestamp are persisted in session closure data
   - QoS family-specific closure checks require phone target for call/SMS families, failure reason on failed families, and target-technology alignment with script configuration
   - QoS execution timeline is now persisted locally per selected family (`STARTED`, `PASSED`, `FAILED`, `BLOCKED`) for deterministic closure auditability
+  - QoS timeline persistence is now transactional: each timeline event has its own durable identity with sequential checkpoint ordering, so repeated event types (`PAUSED`/`RESUMED`/etc.) are preserved instead of overwritten
   - QoS execution engine now exposes explicit runtime states (`READY`, `PREFLIGHT_BLOCKED`, `RUNNING`, `PAUSED`, `RESUMED`, `COMPLETED`, `FAILED`, `BLOCKED`) with deterministic transition-driven projection
+  - QoS execution projection now includes bounded recovery signals (`NONE`, `RESUME_AVAILABLE`, `INVARIANT_BROKEN`) plus next planned run and checkpoint count for interruption/restart transparency
   - QoS runner now tracks a structured local run plan per family/repetition and persists runner progress updates during execution to strengthen interruption/recovery behavior
   - QoS completion assessment is centralized in shared domain logic (single rule source reused by repository + ViewModel)
   - Débit/QoS closure projection in local reports:

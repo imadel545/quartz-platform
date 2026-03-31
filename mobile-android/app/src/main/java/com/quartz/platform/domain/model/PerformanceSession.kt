@@ -43,7 +43,8 @@ data class QosExecutionTimelineEvent(
     val repetitionIndex: Int,
     val eventType: QosExecutionEventType,
     val reason: String? = null,
-    val occurredAtEpochMillis: Long
+    val occurredAtEpochMillis: Long,
+    val checkpointSequence: Int = 0
 )
 
 data class QosFamilyExecutionResult(

@@ -39,6 +39,7 @@ sealed interface ReportListClosureSummary {
     data class Qos(
         val sessionStatus: PerformanceSessionStatus,
         val executionEngineState: QosExecutionEngineState,
+        val recoveryState: QosRecoveryState,
         val preconditionsReady: Boolean,
         val requiredStepCount: Int,
         val completedRequiredStepCount: Int,
@@ -57,10 +58,13 @@ sealed interface ReportListClosureSummary {
         val familiesMeetingRequiredRepeatCount: Int = 0,
         val passFailRunCount: Int = 0,
         val blockedRunCount: Int = 0,
+        val checkpointCount: Int = 0,
         val plannedRunCount: Int = 0,
         val pendingRunCount: Int = 0,
         val activeFamily: QosTestFamily? = null,
         val activeRepetitionIndex: Int? = null,
+        val nextFamily: QosTestFamily? = null,
+        val nextRepetitionIndex: Int? = null,
         val iterationCount: Int,
         val successCount: Int,
         val failureCount: Int

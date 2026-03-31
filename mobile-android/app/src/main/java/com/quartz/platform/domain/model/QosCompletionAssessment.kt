@@ -133,7 +133,13 @@ fun computeQosFamilyRunCoverage(
     val events = qosRunSummary.executionTimelineEvents
         .filter { event -> event.family == family }
         .sortedWith(
-            compareBy<QosExecutionTimelineEvent> { event -> event.repetitionIndex }
+            compareBy<QosExecutionTimelineEvent> { event ->
+                if (event.checkpointSequence > 0) {
+                    event.checkpointSequence
+                } else {
+                    Int.MAX_VALUE
+                }
+            }.thenBy { event -> event.repetitionIndex }
                 .thenBy { event -> event.occurredAtEpochMillis }
                 .thenBy { event -> qosExecutionEventSortOrder(event.eventType) }
         )

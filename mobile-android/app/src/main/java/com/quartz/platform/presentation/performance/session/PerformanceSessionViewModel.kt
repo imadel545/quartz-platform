@@ -443,6 +443,10 @@ class PerformanceSessionViewModel @Inject constructor(
         }
 
         val runPlan = computeQosRunPlan(summary)
+        val nextCheckpointSequence = (
+            state.qosExecutionTimelineEvents.maxOfOrNull { event -> event.checkpointSequence }
+                ?: state.qosExecutionTimelineEvents.size
+            ) + 1
         val nextTimeline = when (action) {
             QosRunnerAction.START -> {
                 val nextRepetitionIndex = computeQosFamilyRunCoverage(summary, family).nextRepetitionIndex
@@ -450,7 +454,8 @@ class PerformanceSessionViewModel @Inject constructor(
                     family = family,
                     repetitionIndex = nextRepetitionIndex,
                     eventType = QosExecutionEventType.STARTED,
-                    occurredAtEpochMillis = System.currentTimeMillis()
+                    occurredAtEpochMillis = System.currentTimeMillis(),
+                    checkpointSequence = nextCheckpointSequence
                 )
             }
 
@@ -462,7 +467,8 @@ class PerformanceSessionViewModel @Inject constructor(
                     family = family,
                     repetitionIndex = activeRepetitionIndex,
                     eventType = QosExecutionEventType.PAUSED,
-                    occurredAtEpochMillis = System.currentTimeMillis()
+                    occurredAtEpochMillis = System.currentTimeMillis(),
+                    checkpointSequence = nextCheckpointSequence
                 )
             }
 
@@ -474,7 +480,8 @@ class PerformanceSessionViewModel @Inject constructor(
                     family = family,
                     repetitionIndex = pausedRepetitionIndex,
                     eventType = QosExecutionEventType.RESUMED,
-                    occurredAtEpochMillis = System.currentTimeMillis()
+                    occurredAtEpochMillis = System.currentTimeMillis(),
+                    checkpointSequence = nextCheckpointSequence
                 )
             }
 
@@ -490,7 +497,8 @@ class PerformanceSessionViewModel @Inject constructor(
                     reason = state.qosFamilyFailureReasonByType[family]
                         ?.trim()
                         ?.takeIf { it.isNotBlank() },
-                    occurredAtEpochMillis = System.currentTimeMillis()
+                    occurredAtEpochMillis = System.currentTimeMillis(),
+                    checkpointSequence = nextCheckpointSequence
                 )
             }
         }
@@ -525,11 +533,13 @@ class PerformanceSessionViewModel @Inject constructor(
                     qosExecutionTimelineEvents = nextTimeline
                         .sortedWith(
                             compareByDescending<QosExecutionTimelineEvent> { event ->
-                                event.occurredAtEpochMillis
+                                event.checkpointSequence
                             }.thenBy { event ->
                                 event.family.name
                             }.thenBy { event ->
                                 event.repetitionIndex
+                            }.thenBy { event ->
+                                event.occurredAtEpochMillis
                             }.thenBy { event ->
                                 qosExecutionEventSortOrder(event.eventType)
                             }
@@ -1164,7 +1174,13 @@ private fun resolveFamilyStatusFromTimeline(
                 event.eventType == QosExecutionEventType.BLOCKED
         }
         .maxWithOrNull(
-            compareBy<QosExecutionTimelineEvent> { event -> event.occurredAtEpochMillis }
+            compareBy<QosExecutionTimelineEvent> { event ->
+                if (event.checkpointSequence > 0) {
+                    event.checkpointSequence
+                } else {
+                    Int.MAX_VALUE
+                }
+            }.thenBy { event -> event.occurredAtEpochMillis }
                 .thenBy { event -> event.repetitionIndex }
                 .thenBy { event -> qosExecutionEventSortOrder(event.eventType) }
         )

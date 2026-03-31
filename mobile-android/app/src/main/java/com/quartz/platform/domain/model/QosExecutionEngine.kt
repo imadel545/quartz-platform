@@ -11,6 +11,12 @@ enum class QosExecutionEngineState {
     BLOCKED
 }
 
+enum class QosRecoveryState {
+    NONE,
+    RESUME_AVAILABLE,
+    INVARIANT_BROKEN
+}
+
 enum class QosRunPlanItemStatus {
     PENDING,
     RUNNING,
@@ -30,7 +36,9 @@ data class QosRunPlanItem(
 
 data class QosExecutionSnapshot(
     val engineState: QosExecutionEngineState,
+    val recoveryState: QosRecoveryState,
     val requiredRepeatCount: Int,
+    val checkpointCount: Int,
     val plannedRunCount: Int,
     val pendingRunCount: Int,
     val runningRunCount: Int,
@@ -39,7 +47,9 @@ data class QosExecutionSnapshot(
     val failedRunCount: Int,
     val blockedRunCount: Int,
     val activeFamily: QosTestFamily? = null,
-    val activeRepetitionIndex: Int? = null
+    val activeRepetitionIndex: Int? = null,
+    val nextFamily: QosTestFamily? = null,
+    val nextRepetitionIndex: Int? = null
 ) {
     val remainingRunCount: Int
         get() = pendingRunCount + runningRunCount + pausedRunCount
@@ -81,7 +91,13 @@ fun computeQosRunPlan(qosRunSummary: QosRunSummary): List<QosRunPlanItem> {
     val orderedEvents = qosRunSummary.executionTimelineEvents
         .filter { event -> event.family in qosRunSummary.selectedTestFamilies }
         .sortedWith(
-            compareBy<QosExecutionTimelineEvent> { event -> event.occurredAtEpochMillis }
+            compareBy<QosExecutionTimelineEvent> { event ->
+                if (event.checkpointSequence > 0) {
+                    event.checkpointSequence
+                } else {
+                    Int.MAX_VALUE
+                }
+            }.thenBy { event -> event.occurredAtEpochMillis }
                 .thenBy { event -> event.family.name }
                 .thenBy { event -> event.repetitionIndex }
                 .thenBy { event -> qosExecutionEventSortOrder(event.eventType) }
@@ -151,13 +167,21 @@ fun deriveQosExecutionSnapshot(
     val failedRunCount = runPlan.count { item -> item.status == QosRunPlanItemStatus.FAILED }
     val blockedRunCount = runPlan.count { item -> item.status == QosRunPlanItemStatus.BLOCKED }
 
-    val activeRun = runPlan.firstOrNull { item ->
+    val activeRuns = runPlan.filter { item ->
         item.status == QosRunPlanItemStatus.RUNNING || item.status == QosRunPlanItemStatus.PAUSED
     }
+    val activeRun = activeRuns.firstOrNull()
+    val nextRun = runPlan.firstOrNull { item -> item.status == QosRunPlanItemStatus.PENDING }
     val latestEventType = qosRunSummary.executionTimelineEvents
         .filter { event -> event.family in qosRunSummary.selectedTestFamilies }
         .maxWithOrNull(
-            compareBy<QosExecutionTimelineEvent> { event -> event.occurredAtEpochMillis }
+            compareBy<QosExecutionTimelineEvent> { event ->
+                if (event.checkpointSequence > 0) {
+                    event.checkpointSequence
+                } else {
+                    Int.MAX_VALUE
+                }
+            }.thenBy { event -> event.occurredAtEpochMillis }
                 .thenBy { event -> event.family.name }
                 .thenBy { event -> event.repetitionIndex }
                 .thenBy { event -> qosExecutionEventSortOrder(event.eventType) }
@@ -168,8 +192,15 @@ fun deriveQosExecutionSnapshot(
         qosRunSummary.scriptId.isNullOrBlank() ||
         qosRunSummary.scriptName.isNullOrBlank() ||
         qosRunSummary.selectedTestFamilies.isEmpty()
+    val hasInconsistentActiveRuns = activeRuns.size > 1
+    val recoveryState = when {
+        hasInconsistentActiveRuns -> QosRecoveryState.INVARIANT_BROKEN
+        activeRun?.status == QosRunPlanItemStatus.PAUSED -> QosRecoveryState.RESUME_AVAILABLE
+        else -> QosRecoveryState.NONE
+    }
 
     val state = when {
+        hasInconsistentActiveRuns -> QosExecutionEngineState.BLOCKED
         preflightBlocked -> QosExecutionEngineState.PREFLIGHT_BLOCKED
         activeRun?.status == QosRunPlanItemStatus.PAUSED -> QosExecutionEngineState.PAUSED
         activeRun?.status == QosRunPlanItemStatus.RUNNING && latestEventType == QosExecutionEventType.RESUMED -> {
@@ -186,7 +217,9 @@ fun deriveQosExecutionSnapshot(
 
     return QosExecutionSnapshot(
         engineState = state,
+        recoveryState = recoveryState,
         requiredRepeatCount = requiredRepeatCount,
+        checkpointCount = qosRunSummary.executionTimelineEvents.size,
         plannedRunCount = plannedRunCount,
         pendingRunCount = pendingRunCount,
         runningRunCount = runningRunCount,
@@ -195,7 +228,9 @@ fun deriveQosExecutionSnapshot(
         failedRunCount = failedRunCount,
         blockedRunCount = blockedRunCount,
         activeFamily = activeRun?.family,
-        activeRepetitionIndex = activeRun?.repetitionIndex
+        activeRepetitionIndex = activeRun?.repetitionIndex,
+        nextFamily = nextRun?.family,
+        nextRepetitionIndex = nextRun?.repetitionIndex
     )
 }
 
@@ -234,4 +269,3 @@ fun deriveQosPassFailCounters(qosRunSummary: QosRunSummary): QosPassFailCounters
         failureCount = failedCount
     )
 }
-
