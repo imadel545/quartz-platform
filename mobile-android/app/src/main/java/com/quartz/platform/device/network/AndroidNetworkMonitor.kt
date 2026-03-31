@@ -6,6 +6,7 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import com.quartz.platform.domain.model.NetworkStatus
+import com.quartz.platform.domain.repository.NetworkStatusRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -15,7 +16,7 @@ import javax.inject.Inject
 
 class AndroidNetworkMonitor @Inject constructor(
     @ApplicationContext private val context: Context
-) : NetworkMonitor {
+) : NetworkStatusRepository {
     override fun observe(): Flow<NetworkStatus> = callbackFlow {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val callback = object : ConnectivityManager.NetworkCallback() {

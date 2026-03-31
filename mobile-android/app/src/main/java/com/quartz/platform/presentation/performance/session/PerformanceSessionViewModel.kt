@@ -10,6 +10,7 @@ import com.quartz.platform.domain.model.PerformanceSessionStatus
 import com.quartz.platform.domain.model.PerformanceStepCode
 import com.quartz.platform.domain.model.PerformanceStepStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
+import com.quartz.platform.domain.model.NetworkStatus
 import com.quartz.platform.domain.model.QosCompletionIssue
 import com.quartz.platform.domain.model.QosExecutionEventType
 import com.quartz.platform.domain.model.QosExecutionIssueCode
@@ -33,7 +34,10 @@ import com.quartz.platform.domain.model.deriveQosPassFailCounters
 import com.quartz.platform.domain.model.qosExecutionEventSortOrder
 import com.quartz.platform.domain.usecase.CreateSitePerformanceSessionUseCase
 import com.quartz.platform.domain.usecase.EnsureDefaultQosScriptsUseCase
+import com.quartz.platform.domain.usecase.GetCurrentBatterySnapshotUseCase
+import com.quartz.platform.domain.usecase.GetLastKnownUserLocationUseCase
 import com.quartz.platform.domain.usecase.ObserveSiteDetailUseCase
+import com.quartz.platform.domain.usecase.ObserveNetworkStatusUseCase
 import com.quartz.platform.domain.usecase.ObserveQosScriptsUseCase
 import com.quartz.platform.domain.usecase.ObserveSitePerformanceSessionHistoryUseCase
 import com.quartz.platform.domain.usecase.OpenOrCreateGuidedSessionReportDraftUseCase
@@ -60,6 +64,9 @@ class PerformanceSessionViewModel @Inject constructor(
     private val observeSiteDetailUseCase: ObserveSiteDetailUseCase,
     private val observeSitePerformanceSessionHistoryUseCase: ObserveSitePerformanceSessionHistoryUseCase,
     private val observeQosScriptsUseCase: ObserveQosScriptsUseCase,
+    private val observeNetworkStatusUseCase: ObserveNetworkStatusUseCase,
+    private val getCurrentBatterySnapshotUseCase: GetCurrentBatterySnapshotUseCase,
+    private val getLastKnownUserLocationUseCase: GetLastKnownUserLocationUseCase,
     private val ensureDefaultQosScriptsUseCase: EnsureDefaultQosScriptsUseCase,
     private val createSitePerformanceSessionUseCase: CreateSitePerformanceSessionUseCase,
     private val upsertQosScriptUseCase: UpsertQosScriptUseCase,
@@ -85,6 +92,7 @@ class PerformanceSessionViewModel @Inject constructor(
         viewModelScope.launch {
             ensureDefaultQosScriptsUseCase()
         }
+        observeDeviceNetworkStatus()
         observeContext()
     }
 
@@ -223,6 +231,53 @@ class PerformanceSessionViewModel @Inject constructor(
 
     fun onPrerequisiteLocationChanged(value: Boolean) {
         updateField { copy(prerequisiteLocationReady = value) }
+    }
+
+    fun onRefreshDeviceDiagnosticsClicked() {
+        viewModelScope.launch {
+            mutableState.update { state ->
+                state.copy(
+                    isRefreshingDeviceDiagnostics = true,
+                    errorMessage = null,
+                    infoMessage = null
+                )
+            }
+            val batterySnapshot = runCatching { getCurrentBatterySnapshotUseCase() }.getOrNull()
+            val userLocation = runCatching { getLastKnownUserLocationUseCase() }.getOrNull()
+            val hasLocation = userLocation != null
+            val capturedAt = System.currentTimeMillis()
+            mutableState.update { state ->
+                deriveQosUiState(
+                    state.copy(
+                        observedBatteryLevelPercent = batterySnapshot?.levelPercent,
+                        observedBatteryIsCharging = batterySnapshot?.isCharging,
+                        observedLocationAvailable = hasLocation,
+                        observedSignalsCapturedAtEpochMillis = capturedAt,
+                        isRefreshingDeviceDiagnostics = false,
+                        infoMessage = uiStrings.get(R.string.info_performance_device_diagnostics_refreshed)
+                    )
+                )
+            }
+        }
+    }
+
+    fun onApplyDeviceDiagnosticsClicked() {
+        mutableState.update { state ->
+            val networkReady = state.observedNetworkStatus == NetworkStatus.AVAILABLE
+            val batteryReady = state.observedBatterySufficient == true
+            val locationReady = state.observedLocationAvailable == true
+            deriveQosUiState(
+                state.copy(
+                    prerequisiteNetworkReady = networkReady,
+                    prerequisiteBatterySufficient = batteryReady,
+                    prerequisiteLocationReady = locationReady,
+                    hasUnsavedChanges = true,
+                    completionGuardMessage = null,
+                    errorMessage = null,
+                    infoMessage = uiStrings.get(R.string.info_performance_device_diagnostics_applied)
+                )
+            )
+        }
     }
 
     fun onThroughputDownloadChanged(value: String) = updateField { copy(throughputDownloadInput = sanitizeDecimal(value)) }
@@ -441,9 +496,9 @@ class PerformanceSessionViewModel @Inject constructor(
             qosRunSummary = summary,
             family = family,
             action = action,
-            preconditionsReady = state.prerequisiteNetworkReady &&
-                state.prerequisiteBatterySufficient &&
-                state.prerequisiteLocationReady,
+            prerequisiteNetworkReady = state.prerequisiteNetworkReady,
+            prerequisiteBatterySufficient = state.prerequisiteBatterySufficient,
+            prerequisiteLocationReady = state.prerequisiteLocationReady,
             reasonCode = state.qosFamilyReasonCodeByType[family],
             failureReason = state.qosFamilyFailureReasonByType[family]
         )
@@ -661,6 +716,10 @@ class PerformanceSessionViewModel @Inject constructor(
                     prerequisiteNetworkReady = current.prerequisiteNetworkReady,
                     prerequisiteBatterySufficient = current.prerequisiteBatterySufficient,
                     prerequisiteLocationReady = current.prerequisiteLocationReady,
+                    observedNetworkStatus = current.observedNetworkStatus,
+                    observedBatteryLevelPercent = current.observedBatteryLevelPercent,
+                    observedLocationAvailable = current.observedLocationAvailable,
+                    observedSignalsCapturedAtEpochMillis = current.observedSignalsCapturedAtEpochMillis,
                     throughputMetrics = throughputMetrics,
                     qosRunSummary = qosSummary,
                     notes = current.notesInput.trim(),
@@ -724,6 +783,29 @@ class PerformanceSessionViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+    private fun observeDeviceNetworkStatus() {
+        viewModelScope.launch {
+            observeNetworkStatusUseCase()
+                .catch { throwable ->
+                    mutableState.update { state ->
+                        state.copy(
+                            errorMessage = throwable.message ?: uiStrings.get(R.string.error_performance_device_diagnostics_unavailable)
+                        )
+                    }
+                }
+                .collect { status ->
+                    mutableState.update { state ->
+                        deriveQosUiState(
+                            state.copy(
+                                observedNetworkStatus = status,
+                                observedSignalsCapturedAtEpochMillis = System.currentTimeMillis()
+                            )
+                        )
+                    }
+                }
         }
     }
 
@@ -827,6 +909,11 @@ class PerformanceSessionViewModel @Inject constructor(
                 prerequisiteNetworkReady = false,
                 prerequisiteBatterySufficient = false,
                 prerequisiteLocationReady = false,
+                observedNetworkStatus = state.observedNetworkStatus,
+                observedBatteryLevelPercent = state.observedBatteryLevelPercent,
+                observedBatteryIsCharging = null,
+                observedLocationAvailable = state.observedLocationAvailable,
+                observedSignalsCapturedAtEpochMillis = state.observedSignalsCapturedAtEpochMillis,
                 throughputDownloadInput = "",
                 throughputUploadInput = "",
                 throughputLatencyInput = "",
@@ -871,6 +958,12 @@ class PerformanceSessionViewModel @Inject constructor(
             prerequisiteNetworkReady = session.prerequisiteNetworkReady,
             prerequisiteBatterySufficient = session.prerequisiteBatterySufficient,
             prerequisiteLocationReady = session.prerequisiteLocationReady,
+            observedNetworkStatus = session.observedNetworkStatus ?: state.observedNetworkStatus,
+            observedBatteryLevelPercent = session.observedBatteryLevelPercent ?: state.observedBatteryLevelPercent,
+            observedBatteryIsCharging = null,
+            observedLocationAvailable = session.observedLocationAvailable ?: state.observedLocationAvailable,
+            observedSignalsCapturedAtEpochMillis = session.observedSignalsCapturedAtEpochMillis
+                ?: state.observedSignalsCapturedAtEpochMillis,
             throughputDownloadInput = session.throughputMetrics.downloadMbps?.toString().orEmpty(),
             throughputUploadInput = session.throughputMetrics.uploadMbps?.toString().orEmpty(),
             throughputLatencyInput = session.throughputMetrics.latencyMs?.toString().orEmpty(),
@@ -944,6 +1037,10 @@ class PerformanceSessionViewModel @Inject constructor(
                     prerequisiteNetworkReady = state.prerequisiteNetworkReady,
                     prerequisiteBatterySufficient = state.prerequisiteBatterySufficient,
                     prerequisiteLocationReady = state.prerequisiteLocationReady,
+                    observedNetworkStatus = state.observedNetworkStatus,
+                    observedBatteryLevelPercent = state.observedBatteryLevelPercent,
+                    observedLocationAvailable = state.observedLocationAvailable,
+                    observedSignalsCapturedAtEpochMillis = state.observedSignalsCapturedAtEpochMillis,
                     throughputMetrics = state.session?.throughputMetrics ?: ThroughputMetrics(),
                     qosRunSummary = qosSummaryForAssessment(state),
                     notes = state.notesInput.trim(),
@@ -1123,9 +1220,9 @@ private fun deriveQosUiState(state: PerformanceSessionUiState): PerformanceSessi
             qosRunSummary = summary,
             family = family,
             action = QosRunnerAction.START,
-            preconditionsReady = aggregated.prerequisiteNetworkReady &&
-                aggregated.prerequisiteBatterySufficient &&
-                aggregated.prerequisiteLocationReady,
+            prerequisiteNetworkReady = aggregated.prerequisiteNetworkReady,
+            prerequisiteBatterySufficient = aggregated.prerequisiteBatterySufficient,
+            prerequisiteLocationReady = aggregated.prerequisiteLocationReady,
             reasonCode = aggregated.qosFamilyReasonCodeByType[family],
             failureReason = aggregated.qosFamilyFailureReasonByType[family]
         )
@@ -1194,7 +1291,9 @@ private fun qosCompletionIssueToErrorRes(issue: QosCompletionIssue): Int {
 
 private fun qosPreflightIssueToErrorRes(issue: QosPreflightIssue): Int {
     return when (issue) {
-        QosPreflightIssue.PREREQUISITES_NOT_READY -> R.string.error_performance_complete_requires_prerequisites
+        QosPreflightIssue.NETWORK_NOT_READY -> R.string.error_performance_qos_issue_network_not_ready
+        QosPreflightIssue.BATTERY_NOT_READY -> R.string.error_performance_qos_issue_battery_not_ready
+        QosPreflightIssue.LOCATION_NOT_READY -> R.string.error_performance_qos_issue_location_not_ready
         QosPreflightIssue.SCRIPT_REFERENCE_MISSING -> R.string.error_performance_qos_script_required
         QosPreflightIssue.FAMILY_NOT_SELECTED -> R.string.error_performance_qos_script_required
         QosPreflightIssue.PHONE_TARGET_MISSING -> R.string.error_performance_qos_phone_required
@@ -1210,7 +1309,9 @@ private fun qosPreflightIssueToErrorRes(issue: QosPreflightIssue): Int {
 
 private fun qosPreflightIssueToReasonCode(issue: QosPreflightIssue): QosExecutionIssueCode? {
     return when (issue) {
-        QosPreflightIssue.PREREQUISITES_NOT_READY -> QosExecutionIssueCode.PREREQUISITE_NOT_READY
+        QosPreflightIssue.NETWORK_NOT_READY -> QosExecutionIssueCode.NETWORK_UNAVAILABLE
+        QosPreflightIssue.BATTERY_NOT_READY -> QosExecutionIssueCode.BATTERY_INSUFFICIENT
+        QosPreflightIssue.LOCATION_NOT_READY -> QosExecutionIssueCode.LOCATION_UNAVAILABLE
         QosPreflightIssue.PHONE_TARGET_MISSING -> QosExecutionIssueCode.PHONE_TARGET_MISSING
         QosPreflightIssue.TARGET_TECHNOLOGY_INVALID -> QosExecutionIssueCode.TARGET_TECHNOLOGY_MISMATCH
         QosPreflightIssue.REPETITION_ALREADY_STARTED,

@@ -35,6 +35,7 @@ import com.quartz.platform.domain.model.QosExecutionEngineState
 import com.quartz.platform.domain.model.QosRecoveryState
 import com.quartz.platform.domain.model.QosExecutionIssueCode
 import com.quartz.platform.domain.model.QosTestFamily
+import com.quartz.platform.domain.model.NetworkStatus
 import com.quartz.platform.domain.model.ReportListClosureSummary
 import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.SiteReportListItem
@@ -377,7 +378,7 @@ private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
         }
 
         is ReportListClosureSummary.Throughput -> {
-            stringResource(
+            val baseSignal = stringResource(
                 R.string.report_list_closure_signal_performance_throughput,
                 summary.completedRequiredStepCount,
                 summary.requiredStepCount,
@@ -390,6 +391,12 @@ private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
                 summary.uploadMbps?.toString() ?: "-",
                 summary.latencyMs?.toString() ?: "-"
             )
+            val diagnostics = buildDeviceDiagnosticsSignal(
+                observedNetworkStatus = summary.observedNetworkStatus,
+                observedBatteryLevelPercent = summary.observedBatteryLevelPercent,
+                observedLocationAvailable = summary.observedLocationAvailable
+            )
+            diagnostics?.let { "$baseSignal · $it" } ?: baseSignal
         }
 
         is ReportListClosureSummary.Qos -> {
@@ -438,7 +445,7 @@ private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
                 summary.successCount,
                 summary.failureCount
             )
-            summary.dominantIssueCode?.let { code ->
+            val withReason = summary.dominantIssueCode?.let { code ->
                 "$baseSignal · ${
                     stringResource(
                         R.string.report_list_closure_signal_performance_qos_reason,
@@ -446,6 +453,12 @@ private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
                     )
                 }"
             } ?: baseSignal
+            val diagnostics = buildDeviceDiagnosticsSignal(
+                observedNetworkStatus = summary.observedNetworkStatus,
+                observedBatteryLevelPercent = summary.observedBatteryLevelPercent,
+                observedLocationAvailable = summary.observedLocationAvailable
+            )
+            diagnostics?.let { "$withReason · $it" } ?: withReason
         }
     }
 
@@ -474,6 +487,45 @@ private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
             }
         }
     }
+}
+
+@Composable
+private fun buildDeviceDiagnosticsSignal(
+    observedNetworkStatus: NetworkStatus?,
+    observedBatteryLevelPercent: Int?,
+    observedLocationAvailable: Boolean?
+): String? {
+    val parts = buildList {
+        observedNetworkStatus?.let { network ->
+            add(
+                stringResource(
+                    R.string.report_list_closure_signal_device_network,
+                    stringResource(networkStatusLabelRes(network))
+                )
+            )
+        }
+        observedBatteryLevelPercent?.let { battery ->
+            add(
+                stringResource(
+                    R.string.report_list_closure_signal_device_battery,
+                    battery
+                )
+            )
+        }
+        observedLocationAvailable?.let { locationAvailable ->
+            add(
+                stringResource(
+                    R.string.report_list_closure_signal_device_location,
+                    if (locationAvailable) {
+                        stringResource(R.string.value_yes)
+                    } else {
+                        stringResource(R.string.value_no)
+                    }
+                )
+            )
+        }
+    }
+    return parts.takeIf { it.isNotEmpty() }?.joinToString(" • ")
 }
 
 @Composable
@@ -561,11 +613,20 @@ private fun qosRecoveryStateLabelRes(state: QosRecoveryState): Int {
 private fun qosIssueCodeLabelRes(code: QosExecutionIssueCode): Int {
     return when (code) {
         QosExecutionIssueCode.PREREQUISITE_NOT_READY -> R.string.qos_issue_code_prerequisite_not_ready
+        QosExecutionIssueCode.BATTERY_INSUFFICIENT -> R.string.qos_issue_code_battery_insufficient
+        QosExecutionIssueCode.LOCATION_UNAVAILABLE -> R.string.qos_issue_code_location_unavailable
         QosExecutionIssueCode.TARGET_TECHNOLOGY_MISMATCH -> R.string.qos_issue_code_target_technology_mismatch
         QosExecutionIssueCode.PHONE_TARGET_MISSING -> R.string.qos_issue_code_phone_target_missing
         QosExecutionIssueCode.NETWORK_UNAVAILABLE -> R.string.qos_issue_code_network_unavailable
         QosExecutionIssueCode.THRESHOLD_NOT_MET -> R.string.qos_issue_code_threshold_not_met
         QosExecutionIssueCode.OPERATOR_ABORTED -> R.string.qos_issue_code_operator_aborted
         QosExecutionIssueCode.UNKNOWN -> R.string.qos_issue_code_unknown
+    }
+}
+
+private fun networkStatusLabelRes(status: NetworkStatus): Int {
+    return when (status) {
+        NetworkStatus.AVAILABLE -> R.string.performance_device_network_available
+        NetworkStatus.UNAVAILABLE -> R.string.performance_device_network_unavailable
     }
 }

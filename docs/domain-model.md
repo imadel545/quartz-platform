@@ -214,6 +214,11 @@ For bounded site-level performance workflows (Débit/QoS foundation), local sess
   - configured technologies set
   - script snapshot timestamp
 - prerequisite readiness flags
+- observed device diagnostics snapshot:
+  - network status (`AVAILABLE`/`UNAVAILABLE`)
+  - battery level percentage
+  - GPS availability
+  - capture timestamp
 - structured throughput metrics and thresholds
 - structured QoS script execution summary
 - required step progression and completion guard

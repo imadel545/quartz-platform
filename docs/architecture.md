@@ -61,6 +61,13 @@ Current Android implementation covers a bounded local-first workflow baseline:
   - active family/repetition visibility
   - deterministic run-plan coverage (planned, pending, terminal)
   - bounded recovery state projection (`NONE`, `RESUME_AVAILABLE`, `INVARIANT_BROKEN`) with next planned run and checkpoint count
+- QoS execution now keeps a bounded observed-device diagnostics snapshot on `performance_sessions`:
+  - network status (`AVAILABLE`/`UNAVAILABLE`)
+  - battery level percentage
+  - GPS availability
+  - diagnostics capture timestamp
+  - persisted via Room migration `22 -> 23`
+- QoS preflight can apply observed diagnostics snapshot to session prerequisite flags for deterministic operator flow
 - `QOS_SCRIPT` completion hardening in repository/domain flow:
   - selected families required
   - each selected family must be completed (`PASSED`/`FAILED`)
@@ -73,9 +80,10 @@ Current Android implementation covers a bounded local-first workflow baseline:
   - script snapshot timestamp (`updatedAtEpochMillis` at selection/save time)
 - report-side performance projection is strengthened but still bounded:
   - ReportDraft includes per-family QoS closure details and timeline review
+  - ReportDraft includes observed-device diagnostics snapshot when available
   - ReportDraft includes typed QoS issue taxonomy visibility (code + optional detail) for failed/blocked outcomes
   - ReportDraft includes QoS execution-engine context (state, active run, plan progress)
-  - ReportList includes concise QoS triage for failed/blocked/coverage signals plus engine-state/run-plan signal and dominant issue code
+  - ReportList includes concise QoS triage for failed/blocked/coverage signals plus engine-state/run-plan signal, dominant issue code, and compact device diagnostics signals
 
 For XFeeder proximity, implementation is intentionally explicit and bounded:
 - `UNAVAILABLE`: location/altitude data cannot be trusted for eligibility

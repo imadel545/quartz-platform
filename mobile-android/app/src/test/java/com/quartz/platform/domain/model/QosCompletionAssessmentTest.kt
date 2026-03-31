@@ -170,7 +170,9 @@ class QosCompletionAssessmentTest {
             qosRunSummary = summary,
             family = QosTestFamily.THROUGHPUT_LATENCY,
             action = QosRunnerAction.MARK_PASSED,
-            preconditionsReady = true,
+            prerequisiteNetworkReady = true,
+            prerequisiteBatterySufficient = true,
+            prerequisiteLocationReady = true,
             reasonCode = null,
             failureReason = null
         )

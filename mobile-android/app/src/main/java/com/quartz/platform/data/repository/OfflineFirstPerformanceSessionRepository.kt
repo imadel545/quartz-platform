@@ -15,6 +15,7 @@ import com.quartz.platform.domain.model.PerformanceSessionStatus
 import com.quartz.platform.domain.model.PerformanceStepCode
 import com.quartz.platform.domain.model.PerformanceStepStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
+import com.quartz.platform.domain.model.NetworkStatus
 import com.quartz.platform.domain.model.QosCompletionIssue
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosExecutionEventType
@@ -113,6 +114,10 @@ class OfflineFirstPerformanceSessionRepository @Inject constructor(
             prerequisiteNetworkReady = false,
             prerequisiteBatterySufficient = false,
             prerequisiteLocationReady = false,
+            observedNetworkStatus = null,
+            observedBatteryLevelPercent = null,
+            observedLocationAvailable = null,
+            observedSignalsCapturedAtEpochMillis = null,
             throughputMetrics = ThroughputMetrics(),
             qosRunSummary = QosRunSummary(),
             notes = "",
@@ -159,6 +164,10 @@ class OfflineFirstPerformanceSessionRepository @Inject constructor(
                 prerequisiteNetworkReady = existing.prerequisiteNetworkReady,
                 prerequisiteBatterySufficient = existing.prerequisiteBatterySufficient,
                 prerequisiteLocationReady = existing.prerequisiteLocationReady,
+                observedNetworkStatus = existing.observedNetworkStatus,
+                observedBatteryLevelPercent = existing.observedBatteryLevelPercent,
+                observedLocationAvailable = existing.observedLocationAvailable,
+                observedSignalsCapturedAtEpochMillis = existing.observedSignalsCapturedAtEpochMillis,
                 throughputDownloadMbps = existing.throughputDownloadMbps,
                 throughputUploadMbps = existing.throughputUploadMbps,
                 throughputLatencyMs = existing.throughputLatencyMs,
@@ -194,6 +203,10 @@ class OfflineFirstPerformanceSessionRepository @Inject constructor(
         prerequisiteNetworkReady: Boolean,
         prerequisiteBatterySufficient: Boolean,
         prerequisiteLocationReady: Boolean,
+        observedNetworkStatus: NetworkStatus?,
+        observedBatteryLevelPercent: Int?,
+        observedLocationAvailable: Boolean?,
+        observedSignalsCapturedAtEpochMillis: Long?,
         throughputMetrics: ThroughputMetrics,
         qosRunSummary: QosRunSummary,
         notes: String,
@@ -236,6 +249,10 @@ class OfflineFirstPerformanceSessionRepository @Inject constructor(
                 prerequisiteNetworkReady = prerequisiteNetworkReady,
                 prerequisiteBatterySufficient = prerequisiteBatterySufficient,
                 prerequisiteLocationReady = prerequisiteLocationReady,
+                observedNetworkStatus = observedNetworkStatus?.name,
+                observedBatteryLevelPercent = observedBatteryLevelPercent?.coerceIn(0, 100),
+                observedLocationAvailable = observedLocationAvailable,
+                observedSignalsCapturedAtEpochMillis = observedSignalsCapturedAtEpochMillis,
                 throughputDownloadMbps = throughputMetrics.downloadMbps,
                 throughputUploadMbps = throughputMetrics.uploadMbps,
                 throughputLatencyMs = throughputMetrics.latencyMs,

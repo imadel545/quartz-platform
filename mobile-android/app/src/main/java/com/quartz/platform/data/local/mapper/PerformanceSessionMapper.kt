@@ -9,6 +9,7 @@ import com.quartz.platform.domain.model.QosExecutionEventType
 import com.quartz.platform.domain.model.QosExecutionTimelineEvent
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosExecutionIssueCode
+import com.quartz.platform.domain.model.NetworkStatus
 import com.quartz.platform.domain.model.PerformanceGuidedStep
 import com.quartz.platform.domain.model.PerformanceSession
 import com.quartz.platform.domain.model.PerformanceSessionStatus
@@ -40,6 +41,12 @@ fun PerformanceSessionEntity.toDomain(
         prerequisiteNetworkReady = prerequisiteNetworkReady,
         prerequisiteBatterySufficient = prerequisiteBatterySufficient,
         prerequisiteLocationReady = prerequisiteLocationReady,
+        observedNetworkStatus = observedNetworkStatus?.let { raw ->
+            runCatching { NetworkStatus.valueOf(raw) }.getOrNull()
+        },
+        observedBatteryLevelPercent = observedBatteryLevelPercent,
+        observedLocationAvailable = observedLocationAvailable,
+        observedSignalsCapturedAtEpochMillis = observedSignalsCapturedAtEpochMillis,
         throughputMetrics = ThroughputMetrics(
             downloadMbps = throughputDownloadMbps,
             uploadMbps = throughputUploadMbps,
@@ -176,6 +183,10 @@ fun PerformanceSession.toEntity(): PerformanceSessionEntity {
         prerequisiteNetworkReady = prerequisiteNetworkReady,
         prerequisiteBatterySufficient = prerequisiteBatterySufficient,
         prerequisiteLocationReady = prerequisiteLocationReady,
+        observedNetworkStatus = observedNetworkStatus?.name,
+        observedBatteryLevelPercent = observedBatteryLevelPercent,
+        observedLocationAvailable = observedLocationAvailable,
+        observedSignalsCapturedAtEpochMillis = observedSignalsCapturedAtEpochMillis,
         throughputDownloadMbps = throughputMetrics.downloadMbps,
         throughputUploadMbps = throughputMetrics.uploadMbps,
         throughputLatencyMs = throughputMetrics.latencyMs,

@@ -48,6 +48,10 @@ data class ThroughputReportClosureProjection(
     val siteCode: String,
     val sessionStatus: PerformanceSessionStatus,
     val preconditionsReady: Boolean,
+    val observedNetworkStatus: NetworkStatus? = null,
+    val observedBatteryLevelPercent: Int? = null,
+    val observedLocationAvailable: Boolean? = null,
+    val observedSignalsCapturedAtEpochMillis: Long? = null,
     val requiredStepCount: Int,
     val completedRequiredStepCount: Int,
     val downloadMbps: Double?,
@@ -70,6 +74,10 @@ data class QosReportClosureProjection(
     val siteCode: String,
     val sessionStatus: PerformanceSessionStatus,
     val preconditionsReady: Boolean,
+    val observedNetworkStatus: NetworkStatus? = null,
+    val observedBatteryLevelPercent: Int? = null,
+    val observedLocationAvailable: Boolean? = null,
+    val observedSignalsCapturedAtEpochMillis: Long? = null,
     val requiredStepCount: Int,
     val completedRequiredStepCount: Int,
     val scriptName: String?,
@@ -129,6 +137,9 @@ data class QosReportClosureProjection(
 
     val timelineFamilyCoverageCount: Int
         get() = executionTimelineEvents.map { event -> event.family }.toSet().size
+
+    val observedBatterySufficient: Boolean?
+        get() = observedBatteryLevelPercent?.let { level -> level >= PerformanceSession.MIN_RECOMMENDED_BATTERY_PERCENT }
 
     val requiredRepeatCount: Int
         get() = configuredRepeatCount?.coerceAtLeast(1) ?: 1

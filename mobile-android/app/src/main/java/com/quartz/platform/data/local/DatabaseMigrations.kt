@@ -979,4 +979,33 @@ object DatabaseMigrations {
             )
         }
     }
+
+    val MIGRATION_22_23: Migration = object : Migration(22, 23) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                ALTER TABLE performance_sessions
+                ADD COLUMN observedNetworkStatus TEXT
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                ALTER TABLE performance_sessions
+                ADD COLUMN observedBatteryLevelPercent INTEGER
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                ALTER TABLE performance_sessions
+                ADD COLUMN observedLocationAvailable INTEGER
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                ALTER TABLE performance_sessions
+                ADD COLUMN observedSignalsCapturedAtEpochMillis INTEGER
+                """.trimIndent()
+            )
+        }
+    }
 }

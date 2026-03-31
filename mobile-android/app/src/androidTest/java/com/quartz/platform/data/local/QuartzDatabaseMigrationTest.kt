@@ -974,6 +974,112 @@ class QuartzDatabaseMigrationTest {
 
         migrated.close()
     }
+
+    @Test
+    fun migration_22_23_adds_performance_session_observed_device_signal_columns() {
+        val dbName = "quartz-migration-22-23-test"
+
+        migrationTestHelper.createDatabase(dbName, 22).apply {
+            insertPerformanceSessionV19(
+                id = "perf-qos-22",
+                siteId = "site-1",
+                workflowType = "QOS_SCRIPT"
+            )
+            close()
+        }
+
+        val migrated = migrationTestHelper.runMigrationsAndValidate(
+            dbName,
+            23,
+            true,
+            DatabaseMigrations.MIGRATION_22_23
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM pragma_table_info('performance_sessions')
+                WHERE name = 'observedNetworkStatus'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM pragma_table_info('performance_sessions')
+                WHERE name = 'observedBatteryLevelPercent'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM pragma_table_info('performance_sessions')
+                WHERE name = 'observedLocationAvailable'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM pragma_table_info('performance_sessions')
+                WHERE name = 'observedSignalsCapturedAtEpochMillis'
+                """.trimIndent()
+            )
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM performance_sessions
+                WHERE id = 'perf-qos-22'
+                  AND observedNetworkStatus IS NULL
+                  AND observedBatteryLevelPercent IS NULL
+                  AND observedLocationAvailable IS NULL
+                  AND observedSignalsCapturedAtEpochMillis IS NULL
+                """.trimIndent()
+            )
+        )
+
+        migrated.execSQL(
+            """
+            UPDATE performance_sessions
+            SET observedNetworkStatus = 'AVAILABLE',
+                observedBatteryLevelPercent = 73,
+                observedLocationAvailable = 1,
+                observedSignalsCapturedAtEpochMillis = 1000
+            WHERE id = 'perf-qos-22'
+            """.trimIndent()
+        )
+
+        assertEquals(
+            "AVAILABLE",
+            migrated.stringQuery(
+                """
+                SELECT observedNetworkStatus
+                FROM performance_sessions
+                WHERE id = 'perf-qos-22'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            73L,
+            migrated.longQuery(
+                """
+                SELECT observedBatteryLevelPercent
+                FROM performance_sessions
+                WHERE id = 'perf-qos-22'
+                """.trimIndent()
+            )
+        )
+
+        migrated.close()
+    }
 }
 
 private fun SupportSQLiteDatabase.insertDraft(

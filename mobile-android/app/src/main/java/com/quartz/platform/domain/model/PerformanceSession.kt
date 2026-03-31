@@ -31,6 +31,8 @@ enum class QosFamilyExecutionStatus {
 
 enum class QosExecutionIssueCode {
     PREREQUISITE_NOT_READY,
+    BATTERY_INSUFFICIENT,
+    LOCATION_UNAVAILABLE,
     TARGET_TECHNOLOGY_MISMATCH,
     PHONE_TARGET_MISSING,
     NETWORK_UNAVAILABLE,
@@ -121,6 +123,10 @@ data class PerformanceSession(
     val prerequisiteNetworkReady: Boolean,
     val prerequisiteBatterySufficient: Boolean,
     val prerequisiteLocationReady: Boolean,
+    val observedNetworkStatus: NetworkStatus? = null,
+    val observedBatteryLevelPercent: Int? = null,
+    val observedLocationAvailable: Boolean? = null,
+    val observedSignalsCapturedAtEpochMillis: Long? = null,
     val throughputMetrics: ThroughputMetrics,
     val qosRunSummary: QosRunSummary,
     val notes: String,
@@ -148,5 +154,12 @@ data class PerformanceSession(
     val preconditionsReady: Boolean
         get() = prerequisiteNetworkReady && prerequisiteBatterySufficient && prerequisiteLocationReady
 
+    val observedBatterySufficient: Boolean?
+        get() = observedBatteryLevelPercent?.let { level -> level >= MIN_RECOMMENDED_BATTERY_PERCENT }
+
     fun completionGuard(): WorkflowCompletionGuard = WorkflowCompletionGuard.fromSteps(steps)
+
+    companion object {
+        const val MIN_RECOMMENDED_BATTERY_PERCENT: Int = 20
+    }
 }

@@ -6,6 +6,7 @@ import com.quartz.platform.domain.model.PerformanceSessionStatus
 import com.quartz.platform.domain.model.PerformanceStepCode
 import com.quartz.platform.domain.model.PerformanceStepStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
+import com.quartz.platform.domain.model.NetworkStatus
 import com.quartz.platform.domain.model.QosFamilyExecutionResult
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosRunSummary
@@ -649,6 +650,10 @@ class ObserveSiteReportListUseCaseTest {
             prerequisiteNetworkReady: Boolean,
             prerequisiteBatterySufficient: Boolean,
             prerequisiteLocationReady: Boolean,
+            observedNetworkStatus: NetworkStatus?,
+            observedBatteryLevelPercent: Int?,
+            observedLocationAvailable: Boolean?,
+            observedSignalsCapturedAtEpochMillis: Long?,
             throughputMetrics: ThroughputMetrics,
             qosRunSummary: QosRunSummary,
             notes: String,

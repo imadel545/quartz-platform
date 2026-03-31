@@ -1,6 +1,7 @@
 package com.quartz.platform.domain.usecase
 
 import com.quartz.platform.domain.model.PerformanceSessionStatus
+import com.quartz.platform.domain.model.NetworkStatus
 import com.quartz.platform.domain.model.QosRunSummary
 import com.quartz.platform.domain.model.ThroughputMetrics
 import com.quartz.platform.domain.repository.PerformanceSessionRepository
@@ -15,6 +16,10 @@ class UpdatePerformanceSessionExecutionUseCase @Inject constructor(
         prerequisiteNetworkReady: Boolean,
         prerequisiteBatterySufficient: Boolean,
         prerequisiteLocationReady: Boolean,
+        observedNetworkStatus: NetworkStatus?,
+        observedBatteryLevelPercent: Int?,
+        observedLocationAvailable: Boolean?,
+        observedSignalsCapturedAtEpochMillis: Long?,
         throughputMetrics: ThroughputMetrics,
         qosRunSummary: QosRunSummary,
         notes: String,
@@ -26,6 +31,10 @@ class UpdatePerformanceSessionExecutionUseCase @Inject constructor(
             prerequisiteNetworkReady = prerequisiteNetworkReady,
             prerequisiteBatterySufficient = prerequisiteBatterySufficient,
             prerequisiteLocationReady = prerequisiteLocationReady,
+            observedNetworkStatus = observedNetworkStatus,
+            observedBatteryLevelPercent = observedBatteryLevelPercent,
+            observedLocationAvailable = observedLocationAvailable,
+            observedSignalsCapturedAtEpochMillis = observedSignalsCapturedAtEpochMillis,
             throughputMetrics = throughputMetrics,
             qosRunSummary = qosRunSummary,
             notes = notes,

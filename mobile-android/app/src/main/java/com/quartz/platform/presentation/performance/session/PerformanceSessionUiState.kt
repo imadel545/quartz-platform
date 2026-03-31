@@ -3,6 +3,7 @@ package com.quartz.platform.presentation.performance.session
 import com.quartz.platform.domain.model.PerformanceSession
 import com.quartz.platform.domain.model.PerformanceSessionStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
+import com.quartz.platform.domain.model.NetworkStatus
 import com.quartz.platform.domain.model.QosCompletionIssue
 import com.quartz.platform.domain.model.QosExecutionSnapshot
 import com.quartz.platform.domain.model.QosRunPlanItem
@@ -32,6 +33,11 @@ data class PerformanceSessionUiState(
     val prerequisiteNetworkReady: Boolean = false,
     val prerequisiteBatterySufficient: Boolean = false,
     val prerequisiteLocationReady: Boolean = false,
+    val observedNetworkStatus: NetworkStatus? = null,
+    val observedBatteryLevelPercent: Int? = null,
+    val observedBatteryIsCharging: Boolean? = null,
+    val observedLocationAvailable: Boolean? = null,
+    val observedSignalsCapturedAtEpochMillis: Long? = null,
     val throughputDownloadInput: String = "",
     val throughputUploadInput: String = "",
     val throughputLatencyInput: String = "",
@@ -70,11 +76,15 @@ data class PerformanceSessionUiState(
     val hasUnsavedChanges: Boolean = false,
     val isCreatingSession: Boolean = false,
     val isSavingSummary: Boolean = false,
+    val isRefreshingDeviceDiagnostics: Boolean = false,
     val errorMessage: String? = null,
     val infoMessage: String? = null
 ) {
     val selectedSessionWorkflowType: PerformanceWorkflowType?
         get() = session?.workflowType
+
+    val observedBatterySufficient: Boolean?
+        get() = observedBatteryLevelPercent?.let { it >= PerformanceSession.MIN_RECOMMENDED_BATTERY_PERCENT }
 }
 
 fun PerformanceSession.toEditableThroughputMetrics(): ThroughputMetrics = throughputMetrics

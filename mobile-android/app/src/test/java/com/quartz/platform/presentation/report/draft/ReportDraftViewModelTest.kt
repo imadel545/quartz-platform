@@ -12,6 +12,7 @@ import com.quartz.platform.domain.model.PerformanceSessionStatus
 import com.quartz.platform.domain.model.PerformanceStepCode
 import com.quartz.platform.domain.model.PerformanceStepStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
+import com.quartz.platform.domain.model.NetworkStatus
 import com.quartz.platform.domain.model.QosRunSummary
 import com.quartz.platform.domain.model.ReportDraft
 import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
@@ -822,6 +823,10 @@ class ReportDraftViewModelTest {
             prerequisiteNetworkReady: Boolean,
             prerequisiteBatterySufficient: Boolean,
             prerequisiteLocationReady: Boolean,
+            observedNetworkStatus: NetworkStatus?,
+            observedBatteryLevelPercent: Int?,
+            observedLocationAvailable: Boolean?,
+            observedSignalsCapturedAtEpochMillis: Long?,
             throughputMetrics: ThroughputMetrics,
             qosRunSummary: QosRunSummary,
             notes: String,

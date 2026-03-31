@@ -32,6 +32,7 @@ import com.quartz.platform.domain.model.QosExecutionEngineState
 import com.quartz.platform.domain.model.QosExecutionIssueCode
 import com.quartz.platform.domain.model.QosRecoveryState
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
+import com.quartz.platform.domain.model.NetworkStatus
 import com.quartz.platform.domain.model.QosReportClosureProjection
 import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ReportClosureProjection
@@ -447,6 +448,12 @@ private fun ThroughputClosureProjectionContent(
         ),
         style = MaterialTheme.typography.bodySmall
     )
+    PerformanceObservedDiagnosticsSection(
+        observedNetworkStatus = projection.observedNetworkStatus,
+        observedBatteryLevelPercent = projection.observedBatteryLevelPercent,
+        observedLocationAvailable = projection.observedLocationAvailable,
+        observedSignalsCapturedAtEpochMillis = projection.observedSignalsCapturedAtEpochMillis
+    )
     projection.downloadMbps?.let { value ->
         Text(
             text = stringResource(R.string.report_closure_performance_download, value),
@@ -528,6 +535,12 @@ private fun QosClosureProjectionContent(
             }
         ),
         style = MaterialTheme.typography.bodySmall
+    )
+    PerformanceObservedDiagnosticsSection(
+        observedNetworkStatus = projection.observedNetworkStatus,
+        observedBatteryLevelPercent = projection.observedBatteryLevelPercent,
+        observedLocationAvailable = projection.observedLocationAvailable,
+        observedSignalsCapturedAtEpochMillis = projection.observedSignalsCapturedAtEpochMillis
     )
     Text(
         text = stringResource(
@@ -769,6 +782,72 @@ private fun QosClosureProjectionContent(
 }
 
 @Composable
+private fun PerformanceObservedDiagnosticsSection(
+    observedNetworkStatus: NetworkStatus?,
+    observedBatteryLevelPercent: Int?,
+    observedLocationAvailable: Boolean?,
+    observedSignalsCapturedAtEpochMillis: Long?
+) {
+    if (
+        observedNetworkStatus == null &&
+        observedBatteryLevelPercent == null &&
+        observedLocationAvailable == null &&
+        observedSignalsCapturedAtEpochMillis == null
+    ) {
+        return
+    }
+
+    observedNetworkStatus?.let { networkStatus ->
+        Text(
+            text = stringResource(
+                R.string.report_closure_performance_device_network,
+                stringResource(networkStatusLabelRes(networkStatus))
+            ),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    observedBatteryLevelPercent?.let { batteryPercent ->
+        val batteryLabel = buildString {
+            append("$batteryPercent%")
+            append(" • ")
+            append(
+                if (batteryPercent >= com.quartz.platform.domain.model.PerformanceSession.MIN_RECOMMENDED_BATTERY_PERCENT) {
+                    "OK"
+                } else {
+                    "LOW"
+                }
+            )
+        }
+        Text(
+            text = stringResource(R.string.report_closure_performance_device_battery, batteryLabel),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    observedLocationAvailable?.let { locationAvailable ->
+        Text(
+            text = stringResource(
+                R.string.report_closure_performance_device_location,
+                if (locationAvailable) {
+                    stringResource(R.string.value_yes)
+                } else {
+                    stringResource(R.string.value_no)
+                }
+            ),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    observedSignalsCapturedAtEpochMillis?.let { capturedAt ->
+        Text(
+            text = stringResource(
+                R.string.report_closure_performance_device_captured_at,
+                formatEpoch(capturedAt)
+            ),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
 private fun DebugLiveSyncTraceSnapshotCard(trace: ReportSyncTrace) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -974,6 +1053,13 @@ private fun xfeederOutcomeLabelRes(outcome: XfeederSectorOutcome): Int {
     }
 }
 
+private fun networkStatusLabelRes(status: NetworkStatus): Int {
+    return when (status) {
+        NetworkStatus.AVAILABLE -> R.string.performance_device_network_available
+        NetworkStatus.UNAVAILABLE -> R.string.performance_device_network_unavailable
+    }
+}
+
 private fun qosTestFamilyLabelRes(family: QosTestFamily): Int {
     return when (family) {
         QosTestFamily.THROUGHPUT_LATENCY -> R.string.qos_test_family_throughput_latency
@@ -1033,6 +1119,8 @@ private fun qosIssueCodeLabelRes(code: QosExecutionIssueCode): Int {
         QosExecutionIssueCode.TARGET_TECHNOLOGY_MISMATCH -> R.string.qos_issue_code_target_technology_mismatch
         QosExecutionIssueCode.PHONE_TARGET_MISSING -> R.string.qos_issue_code_phone_target_missing
         QosExecutionIssueCode.NETWORK_UNAVAILABLE -> R.string.qos_issue_code_network_unavailable
+        QosExecutionIssueCode.BATTERY_INSUFFICIENT -> R.string.qos_issue_code_battery_insufficient
+        QosExecutionIssueCode.LOCATION_UNAVAILABLE -> R.string.qos_issue_code_location_unavailable
         QosExecutionIssueCode.THRESHOLD_NOT_MET -> R.string.qos_issue_code_threshold_not_met
         QosExecutionIssueCode.OPERATOR_ABORTED -> R.string.qos_issue_code_operator_aborted
         QosExecutionIssueCode.UNKNOWN -> R.string.qos_issue_code_unknown

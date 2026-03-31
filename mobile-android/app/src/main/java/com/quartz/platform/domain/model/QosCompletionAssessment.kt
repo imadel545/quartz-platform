@@ -12,7 +12,9 @@ enum class QosCompletionIssue {
 }
 
 enum class QosPreflightIssue {
-    PREREQUISITES_NOT_READY,
+    NETWORK_NOT_READY,
+    BATTERY_NOT_READY,
+    LOCATION_NOT_READY,
     SCRIPT_REFERENCE_MISSING,
     FAMILY_NOT_SELECTED,
     PHONE_TARGET_MISSING,
@@ -215,14 +217,16 @@ fun assessQosFamilyPreflight(
     qosRunSummary: QosRunSummary,
     family: QosTestFamily,
     action: QosRunnerAction,
-    preconditionsReady: Boolean,
+    prerequisiteNetworkReady: Boolean,
+    prerequisiteBatterySufficient: Boolean,
+    prerequisiteLocationReady: Boolean,
     reasonCode: QosExecutionIssueCode?,
     failureReason: String?
 ): Set<QosPreflightIssue> {
     val issues = linkedSetOf<QosPreflightIssue>()
-    if (!preconditionsReady) {
-        issues += QosPreflightIssue.PREREQUISITES_NOT_READY
-    }
+    if (!prerequisiteNetworkReady) issues += QosPreflightIssue.NETWORK_NOT_READY
+    if (!prerequisiteBatterySufficient) issues += QosPreflightIssue.BATTERY_NOT_READY
+    if (!prerequisiteLocationReady) issues += QosPreflightIssue.LOCATION_NOT_READY
     if (qosRunSummary.scriptId.isNullOrBlank() || qosRunSummary.scriptName.isNullOrBlank()) {
         issues += QosPreflightIssue.SCRIPT_REFERENCE_MISSING
     }
@@ -240,6 +244,9 @@ fun assessQosFamilyPreflight(
     }
 
     val coverage = computeQosFamilyRunCoverage(qosRunSummary, family)
+    val preconditionsReady = prerequisiteNetworkReady &&
+        prerequisiteBatterySufficient &&
+        prerequisiteLocationReady
     val activeRun = deriveQosExecutionSnapshot(
         qosRunSummary = qosRunSummary,
         preconditionsReady = preconditionsReady

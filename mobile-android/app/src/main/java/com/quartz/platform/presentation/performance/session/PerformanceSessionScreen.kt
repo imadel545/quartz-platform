@@ -37,6 +37,7 @@ import com.quartz.platform.domain.model.PerformanceSessionStatus
 import com.quartz.platform.domain.model.PerformanceStepCode
 import com.quartz.platform.domain.model.PerformanceStepStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
+import com.quartz.platform.domain.model.NetworkStatus
 import com.quartz.platform.domain.model.QosCompletionIssue
 import com.quartz.platform.domain.model.QosExecutionEngineState
 import com.quartz.platform.domain.model.QosRecoveryState
@@ -81,6 +82,8 @@ fun PerformanceSessionRoute(
         onTechnologySelected = viewModel::onTechnologySelected,
         onStepStatusSelected = viewModel::onStepStatusSelected,
         onSessionStatusSelected = viewModel::onSessionStatusSelected,
+        onRefreshDeviceDiagnosticsClicked = viewModel::onRefreshDeviceDiagnosticsClicked,
+        onApplyDeviceDiagnosticsClicked = viewModel::onApplyDeviceDiagnosticsClicked,
         onPrerequisiteNetworkChanged = viewModel::onPrerequisiteNetworkChanged,
         onPrerequisiteBatteryChanged = viewModel::onPrerequisiteBatteryChanged,
         onPrerequisiteLocationChanged = viewModel::onPrerequisiteLocationChanged,
@@ -129,6 +132,8 @@ fun PerformanceSessionScreen(
     onTechnologySelected: (String?) -> Unit,
     onStepStatusSelected: (PerformanceStepCode, PerformanceStepStatus) -> Unit,
     onSessionStatusSelected: (PerformanceSessionStatus) -> Unit,
+    onRefreshDeviceDiagnosticsClicked: () -> Unit,
+    onApplyDeviceDiagnosticsClicked: () -> Unit,
     onPrerequisiteNetworkChanged: (Boolean) -> Unit,
     onPrerequisiteBatteryChanged: (Boolean) -> Unit,
     onPrerequisiteLocationChanged: (Boolean) -> Unit,
@@ -252,6 +257,20 @@ fun PerformanceSessionScreen(
                         session = session,
                         selectedStatus = state.selectedStatus,
                         onSessionStatusSelected = onSessionStatusSelected
+                    )
+                }
+
+                item {
+                    DeviceDiagnosticsCard(
+                        observedNetworkStatus = state.observedNetworkStatus,
+                        observedBatteryLevelPercent = state.observedBatteryLevelPercent,
+                        observedBatteryIsCharging = state.observedBatteryIsCharging,
+                        observedBatterySufficient = state.observedBatterySufficient,
+                        observedLocationAvailable = state.observedLocationAvailable,
+                        observedSignalsCapturedAtEpochMillis = state.observedSignalsCapturedAtEpochMillis,
+                        isRefreshing = state.isRefreshingDeviceDiagnostics,
+                        onRefreshDeviceDiagnosticsClicked = onRefreshDeviceDiagnosticsClicked,
+                        onApplyDeviceDiagnosticsClicked = onApplyDeviceDiagnosticsClicked
                     )
                 }
 
@@ -581,6 +600,93 @@ private fun SessionSummaryCard(
                     Button(onClick = { onSessionStatusSelected(status) }) {
                         Text(stringResource(performanceSessionStatusLabelRes(status)))
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeviceDiagnosticsCard(
+    observedNetworkStatus: NetworkStatus?,
+    observedBatteryLevelPercent: Int?,
+    observedBatteryIsCharging: Boolean?,
+    observedBatterySufficient: Boolean?,
+    observedLocationAvailable: Boolean?,
+    observedSignalsCapturedAtEpochMillis: Long?,
+    isRefreshing: Boolean,
+    onRefreshDeviceDiagnosticsClicked: () -> Unit,
+    onApplyDeviceDiagnosticsClicked: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.performance_header_device_diagnostics),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.performance_label_device_network_status,
+                    stringResource(networkStatusLabelRes(observedNetworkStatus))
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.performance_label_device_battery_status,
+                    observedBatteryLevelPercent?.toString() ?: stringResource(R.string.value_not_available),
+                    when (observedBatterySufficient) {
+                        true -> stringResource(R.string.value_yes)
+                        false -> stringResource(R.string.value_no)
+                        null -> stringResource(R.string.value_not_available)
+                    },
+                    when (observedBatteryIsCharging) {
+                        true -> stringResource(R.string.value_yes)
+                        false -> stringResource(R.string.value_no)
+                        null -> stringResource(R.string.value_not_available)
+                    }
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.performance_label_device_location_status,
+                    when (observedLocationAvailable) {
+                        true -> stringResource(R.string.value_yes)
+                        false -> stringResource(R.string.value_no)
+                        null -> stringResource(R.string.value_not_available)
+                    }
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            observedSignalsCapturedAtEpochMillis?.let { capturedAt ->
+                Text(
+                    text = stringResource(R.string.label_updated_at, formatEpoch(capturedAt)),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    modifier = Modifier.weight(1f),
+                    enabled = !isRefreshing,
+                    onClick = onRefreshDeviceDiagnosticsClicked
+                ) {
+                    Text(
+                        text = if (isRefreshing) {
+                            stringResource(R.string.performance_action_device_diagnostics_refresh_loading)
+                        } else {
+                            stringResource(R.string.performance_action_device_diagnostics_refresh)
+                        }
+                    )
+                }
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onApplyDeviceDiagnosticsClicked
+                ) {
+                    Text(stringResource(R.string.performance_action_device_diagnostics_apply))
                 }
             }
         }
@@ -1267,6 +1373,8 @@ private fun qosExecutionEventTypeLabelRes(eventType: QosExecutionEventType): Int
 private fun qosIssueCodeLabelRes(code: QosExecutionIssueCode): Int {
     return when (code) {
         QosExecutionIssueCode.PREREQUISITE_NOT_READY -> R.string.qos_issue_code_prerequisite_not_ready
+        QosExecutionIssueCode.BATTERY_INSUFFICIENT -> R.string.qos_issue_code_battery_insufficient
+        QosExecutionIssueCode.LOCATION_UNAVAILABLE -> R.string.qos_issue_code_location_unavailable
         QosExecutionIssueCode.TARGET_TECHNOLOGY_MISMATCH -> R.string.qos_issue_code_target_technology_mismatch
         QosExecutionIssueCode.PHONE_TARGET_MISSING -> R.string.qos_issue_code_phone_target_missing
         QosExecutionIssueCode.NETWORK_UNAVAILABLE -> R.string.qos_issue_code_network_unavailable
@@ -1279,6 +1387,8 @@ private fun qosIssueCodeLabelRes(code: QosExecutionIssueCode): Int {
 private fun qosIssueCodeActionRes(code: QosExecutionIssueCode): Int {
     return when (code) {
         QosExecutionIssueCode.PREREQUISITE_NOT_READY -> R.string.qos_issue_action_prerequisite_not_ready
+        QosExecutionIssueCode.BATTERY_INSUFFICIENT -> R.string.qos_issue_action_battery_insufficient
+        QosExecutionIssueCode.LOCATION_UNAVAILABLE -> R.string.qos_issue_action_location_unavailable
         QosExecutionIssueCode.TARGET_TECHNOLOGY_MISMATCH -> R.string.qos_issue_action_target_technology_mismatch
         QosExecutionIssueCode.PHONE_TARGET_MISSING -> R.string.qos_issue_action_phone_target_missing
         QosExecutionIssueCode.NETWORK_UNAVAILABLE -> R.string.qos_issue_action_network_unavailable
@@ -1293,6 +1403,8 @@ private fun qosReasonOptionsForFamily(family: QosTestFamily): List<QosExecutionI
         QosTestFamily.THROUGHPUT_LATENCY,
         QosTestFamily.VIDEO_STREAMING -> listOf(
             QosExecutionIssueCode.NETWORK_UNAVAILABLE,
+            QosExecutionIssueCode.BATTERY_INSUFFICIENT,
+            QosExecutionIssueCode.LOCATION_UNAVAILABLE,
             QosExecutionIssueCode.THRESHOLD_NOT_MET,
             QosExecutionIssueCode.OPERATOR_ABORTED,
             QosExecutionIssueCode.UNKNOWN
@@ -1305,6 +1417,8 @@ private fun qosReasonOptionsForFamily(family: QosTestFamily): List<QosExecutionI
         QosTestFamily.STANDARD_CALL -> listOf(
             QosExecutionIssueCode.PHONE_TARGET_MISSING,
             QosExecutionIssueCode.NETWORK_UNAVAILABLE,
+            QosExecutionIssueCode.BATTERY_INSUFFICIENT,
+            QosExecutionIssueCode.LOCATION_UNAVAILABLE,
             QosExecutionIssueCode.OPERATOR_ABORTED,
             QosExecutionIssueCode.UNKNOWN
         )
@@ -1326,7 +1440,9 @@ private fun qosCompletionIssueLabelRes(issue: QosCompletionIssue): Int {
 
 private fun qosPreflightIssueLabelRes(issue: QosPreflightIssue): Int {
     return when (issue) {
-        QosPreflightIssue.PREREQUISITES_NOT_READY -> R.string.error_performance_qos_issue_prerequisites_not_ready
+        QosPreflightIssue.NETWORK_NOT_READY -> R.string.error_performance_qos_issue_network_not_ready
+        QosPreflightIssue.BATTERY_NOT_READY -> R.string.error_performance_qos_issue_battery_not_ready
+        QosPreflightIssue.LOCATION_NOT_READY -> R.string.error_performance_qos_issue_location_not_ready
         QosPreflightIssue.SCRIPT_REFERENCE_MISSING -> R.string.error_performance_qos_issue_script_reference_missing
         QosPreflightIssue.FAMILY_NOT_SELECTED -> R.string.error_performance_qos_issue_family_not_selected
         QosPreflightIssue.PHONE_TARGET_MISSING -> R.string.error_performance_qos_issue_phone_target_missing
@@ -1337,6 +1453,14 @@ private fun qosPreflightIssueLabelRes(issue: QosPreflightIssue): Int {
         QosPreflightIssue.REPETITION_NOT_STARTED -> R.string.error_performance_qos_issue_repetition_not_started
         QosPreflightIssue.REPETITION_NOT_PAUSED -> R.string.error_performance_qos_issue_repetition_not_paused
         QosPreflightIssue.FAILURE_REASON_CODE_REQUIRED -> R.string.error_performance_qos_issue_failure_reason_missing
+    }
+}
+
+private fun networkStatusLabelRes(status: NetworkStatus?): Int {
+    return when (status) {
+        NetworkStatus.AVAILABLE -> R.string.performance_device_network_available
+        NetworkStatus.UNAVAILABLE -> R.string.performance_device_network_unavailable
+        null -> R.string.value_not_available
     }
 }
 
