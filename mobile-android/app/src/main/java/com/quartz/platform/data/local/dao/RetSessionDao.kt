@@ -28,6 +28,15 @@ interface RetSessionDao {
     )
     fun observeLatestBySector(siteId: String, sectorId: String): Flow<RetSessionEntity?>
 
+    @Query(
+        """
+        SELECT * FROM ret_sessions
+        WHERE siteId = :siteId
+        ORDER BY updatedAtEpochMillis DESC
+        """
+    )
+    fun observeBySite(siteId: String): Flow<List<RetSessionEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(session: RetSessionEntity)
 

@@ -44,6 +44,7 @@ fun SiteDetailRoute(
     onOpenReportList: (String) -> Unit,
     onOpenXfeederSession: (siteId: String, sectorId: String) -> Unit,
     onOpenRetSession: (siteId: String, sectorId: String) -> Unit,
+    onOpenPerformanceSession: (siteId: String) -> Unit,
     viewModel: SiteDetailViewModel = hiltViewModel()
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
@@ -63,7 +64,8 @@ fun SiteDetailRoute(
         onOpenDraft = onOpenDraft,
         onOpenReportList = onOpenReportList,
         onOpenXfeederSession = onOpenXfeederSession,
-        onOpenRetSession = onOpenRetSession
+        onOpenRetSession = onOpenRetSession,
+        onOpenPerformanceSession = onOpenPerformanceSession
     )
 }
 
@@ -76,7 +78,8 @@ fun SiteDetailScreen(
     onOpenDraft: (String) -> Unit,
     onOpenReportList: (String) -> Unit,
     onOpenXfeederSession: (siteId: String, sectorId: String) -> Unit,
-    onOpenRetSession: (siteId: String, sectorId: String) -> Unit
+    onOpenRetSession: (siteId: String, sectorId: String) -> Unit,
+    onOpenPerformanceSession: (siteId: String) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -190,6 +193,15 @@ fun SiteDetailScreen(
                             onClick = { onOpenReportList(state.site.id) }
                         ) {
                             Text(stringResource(R.string.action_open_site_local_reports))
+                        }
+                    }
+
+                    item {
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { onOpenPerformanceSession(state.site.id) }
+                        ) {
+                            Text(stringResource(R.string.action_open_performance_session))
                         }
                     }
 

@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.quartz.platform.presentation.home.map.HomeMapRoute
+import com.quartz.platform.presentation.performance.session.PerformanceSessionRoute
 import com.quartz.platform.presentation.ret.session.RetGuidedSessionRoute
 import com.quartz.platform.presentation.report.draft.ReportDraftRoute
 import com.quartz.platform.presentation.report.list.ReportListRoute
@@ -64,6 +65,9 @@ fun QuartzNavHost() {
                             sectorId = sectorId
                         )
                     )
+                },
+                onOpenPerformanceSession = { siteId ->
+                    navController.navigate(QuartzDestination.PerformanceSession.routeFor(siteId))
                 }
             )
         }
@@ -119,6 +123,17 @@ fun QuartzNavHost() {
                 onOpenDraft = { draftId ->
                     navController.navigate(QuartzDestination.ReportDraft.routeFor(draftId))
                 }
+            )
+        }
+
+        composable(
+            route = QuartzDestination.PerformanceSession.route,
+            arguments = listOf(
+                navArgument(QuartzDestination.PerformanceSession.ARG_SITE_ID) { type = NavType.StringType }
+            )
+        ) {
+            PerformanceSessionRoute(
+                onBack = { navController.popBackStack() }
             )
         }
     }

@@ -7,11 +7,11 @@ import com.quartz.platform.R
 import com.quartz.platform.core.text.UiStrings
 import com.quartz.platform.data.remote.simulation.SyncSimulationControl
 import com.quartz.platform.data.remote.simulation.SyncSimulationMode
+import com.quartz.platform.domain.model.ReportClosureProjection
 import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.ReportDraft
-import com.quartz.platform.domain.model.GuidedSessionClosureProjection
 import com.quartz.platform.domain.usecase.EnqueueReportDraftSyncUseCase
-import com.quartz.platform.domain.usecase.ObserveSiteClosureProjectionsUseCase
+import com.quartz.platform.domain.usecase.ObserveSiteReportClosureProjectionsUseCase
 import com.quartz.platform.domain.usecase.ObserveReportDraftSyncTraceUseCase
 import com.quartz.platform.domain.usecase.ObserveReportDraftUseCase
 import com.quartz.platform.domain.usecase.UpdateReportDraftUseCase
@@ -38,7 +38,7 @@ class ReportDraftViewModel @Inject constructor(
     private val updateReportDraftUseCase: UpdateReportDraftUseCase,
     private val enqueueReportDraftSyncUseCase: EnqueueReportDraftSyncUseCase,
     private val observeReportDraftSyncTraceUseCase: ObserveReportDraftSyncTraceUseCase,
-    private val observeSiteClosureProjectionsUseCase: ObserveSiteClosureProjectionsUseCase,
+    private val observeSiteReportClosureProjectionsUseCase: ObserveSiteReportClosureProjectionsUseCase,
     private val syncSimulationControls: Set<@JvmSuppressWildcards SyncSimulationControl>,
     private val uiStrings: UiStrings
 ) : ViewModel() {
@@ -176,7 +176,7 @@ class ReportDraftViewModel @Inject constructor(
                 if (draft == null) {
                     flowOf(emptyList())
                 } else {
-                    observeSiteClosureProjectionsUseCase(draft.siteId)
+                    observeSiteReportClosureProjectionsUseCase(draft.siteId)
                 }
             }
 
@@ -248,20 +248,29 @@ class ReportDraftViewModel @Inject constructor(
 
     private fun projectClosuresForDraft(
         draft: ReportDraft?,
-        siteClosures: List<GuidedSessionClosureProjection>
-    ): List<GuidedSessionClosureProjection> {
+        siteClosures: List<ReportClosureProjection>
+    ): List<ReportClosureProjection> {
         if (draft == null || siteClosures.isEmpty()) return emptyList()
 
+        val workflowScopedClosures = if (draft.originWorkflowType == null) {
+            siteClosures
+        } else {
+            siteClosures.filter { projection ->
+                projection.workflowType == draft.originWorkflowType
+            }
+        }
+        if (workflowScopedClosures.isEmpty()) return emptyList()
+
         val bySession = draft.originSessionId?.let { originSessionId ->
-            siteClosures.firstOrNull { projection -> projection.sessionId == originSessionId }
+            workflowScopedClosures.firstOrNull { projection -> projection.sessionId == originSessionId }
         }
         if (bySession != null) return listOf(bySession)
 
         val bySector = draft.originSectorId?.let { originSectorId ->
-            siteClosures.firstOrNull { projection -> projection.sectorId == originSectorId }
+            workflowScopedClosures.firstOrNull { projection -> projection.sectorId == originSectorId }
         }
         if (bySector != null) return listOf(bySector)
 
-        return siteClosures
+        return workflowScopedClosures
     }
 }

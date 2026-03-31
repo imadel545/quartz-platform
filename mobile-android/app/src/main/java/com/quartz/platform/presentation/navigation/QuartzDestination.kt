@@ -37,4 +37,9 @@ sealed class QuartzDestination(val route: String) {
             return "ret_session/${Uri.encode(siteId)}/${Uri.encode(sectorId)}"
         }
     }
+
+    data object PerformanceSession : QuartzDestination("performance_session/{siteId}") {
+        const val ARG_SITE_ID = "siteId"
+        fun routeFor(siteId: String): String = "performance_session/${Uri.encode(siteId)}"
+    }
 }

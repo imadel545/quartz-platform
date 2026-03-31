@@ -39,7 +39,12 @@ Current Android implementation covers a bounded local-first workflow baseline:
 - site detail with sectors / antennas / cells
 - guided XFeeder workflow with persisted geospatial session context
 - guided RET workflow reusing shared workflow/session core
+- guided Débit/QoS site-level workflow foundation reusing the same session core principles
 - local report draft continuity with workflow-typed provenance
+- local report closure projection that stays workflow-typed (`XFEEDER`, `RET`) for reviewer-readable draft inspection
+- bounded local performance closure projection (`THROUGHPUT`, `QOS_SCRIPT`) into report surfaces:
+  - detailed reviewer view in ReportDraft
+  - concise triage signal in ReportList for non-guided drafts
 
 For XFeeder proximity, implementation is intentionally explicit and bounded:
 - `UNAVAILABLE`: location/altitude data cannot be trusted for eligibility

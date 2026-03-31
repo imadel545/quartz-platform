@@ -540,4 +540,83 @@ object DatabaseMigrations {
             )
         }
     }
+
+    val MIGRATION_14_15: Migration = object : Migration(14, 15) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS performance_sessions (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    siteId TEXT NOT NULL,
+                    siteCode TEXT NOT NULL,
+                    workflowType TEXT NOT NULL,
+                    operatorName TEXT,
+                    technology TEXT,
+                    status TEXT NOT NULL,
+                    prerequisiteNetworkReady INTEGER NOT NULL,
+                    prerequisiteBatterySufficient INTEGER NOT NULL,
+                    prerequisiteLocationReady INTEGER NOT NULL,
+                    throughputDownloadMbps REAL,
+                    throughputUploadMbps REAL,
+                    throughputLatencyMs INTEGER,
+                    throughputMinDownloadMbps REAL,
+                    throughputMinUploadMbps REAL,
+                    throughputMaxLatencyMs INTEGER,
+                    qosScriptId TEXT,
+                    qosScriptName TEXT,
+                    qosTargetTechnology TEXT,
+                    qosTargetPhoneNumber TEXT,
+                    qosIterationCount INTEGER NOT NULL,
+                    qosSuccessCount INTEGER NOT NULL,
+                    qosFailureCount INTEGER NOT NULL,
+                    notes TEXT NOT NULL,
+                    resultSummary TEXT NOT NULL,
+                    createdAtEpochMillis INTEGER NOT NULL,
+                    updatedAtEpochMillis INTEGER NOT NULL,
+                    completedAtEpochMillis INTEGER,
+                    FOREIGN KEY(siteId) REFERENCES sites(id) ON DELETE CASCADE
+                )
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_performance_sessions_siteId
+                ON performance_sessions(siteId)
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_performance_sessions_siteId_workflowType_createdAtEpochMillis
+                ON performance_sessions(siteId, workflowType, createdAtEpochMillis)
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS performance_steps (
+                    sessionId TEXT NOT NULL,
+                    code TEXT NOT NULL,
+                    required INTEGER NOT NULL,
+                    status TEXT NOT NULL,
+                    displayOrder INTEGER NOT NULL,
+                    PRIMARY KEY(sessionId, code),
+                    FOREIGN KEY(sessionId) REFERENCES performance_sessions(id) ON DELETE CASCADE
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_performance_steps_sessionId
+                ON performance_steps(sessionId)
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_performance_steps_sessionId_displayOrder
+                ON performance_steps(sessionId, displayOrder)
+                """.trimIndent()
+            )
+        }
+    }
 }

@@ -74,6 +74,10 @@ The mobile application must support structured field sessions with:
 - final reporting
 
 Current validated guided-session coverage includes XFeeder and RET shells with local persistence/resume, completion guards, and report-draft continuity. XFeeder proximity handling is altitude-aware with explicit local reference-altitude provenance (technical default vs operator override vs unavailable), while remaining intentionally bounded (no full telecom automation claims).
+Current validated performance coverage also includes a bounded local-first Débit/QoS foundation (site-level guided sessions, prerequisites, structured result capture, and local session history) without claiming final telecom automation.
+Current validated local reporting now includes bounded Débit/QoS closure review projection:
+- ReportDraft shows typed performance closure signals (workflow type, execution state, required-step progress, prerequisites, and implemented metrics/results).
+- ReportList may expose a concise performance triage summary for non-guided drafts when a local performance closure exists.
 
 ### 4. Throughput and QoS testing
 The system should support:
@@ -96,6 +100,7 @@ The platform must provide:
 - synchronization status
 - technician visibility
 - supervisor access through web back office
+- workflow-typed local closure review in mobile drafts before backend sync (bounded XFeeder/RET projection)
 
 ### 7. Device and capability awareness
 The system must account for:

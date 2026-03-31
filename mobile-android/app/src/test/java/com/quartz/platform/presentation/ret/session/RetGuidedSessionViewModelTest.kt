@@ -6,6 +6,7 @@ import com.quartz.platform.MainDispatcherRule
 import com.quartz.platform.TestUiStrings
 import com.quartz.platform.domain.model.ReportDraft
 import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
+import com.quartz.platform.domain.model.RetClosureProjection
 import com.quartz.platform.domain.model.RetGeospatialPolicy
 import com.quartz.platform.domain.model.RetGuidedSession
 import com.quartz.platform.domain.model.RetGuidedStep
@@ -280,6 +281,10 @@ class RetGuidedSessionViewModelTest {
 
         override fun observeLatestSectorSession(siteId: String, sectorId: String): Flow<RetGuidedSession?> {
             return observeSectorSessionHistory(siteId, sectorId).map { it.firstOrNull() }
+        }
+
+        override fun observeSiteClosureProjections(siteId: String): Flow<List<RetClosureProjection>> {
+            return flowOf(emptyList())
         }
 
         override suspend fun createSession(siteId: String, sectorId: String, sectorCode: String): RetGuidedSession {

@@ -1,13 +1,38 @@
 package com.quartz.platform.domain.usecase
 
 import com.google.common.truth.Truth.assertThat
+import com.quartz.platform.domain.model.PerformanceSession
+import com.quartz.platform.domain.model.PerformanceSessionStatus
+import com.quartz.platform.domain.model.PerformanceStepCode
+import com.quartz.platform.domain.model.PerformanceStepStatus
+import com.quartz.platform.domain.model.PerformanceWorkflowType
+import com.quartz.platform.domain.model.QosRunSummary
 import com.quartz.platform.domain.model.ReportDraft
 import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
+import com.quartz.platform.domain.model.RetClosureProjection
+import com.quartz.platform.domain.model.RetReferenceAltitudeSourceState
+import com.quartz.platform.domain.model.RetResultOutcome
+import com.quartz.platform.domain.model.RetSessionStatus
+import com.quartz.platform.domain.model.RetStepCode
+import com.quartz.platform.domain.model.RetStepStatus
 import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.ReportSyncTrace
+import com.quartz.platform.domain.model.ThroughputMetrics
+import com.quartz.platform.domain.model.XfeederClosureEvidence
+import com.quartz.platform.domain.model.XfeederGeospatialPolicy
+import com.quartz.platform.domain.model.XfeederGuidedSession
+import com.quartz.platform.domain.model.XfeederGuidedStep
+import com.quartz.platform.domain.model.XfeederReferenceAltitudeSourceState
+import com.quartz.platform.domain.model.XfeederSectorOutcome
+import com.quartz.platform.domain.model.XfeederSessionStatus
+import com.quartz.platform.domain.model.XfeederStepCode
+import com.quartz.platform.domain.model.XfeederStepStatus
 import com.quartz.platform.domain.model.SiteReportListItem
 import com.quartz.platform.domain.repository.ReportDraftRepository
+import com.quartz.platform.domain.repository.PerformanceSessionRepository
+import com.quartz.platform.domain.repository.RetGuidedSessionRepository
 import com.quartz.platform.domain.repository.SyncRepository
+import com.quartz.platform.domain.repository.XfeederGuidedSessionRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,7 +87,15 @@ class ObserveSiteReportListUseCaseTest {
                 )
             )
         )
-        val useCase = ObserveSiteReportListUseCase(reportRepository, syncRepository)
+        val useCase = ObserveSiteReportListUseCase(
+            reportDraftRepository = reportRepository,
+            syncRepository = syncRepository,
+            observeSiteReportClosureProjectionsUseCase = ObserveSiteReportClosureProjectionsUseCase(
+                xfeederRepository = FakeXfeederGuidedSessionRepository(),
+                retRepository = FakeRetGuidedSessionRepository(),
+                performanceSessionRepository = FakePerformanceSessionRepository()
+            )
+        )
 
         val emissions = mutableListOf<List<SiteReportListItem>>()
         val job = launch {
@@ -92,6 +125,145 @@ class ObserveSiteReportListUseCaseTest {
             ReportSyncState.PENDING
         ).inOrder()
         assertThat(emissions[0].last().syncTrace.failureReason).isEqualTo("Timeout")
+    }
+
+    @Test
+    fun `observe use case exposes workflow typed closure summary for guided drafts`() = runTest {
+        val drafts = listOf(
+            ReportDraft(
+                id = "draft-ret",
+                siteId = "site-1",
+                originSessionId = "ret-session-1",
+                originSectorId = "sector-r1",
+                originWorkflowType = ReportDraftOriginWorkflowType.RET,
+                title = "RET draft",
+                observation = "",
+                revision = 1,
+                createdAtEpochMillis = 1L,
+                updatedAtEpochMillis = 10L
+            ),
+            ReportDraft(
+                id = "draft-local",
+                siteId = "site-1",
+                title = "Local draft",
+                observation = "",
+                revision = 1,
+                createdAtEpochMillis = 2L,
+                updatedAtEpochMillis = 11L
+            )
+        )
+        val reportRepository = FakeReportDraftRepository(drafts)
+        val syncRepository = FakeSyncRepository(
+            mapOf(
+                "draft-ret" to ReportSyncTrace.localOnly(),
+                "draft-local" to ReportSyncTrace.localOnly()
+            )
+        )
+        val useCase = ObserveSiteReportListUseCase(
+            reportDraftRepository = reportRepository,
+            syncRepository = syncRepository,
+            observeSiteReportClosureProjectionsUseCase = ObserveSiteReportClosureProjectionsUseCase(
+                xfeederRepository = FakeXfeederGuidedSessionRepository(),
+                retRepository = FakeRetGuidedSessionRepository(
+                    projections = listOf(
+                        RetClosureProjection(
+                            sessionId = "ret-session-1",
+                            siteId = "site-1",
+                            sectorId = "sector-r1",
+                            sectorCode = "R1",
+                            sessionStatus = RetSessionStatus.COMPLETED,
+                            resultOutcome = RetResultOutcome.PASS,
+                            requiredStepCount = 3,
+                            completedRequiredStepCount = 3,
+                            measurementZoneRadiusMeters = 70,
+                            proximityModeEnabled = true,
+                            resultSummary = "Conforme",
+                            updatedAtEpochMillis = 99L
+                        )
+                    )
+                ),
+                performanceSessionRepository = FakePerformanceSessionRepository()
+            )
+        )
+
+        val items = useCase("site-1").take(1).toList().first()
+
+        assertThat(items).hasSize(2)
+        val guided = items.first { it.draftId == "draft-ret" }
+        val nonGuided = items.first { it.draftId == "draft-local" }
+        assertThat(guided.closureSummary).isNotNull()
+        assertThat(nonGuided.closureSummary).isNull()
+    }
+
+    @Test
+    fun `observe use case exposes performance summary fallback for non guided draft`() = runTest {
+        val drafts = listOf(
+            ReportDraft(
+                id = "draft-local",
+                siteId = "site-1",
+                title = "Local draft",
+                observation = "",
+                revision = 1,
+                createdAtEpochMillis = 2L,
+                updatedAtEpochMillis = 11L
+            )
+        )
+        val reportRepository = FakeReportDraftRepository(drafts)
+        val syncRepository = FakeSyncRepository(
+            mapOf("draft-local" to ReportSyncTrace.localOnly())
+        )
+        val useCase = ObserveSiteReportListUseCase(
+            reportDraftRepository = reportRepository,
+            syncRepository = syncRepository,
+            observeSiteReportClosureProjectionsUseCase = ObserveSiteReportClosureProjectionsUseCase(
+                xfeederRepository = FakeXfeederGuidedSessionRepository(),
+                retRepository = FakeRetGuidedSessionRepository(),
+                performanceSessionRepository = FakePerformanceSessionRepository(
+                    sessions = listOf(
+                        PerformanceSession(
+                            id = "perf-1",
+                            siteId = "site-1",
+                            siteCode = "SITE-1",
+                            workflowType = PerformanceWorkflowType.THROUGHPUT,
+                            operatorName = "Op-A",
+                            technology = "4G",
+                            status = PerformanceSessionStatus.COMPLETED,
+                            prerequisiteNetworkReady = true,
+                            prerequisiteBatterySufficient = true,
+                            prerequisiteLocationReady = true,
+                            throughputMetrics = ThroughputMetrics(
+                                downloadMbps = 52.1,
+                                uploadMbps = 9.3,
+                                latencyMs = 31
+                            ),
+                            qosRunSummary = QosRunSummary(),
+                            notes = "",
+                            resultSummary = "OK",
+                            createdAtEpochMillis = 1L,
+                            updatedAtEpochMillis = 100L,
+                            completedAtEpochMillis = 100L,
+                            steps = listOf(
+                                com.quartz.platform.domain.model.PerformanceGuidedStep(
+                                    code = PerformanceStepCode.PRECONDITIONS_CHECK,
+                                    required = true,
+                                    status = PerformanceStepStatus.DONE
+                                ),
+                                com.quartz.platform.domain.model.PerformanceGuidedStep(
+                                    code = PerformanceStepCode.EXECUTE_TEST,
+                                    required = true,
+                                    status = PerformanceStepStatus.DONE
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        val items = useCase("site-1").take(1).toList().first()
+        assertThat(items).hasSize(1)
+        assertThat(items.first().closureSummary)
+            .isInstanceOf(com.quartz.platform.domain.model.ReportListClosureSummary.Throughput::class.java)
     }
 
     private class FakeReportDraftRepository(
@@ -153,5 +325,191 @@ class ObserveSiteReportListUseCaseTest {
         fun updateState(reportDraftId: String, state: ReportSyncTrace) {
             stateFlows.getValue(reportDraftId).value = state
         }
+    }
+
+    private class FakeXfeederGuidedSessionRepository : XfeederGuidedSessionRepository {
+        override fun observeSectorSessionHistory(
+            siteId: String,
+            sectorId: String
+        ): Flow<List<XfeederGuidedSession>> = flowOf(emptyList())
+
+        override fun observeLatestSectorSession(siteId: String, sectorId: String): Flow<XfeederGuidedSession?> {
+            return flowOf(null)
+        }
+
+        override fun observeSiteClosureProjections(siteId: String): Flow<List<com.quartz.platform.domain.model.GuidedSessionClosureProjection>> {
+            return flowOf(emptyList())
+        }
+
+        override suspend fun createSession(
+            siteId: String,
+            sectorId: String,
+            sectorCode: String
+        ): XfeederGuidedSession {
+            return XfeederGuidedSession(
+                id = "xf",
+                siteId = siteId,
+                sectorId = sectorId,
+                sectorCode = sectorCode,
+                measurementZoneRadiusMeters = XfeederGeospatialPolicy.DEFAULT_MEASUREMENT_ZONE_RADIUS_METERS,
+                measurementZoneExtensionReason = "",
+                proximityModeEnabled = false,
+                proximityReferenceAltitudeMeters = null,
+                proximityReferenceAltitudeSource = XfeederReferenceAltitudeSourceState.UNAVAILABLE,
+                status = XfeederSessionStatus.CREATED,
+                sectorOutcome = XfeederSectorOutcome.NOT_TESTED,
+                closureEvidence = XfeederClosureEvidence("", null, null),
+                notes = "",
+                resultSummary = "",
+                createdAtEpochMillis = 1L,
+                updatedAtEpochMillis = 1L,
+                completedAtEpochMillis = null,
+                steps = listOf(
+                    XfeederGuidedStep(
+                        code = XfeederStepCode.PRECONDITION_NETWORK_READY,
+                        required = true,
+                        status = XfeederStepStatus.TODO
+                    )
+                )
+            )
+        }
+
+        override suspend fun updateStepStatus(
+            sessionId: String,
+            stepCode: XfeederStepCode,
+            status: XfeederStepStatus
+        ) = Unit
+
+        override suspend fun updateSessionSummary(
+            sessionId: String,
+            status: XfeederSessionStatus,
+            sectorOutcome: XfeederSectorOutcome,
+            closureEvidence: XfeederClosureEvidence,
+            notes: String,
+            resultSummary: String
+        ) = Unit
+
+        override suspend fun updateSessionGeospatialContext(
+            sessionId: String,
+            measurementZoneRadiusMeters: Int,
+            measurementZoneExtensionReason: String,
+            proximityModeEnabled: Boolean,
+            proximityReferenceAltitudeMeters: Double?,
+            proximityReferenceAltitudeSource: XfeederReferenceAltitudeSourceState
+        ) = Unit
+    }
+
+    private class FakeRetGuidedSessionRepository(
+        private val projections: List<RetClosureProjection> = emptyList()
+    ) : RetGuidedSessionRepository {
+        override fun observeSectorSessionHistory(
+            siteId: String,
+            sectorId: String
+        ): Flow<List<com.quartz.platform.domain.model.RetGuidedSession>> = flowOf(emptyList())
+
+        override fun observeLatestSectorSession(
+            siteId: String,
+            sectorId: String
+        ): Flow<com.quartz.platform.domain.model.RetGuidedSession?> = flowOf(null)
+
+        override fun observeSiteClosureProjections(siteId: String): Flow<List<RetClosureProjection>> {
+            return flowOf(projections.filter { it.siteId == siteId })
+        }
+
+        override suspend fun createSession(
+            siteId: String,
+            sectorId: String,
+            sectorCode: String
+        ): com.quartz.platform.domain.model.RetGuidedSession {
+            return com.quartz.platform.domain.model.RetGuidedSession(
+                id = "ret",
+                siteId = siteId,
+                sectorId = sectorId,
+                sectorCode = sectorCode,
+                measurementZoneRadiusMeters = 70,
+                measurementZoneExtensionReason = "",
+                proximityModeEnabled = false,
+                proximityReferenceAltitudeMeters = null,
+                proximityReferenceAltitudeSource = RetReferenceAltitudeSourceState.UNAVAILABLE,
+                status = RetSessionStatus.CREATED,
+                resultOutcome = RetResultOutcome.NOT_RUN,
+                notes = "",
+                resultSummary = "",
+                createdAtEpochMillis = 1L,
+                updatedAtEpochMillis = 1L,
+                completedAtEpochMillis = null,
+                steps = listOf(
+                    com.quartz.platform.domain.model.RetGuidedStep(
+                        code = RetStepCode.CALIBRATION_PRECHECK,
+                        required = true,
+                        status = RetStepStatus.TODO
+                    )
+                )
+            )
+        }
+
+        override suspend fun updateStepStatus(
+            sessionId: String,
+            stepCode: RetStepCode,
+            status: RetStepStatus
+        ) = Unit
+
+        override suspend fun updateSessionSummary(
+            sessionId: String,
+            status: RetSessionStatus,
+            resultOutcome: RetResultOutcome,
+            notes: String,
+            resultSummary: String
+        ) = Unit
+
+        override suspend fun updateSessionGeospatialContext(
+            sessionId: String,
+            measurementZoneRadiusMeters: Int,
+            measurementZoneExtensionReason: String,
+            proximityModeEnabled: Boolean,
+            proximityReferenceAltitudeMeters: Double?,
+            proximityReferenceAltitudeSource: RetReferenceAltitudeSourceState
+        ) = Unit
+    }
+
+    private class FakePerformanceSessionRepository(
+        private val sessions: List<PerformanceSession> = emptyList()
+    ) : PerformanceSessionRepository {
+        override fun observeSiteSessionHistory(siteId: String): Flow<List<PerformanceSession>> {
+            return flowOf(sessions.filter { it.siteId == siteId })
+        }
+
+        override fun observeLatestSiteSession(
+            siteId: String,
+            workflowType: PerformanceWorkflowType
+        ): Flow<PerformanceSession?> = flowOf(
+            sessions.firstOrNull { it.siteId == siteId && it.workflowType == workflowType }
+        )
+
+        override suspend fun createSession(
+            siteId: String,
+            siteCode: String,
+            workflowType: PerformanceWorkflowType,
+            operatorName: String?,
+            technology: String?
+        ): PerformanceSession = sessions.first()
+
+        override suspend fun updateStepStatus(
+            sessionId: String,
+            stepCode: PerformanceStepCode,
+            status: PerformanceStepStatus
+        ) = Unit
+
+        override suspend fun updateSessionExecution(
+            sessionId: String,
+            status: PerformanceSessionStatus,
+            prerequisiteNetworkReady: Boolean,
+            prerequisiteBatterySufficient: Boolean,
+            prerequisiteLocationReady: Boolean,
+            throughputMetrics: ThroughputMetrics,
+            qosRunSummary: QosRunSummary,
+            notes: String,
+            resultSummary: String
+        ) = Unit
     }
 }

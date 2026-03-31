@@ -9,6 +9,7 @@ import com.quartz.platform.domain.model.RetResultOutcome
 import com.quartz.platform.domain.model.RetSessionStatus
 import com.quartz.platform.domain.model.RetStepCode
 import com.quartz.platform.domain.model.RetStepStatus
+import com.quartz.platform.domain.model.RetClosureProjection
 
 fun RetSessionEntity.toDomain(steps: List<RetStepEntity>): RetGuidedSession {
     return RetGuidedSession(
@@ -68,5 +69,32 @@ fun RetGuidedStep.toEntity(sessionId: String, displayOrder: Int): RetStepEntity 
         required = required,
         status = status.name,
         displayOrder = displayOrder
+    )
+}
+
+fun RetSessionEntity.toClosureProjection(steps: List<RetStepEntity>): RetClosureProjection {
+    val requiredStepCount = steps.count { step -> step.required }
+    val completedRequiredStepCount = steps.count { step ->
+        step.required && runCatching {
+            RetStepStatus.valueOf(step.status)
+        }.getOrDefault(RetStepStatus.TODO) == RetStepStatus.DONE
+    }
+    return RetClosureProjection(
+        sessionId = id,
+        siteId = siteId,
+        sectorId = sectorId,
+        sectorCode = sectorCode,
+        sessionStatus = runCatching {
+            RetSessionStatus.valueOf(status)
+        }.getOrDefault(RetSessionStatus.CREATED),
+        resultOutcome = runCatching {
+            RetResultOutcome.valueOf(resultOutcome)
+        }.getOrDefault(RetResultOutcome.NOT_RUN),
+        requiredStepCount = requiredStepCount,
+        completedRequiredStepCount = completedRequiredStepCount,
+        measurementZoneRadiusMeters = measurementZoneRadiusMeters,
+        proximityModeEnabled = proximityModeEnabled,
+        resultSummary = resultSummary.trim().takeIf { it.isNotBlank() },
+        updatedAtEpochMillis = updatedAtEpochMillis
     )
 }

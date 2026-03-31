@@ -1,9 +1,9 @@
 package com.quartz.platform.presentation.report.draft
 
 import com.quartz.platform.domain.model.ReportDraft
+import com.quartz.platform.domain.model.ReportClosureProjection
 import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.ReportSyncTrace
-import com.quartz.platform.domain.model.GuidedSessionClosureProjection
 import com.quartz.platform.data.remote.simulation.SyncSimulationMode
 
 data class ReportDraftUiState(
@@ -13,7 +13,7 @@ data class ReportDraftUiState(
     val observationInput: String = "",
     val hasUnsavedChanges: Boolean = false,
     val syncTrace: ReportSyncTrace = ReportSyncTrace.localOnly(),
-    val closureProjections: List<GuidedSessionClosureProjection> = emptyList(),
+    val closureProjections: List<ReportClosureProjection> = emptyList(),
     val isSyncSimulationControlVisible: Boolean = false,
     val syncSimulationMode: SyncSimulationMode = SyncSimulationMode.NORMAL_SUCCESS,
     val infoMessage: String? = null,

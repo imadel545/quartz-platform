@@ -5,6 +5,12 @@ import com.google.common.truth.Truth.assertThat
 import com.quartz.platform.MainDispatcherRule
 import com.quartz.platform.TestUiStrings
 import com.quartz.platform.domain.model.GuidedSessionClosureProjection
+import com.quartz.platform.domain.model.PerformanceSession
+import com.quartz.platform.domain.model.PerformanceSessionStatus
+import com.quartz.platform.domain.model.PerformanceStepCode
+import com.quartz.platform.domain.model.PerformanceStepStatus
+import com.quartz.platform.domain.model.PerformanceWorkflowType
+import com.quartz.platform.domain.model.QosRunSummary
 import com.quartz.platform.domain.model.ReportDraft
 import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.model.RetClosureProjection
@@ -27,6 +33,7 @@ import com.quartz.platform.domain.model.XfeederSessionStatus
 import com.quartz.platform.domain.model.XfeederStepCode
 import com.quartz.platform.domain.model.XfeederStepStatus
 import com.quartz.platform.domain.repository.ReportDraftRepository
+import com.quartz.platform.domain.repository.PerformanceSessionRepository
 import com.quartz.platform.domain.repository.RetGuidedSessionRepository
 import com.quartz.platform.domain.repository.SyncRepository
 import com.quartz.platform.domain.repository.XfeederGuidedSessionRepository
@@ -34,6 +41,7 @@ import com.quartz.platform.domain.usecase.ObserveSiteReportClosureProjectionsUse
 import com.quartz.platform.domain.usecase.ObserveSiteReportListUseCase
 import com.quartz.platform.domain.usecase.RetryFailedReportDraftSyncUseCase
 import com.quartz.platform.presentation.navigation.QuartzDestination
+import com.quartz.platform.domain.model.ThroughputMetrics
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -292,7 +300,8 @@ class ReportListViewModelTest {
             syncRepository = syncRepository,
             observeSiteReportClosureProjectionsUseCase = ObserveSiteReportClosureProjectionsUseCase(
                 xfeederRepository = FakeXfeederGuidedSessionRepository(),
-                retRepository = FakeRetGuidedSessionRepository()
+                retRepository = FakeRetGuidedSessionRepository(),
+                performanceSessionRepository = FakePerformanceSessionRepository()
             )
         )
     }
@@ -504,6 +513,68 @@ class ReportListViewModelTest {
             proximityModeEnabled: Boolean,
             proximityReferenceAltitudeMeters: Double?,
             proximityReferenceAltitudeSource: RetReferenceAltitudeSourceState
+        ) = Unit
+    }
+
+    private class FakePerformanceSessionRepository : PerformanceSessionRepository {
+        override fun observeSiteSessionHistory(siteId: String): Flow<List<PerformanceSession>> = flowOf(emptyList())
+
+        override fun observeLatestSiteSession(
+            siteId: String,
+            workflowType: PerformanceWorkflowType
+        ): Flow<PerformanceSession?> = flowOf(null)
+
+        override suspend fun createSession(
+            siteId: String,
+            siteCode: String,
+            workflowType: PerformanceWorkflowType,
+            operatorName: String?,
+            technology: String?
+        ): PerformanceSession {
+            return PerformanceSession(
+                id = "perf",
+                siteId = siteId,
+                siteCode = siteCode,
+                workflowType = workflowType,
+                operatorName = operatorName,
+                technology = technology,
+                status = PerformanceSessionStatus.CREATED,
+                prerequisiteNetworkReady = false,
+                prerequisiteBatterySufficient = false,
+                prerequisiteLocationReady = false,
+                throughputMetrics = ThroughputMetrics(),
+                qosRunSummary = QosRunSummary(),
+                notes = "",
+                resultSummary = "",
+                createdAtEpochMillis = 1L,
+                updatedAtEpochMillis = 1L,
+                completedAtEpochMillis = null,
+                steps = listOf(
+                    com.quartz.platform.domain.model.PerformanceGuidedStep(
+                        code = PerformanceStepCode.PRECONDITIONS_CHECK,
+                        required = true,
+                        status = PerformanceStepStatus.TODO
+                    )
+                )
+            )
+        }
+
+        override suspend fun updateStepStatus(
+            sessionId: String,
+            stepCode: PerformanceStepCode,
+            status: PerformanceStepStatus
+        ) = Unit
+
+        override suspend fun updateSessionExecution(
+            sessionId: String,
+            status: PerformanceSessionStatus,
+            prerequisiteNetworkReady: Boolean,
+            prerequisiteBatterySufficient: Boolean,
+            prerequisiteLocationReady: Boolean,
+            throughputMetrics: ThroughputMetrics,
+            qosRunSummary: QosRunSummary,
+            notes: String,
+            resultSummary: String
         ) = Unit
     }
 }

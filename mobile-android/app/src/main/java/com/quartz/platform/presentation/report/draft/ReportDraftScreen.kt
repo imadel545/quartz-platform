@@ -27,11 +27,19 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
 import com.quartz.platform.data.remote.simulation.SyncSimulationMode
-import com.quartz.platform.domain.model.GuidedSessionClosureProjection
+import com.quartz.platform.domain.model.QosReportClosureProjection
+import com.quartz.platform.domain.model.ReportClosureProjection
+import com.quartz.platform.domain.model.RetReportClosureProjection
+import com.quartz.platform.domain.model.ThroughputReportClosureProjection
+import com.quartz.platform.domain.model.XfeederReportClosureProjection
 import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.ReportSyncTrace
 import com.quartz.platform.domain.model.XfeederSectorOutcome
 import com.quartz.platform.domain.model.XfeederUnreliableReason
+import com.quartz.platform.presentation.performance.session.performanceSessionStatusLabelRes
+import com.quartz.platform.presentation.performance.session.performanceWorkflowTypeLabelRes
+import com.quartz.platform.presentation.ret.session.retResultOutcomeLabelRes
+import com.quartz.platform.presentation.ret.session.retSessionStatusLabelRes
 import com.quartz.platform.presentation.sync.syncStateDescriptionRes
 import com.quartz.platform.presentation.sync.syncStateLabelRes
 import java.time.Instant
@@ -239,7 +247,7 @@ fun ReportDraftScreen(
 
 @Composable
 private fun GuidedClosureProjectionCard(
-    projections: List<GuidedSessionClosureProjection>
+    projections: List<ReportClosureProjection>
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -258,46 +266,294 @@ private fun GuidedClosureProjectionCard(
                 )
             } else {
                 projections.forEach { projection ->
-                    Text(
-                        text = stringResource(R.string.report_closure_sector, projection.sectorCode),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.report_closure_outcome,
-                            stringResource(xfeederOutcomeLabelRes(projection.sectorOutcome))
-                        ),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    projection.relatedSectorCode?.let { related ->
-                        Text(
-                            text = stringResource(R.string.report_closure_related_sector, related),
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                    when (projection) {
+                        is XfeederReportClosureProjection -> {
+                            XfeederClosureProjectionContent(projection)
+                        }
+
+                        is RetReportClosureProjection -> {
+                            RetClosureProjectionContent(projection)
+                        }
+
+                        is ThroughputReportClosureProjection -> {
+                            ThroughputClosureProjectionContent(projection)
+                        }
+
+                        is QosReportClosureProjection -> {
+                            QosClosureProjectionContent(projection)
+                        }
                     }
-                    projection.unreliableReason?.let { reason ->
-                        Text(
-                            text = stringResource(
-                                R.string.report_closure_unreliable_reason,
-                                stringResource(xfeederUnreliableReasonLabelRes(reason))
-                            ),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    projection.observedSectorCount?.let { observedCount ->
-                        Text(
-                            text = stringResource(R.string.report_closure_observed_sector_count, observedCount),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    Text(
-                        text = stringResource(R.string.label_updated_at, formatEpoch(projection.updatedAtEpochMillis)),
-                        style = MaterialTheme.typography.bodySmall
-                    )
                 }
             }
         }
     }
+}
+
+@Composable
+private fun XfeederClosureProjectionContent(
+    projection: XfeederReportClosureProjection
+) {
+    Text(
+        text = stringResource(R.string.report_closure_workflow_xfeeder),
+        style = MaterialTheme.typography.labelLarge
+    )
+    Text(
+        text = stringResource(R.string.report_closure_sector, projection.sectorCode),
+        style = MaterialTheme.typography.bodyMedium
+    )
+    Text(
+        text = stringResource(
+            R.string.report_closure_outcome,
+            stringResource(xfeederOutcomeLabelRes(projection.sectorOutcome))
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    projection.relatedSectorCode?.let { related ->
+        Text(
+            text = stringResource(R.string.report_closure_related_sector, related),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    projection.unreliableReason?.let { reason ->
+        Text(
+            text = stringResource(
+                R.string.report_closure_unreliable_reason,
+                stringResource(xfeederUnreliableReasonLabelRes(reason))
+            ),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    projection.observedSectorCount?.let { observedCount ->
+        Text(
+            text = stringResource(R.string.report_closure_observed_sector_count, observedCount),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    Text(
+        text = stringResource(R.string.label_updated_at, formatEpoch(projection.updatedAtEpochMillis)),
+        style = MaterialTheme.typography.bodySmall
+    )
+}
+
+@Composable
+private fun RetClosureProjectionContent(
+    projection: RetReportClosureProjection
+) {
+    Text(
+        text = stringResource(R.string.report_closure_workflow_ret),
+        style = MaterialTheme.typography.labelLarge
+    )
+    Text(
+        text = stringResource(R.string.report_closure_sector, projection.sectorCode),
+        style = MaterialTheme.typography.bodyMedium
+    )
+    Text(
+        text = stringResource(
+            R.string.report_closure_ret_result,
+            stringResource(retResultOutcomeLabelRes(projection.resultOutcome))
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    Text(
+        text = stringResource(
+            R.string.report_closure_ret_status,
+            stringResource(retSessionStatusLabelRes(projection.sessionStatus))
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    Text(
+        text = stringResource(
+            R.string.report_closure_ret_required_step_progress,
+            projection.completedRequiredStepCount,
+            projection.requiredStepCount
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    Text(
+        text = stringResource(
+            R.string.report_closure_ret_measurement_zone,
+            projection.measurementZoneRadiusMeters
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    Text(
+        text = stringResource(
+            R.string.report_closure_ret_proximity_mode,
+            if (projection.proximityModeEnabled) {
+                stringResource(R.string.value_yes)
+            } else {
+                stringResource(R.string.value_no)
+            }
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    projection.resultSummary?.let { summary ->
+        Text(
+            text = stringResource(R.string.report_closure_ret_result_summary, summary),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    Text(
+        text = stringResource(R.string.label_updated_at, formatEpoch(projection.updatedAtEpochMillis)),
+        style = MaterialTheme.typography.bodySmall
+    )
+}
+
+@Composable
+private fun ThroughputClosureProjectionContent(
+    projection: ThroughputReportClosureProjection
+) {
+    Text(
+        text = stringResource(
+            R.string.report_closure_workflow_performance,
+            stringResource(performanceWorkflowTypeLabelRes(com.quartz.platform.domain.model.PerformanceWorkflowType.THROUGHPUT))
+        ),
+        style = MaterialTheme.typography.labelLarge
+    )
+    Text(
+        text = stringResource(R.string.report_closure_performance_site, projection.siteCode),
+        style = MaterialTheme.typography.bodyMedium
+    )
+    Text(
+        text = stringResource(
+            R.string.report_closure_performance_status,
+            stringResource(performanceSessionStatusLabelRes(projection.sessionStatus))
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    Text(
+        text = stringResource(
+            R.string.report_closure_performance_required_step_progress,
+            projection.completedRequiredStepCount,
+            projection.requiredStepCount
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    Text(
+        text = stringResource(
+            R.string.report_closure_performance_prerequisites,
+            if (projection.preconditionsReady) {
+                stringResource(R.string.value_yes)
+            } else {
+                stringResource(R.string.value_no)
+            }
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    projection.downloadMbps?.let { value ->
+        Text(
+            text = stringResource(R.string.report_closure_performance_download, value),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    projection.uploadMbps?.let { value ->
+        Text(
+            text = stringResource(R.string.report_closure_performance_upload, value),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    projection.latencyMs?.let { value ->
+        Text(
+            text = stringResource(R.string.report_closure_performance_latency, value),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    if (projection.minDownloadMbps != null || projection.minUploadMbps != null || projection.maxLatencyMs != null) {
+        Text(
+            text = stringResource(
+                R.string.report_closure_performance_thresholds,
+                projection.minDownloadMbps?.toString() ?: "-",
+                projection.minUploadMbps?.toString() ?: "-",
+                projection.maxLatencyMs?.toString() ?: "-"
+            ),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    projection.resultSummary?.let { summary ->
+        Text(
+            text = stringResource(R.string.report_closure_performance_result_summary, summary),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    Text(
+        text = stringResource(R.string.label_updated_at, formatEpoch(projection.updatedAtEpochMillis)),
+        style = MaterialTheme.typography.bodySmall
+    )
+}
+
+@Composable
+private fun QosClosureProjectionContent(
+    projection: QosReportClosureProjection
+) {
+    Text(
+        text = stringResource(
+            R.string.report_closure_workflow_performance,
+            stringResource(performanceWorkflowTypeLabelRes(com.quartz.platform.domain.model.PerformanceWorkflowType.QOS_SCRIPT))
+        ),
+        style = MaterialTheme.typography.labelLarge
+    )
+    Text(
+        text = stringResource(R.string.report_closure_performance_site, projection.siteCode),
+        style = MaterialTheme.typography.bodyMedium
+    )
+    Text(
+        text = stringResource(
+            R.string.report_closure_performance_status,
+            stringResource(performanceSessionStatusLabelRes(projection.sessionStatus))
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    Text(
+        text = stringResource(
+            R.string.report_closure_performance_required_step_progress,
+            projection.completedRequiredStepCount,
+            projection.requiredStepCount
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    Text(
+        text = stringResource(
+            R.string.report_closure_performance_prerequisites,
+            if (projection.preconditionsReady) {
+                stringResource(R.string.value_yes)
+            } else {
+                stringResource(R.string.value_no)
+            }
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    Text(
+        text = stringResource(
+            R.string.report_closure_performance_qos_script,
+            projection.scriptName ?: stringResource(R.string.value_not_available)
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    projection.targetTechnology?.let { technology ->
+        Text(
+            text = stringResource(R.string.report_closure_performance_qos_target_technology, technology),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    Text(
+        text = stringResource(
+            R.string.report_closure_performance_qos_results,
+            projection.iterationCount,
+            projection.successCount,
+            projection.failureCount
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    projection.resultSummary?.let { summary ->
+        Text(
+            text = stringResource(R.string.report_closure_performance_result_summary, summary),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    Text(
+        text = stringResource(R.string.label_updated_at, formatEpoch(projection.updatedAtEpochMillis)),
+        style = MaterialTheme.typography.bodySmall
+    )
 }
 
 @Composable

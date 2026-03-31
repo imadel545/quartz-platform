@@ -196,6 +196,16 @@ For guided geospatial sessions (for example XFeeder), a bounded geospatial conte
 - reference altitude source (`TECHNICAL_DEFAULT`, `OPERATOR_OVERRIDE`, `UNAVAILABLE`)
 - computed proximity eligibility state (`SUPPORTED`, `UNAVAILABLE`, `INELIGIBLE`, `ELIGIBLE`)
 
+For bounded site-level performance workflows (Débit/QoS foundation), local session state tracks:
+- workflow type (`THROUGHPUT`, `QOS_SCRIPT`)
+- prerequisite readiness flags
+- structured throughput metrics and thresholds
+- structured QoS script execution summary
+- required step progression and completion guard
+- bounded closure projection for local report review:
+  - detailed projection in ReportDraft
+  - concise triage projection in ReportList
+
 Possible status values:
 - CREATED
 - IN_PROGRESS
@@ -299,6 +309,9 @@ Possible sync values:
 - PENDING
 - SYNCED
 - FAILED
+
+For local-first review before backend sync, report drafts may expose workflow-typed closure projections
+(for example XFeeder sector closure or RET closure summary) instead of raw workflow internals.
 
 ## SyncJob
 Represents a durable synchronization unit.

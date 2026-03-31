@@ -4,9 +4,12 @@ import androidx.room.withTransaction
 import com.quartz.platform.data.local.QuartzDatabase
 import com.quartz.platform.data.local.dao.RetSessionDao
 import com.quartz.platform.data.local.dao.RetStepDao
+import com.quartz.platform.data.local.entity.RetSessionEntity
 import com.quartz.platform.data.local.entity.RetStepEntity
+import com.quartz.platform.data.local.mapper.toClosureProjection
 import com.quartz.platform.data.local.mapper.toDomain
 import com.quartz.platform.data.local.mapper.toEntity
+import com.quartz.platform.domain.model.RetClosureProjection
 import com.quartz.platform.domain.model.RetGuidedSession
 import com.quartz.platform.domain.model.RetGuidedStep
 import com.quartz.platform.domain.model.RetReferenceAltitudeSourceState
@@ -52,6 +55,24 @@ class OfflineFirstRetGuidedSessionRepository @Inject constructor(
     override fun observeLatestSectorSession(siteId: String, sectorId: String): Flow<RetGuidedSession?> {
         return observeSectorSessionHistory(siteId = siteId, sectorId = sectorId)
             .map { history -> history.firstOrNull() }
+    }
+
+    override fun observeSiteClosureProjections(siteId: String): Flow<List<RetClosureProjection>> {
+        return sessionDao.observeBySite(siteId)
+            .flatMapLatest { sessions ->
+                if (sessions.isEmpty()) {
+                    flowOf(emptyList())
+                } else {
+                    val sessionIds = sessions.map { session -> session.id }
+                    stepDao.observeBySessionIds(sessionIds).map { steps ->
+                        val stepsBySession = steps.groupBy { step -> step.sessionId }
+                        toSiteRetClosureProjections(
+                            sessions = sessions,
+                            stepsBySession = stepsBySession
+                        )
+                    }
+                }
+            }
     }
 
     override suspend fun createSession(
@@ -199,4 +220,24 @@ internal fun buildRetCompletionGuard(steps: List<RetStepEntity>): WorkflowComple
             step.required to RetStepStatus.valueOf(step.status)
         }
     )
+}
+
+internal fun toSiteRetClosureProjections(
+    sessions: List<RetSessionEntity>,
+    stepsBySession: Map<String, List<RetStepEntity>>
+): List<RetClosureProjection> {
+    return sessions
+        .asSequence()
+        .filter { session -> session.status == RetSessionStatus.COMPLETED.name }
+        .groupBy { session -> session.sectorId }
+        .values
+        .mapNotNull { sectorSessions ->
+            sectorSessions.maxByOrNull { session -> session.updatedAtEpochMillis }
+        }
+        .map { session ->
+            session.toClosureProjection(
+                steps = stepsBySession[session.id].orEmpty()
+            )
+        }
+        .sortedBy { projection -> projection.sectorCode }
 }

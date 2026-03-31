@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -29,9 +31,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
+import com.quartz.platform.domain.model.ReportListClosureSummary
 import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.SiteReportListItem
+import com.quartz.platform.domain.model.XfeederSignal
+import com.quartz.platform.presentation.performance.session.performanceSessionStatusLabelRes
+import com.quartz.platform.presentation.performance.session.performanceWorkflowTypeLabelRes
+import com.quartz.platform.presentation.ret.session.retResultOutcomeLabelRes
 import com.quartz.platform.presentation.sync.syncStateLabelRes
+import com.quartz.platform.presentation.xfeeder.session.xfeederSectorOutcomeLabelRes
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -57,7 +65,8 @@ fun ReportListRoute(
         state = state,
         onBack = onBack,
         onOpenDraft = viewModel::onOpenDraftClicked,
-        onRetryFailedSync = viewModel::onRetryFailedSyncClicked
+        onRetryFailedSync = viewModel::onRetryFailedSyncClicked,
+        onFilterSelected = viewModel::onFilterSelected
     )
 }
 
@@ -67,7 +76,8 @@ fun ReportListScreen(
     state: ReportListUiState,
     onBack: () -> Unit,
     onOpenDraft: (String) -> Unit,
-    onRetryFailedSync: (String) -> Unit
+    onRetryFailedSync: (String) -> Unit,
+    onFilterSelected: (ReportListFilter) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -145,6 +155,12 @@ fun ReportListScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
+                    item {
+                        ReportListFilterRow(
+                            selectedFilter = state.selectedFilter,
+                            onFilterSelected = onFilterSelected
+                        )
+                    }
 
                     state.infoMessage?.let { info ->
                         item {
@@ -171,13 +187,25 @@ fun ReportListScreen(
                         }
                     }
 
-                    items(state.reports, key = { it.draftId }) { report ->
-                        ReportListItemCard(
-                            report = report,
-                            isRetrying = report.draftId in state.retryingDraftIds,
-                            onOpenDraft = onOpenDraft,
-                            onRetryFailedSync = onRetryFailedSync
-                        )
+                    if (state.isFilterEmpty) {
+                        item {
+                            Card(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = stringResource(R.string.empty_filtered_local_reports),
+                                    modifier = Modifier.padding(16.dp),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    } else {
+                        items(state.filteredReports, key = { it.draftId }) { report ->
+                            ReportListItemCard(
+                                report = report,
+                                isRetrying = report.draftId in state.retryingDraftIds,
+                                onOpenDraft = onOpenDraft,
+                                onRetryFailedSync = onRetryFailedSync
+                            )
+                        }
                     }
 
                     item {
@@ -189,6 +217,38 @@ fun ReportListScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReportListFilterRow(
+    selectedFilter: ReportListFilter,
+    onFilterSelected: (ReportListFilter) -> Unit
+) {
+    val filters = ReportListFilter.values().toList()
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.label_report_list_filter),
+            style = MaterialTheme.typography.bodyMedium
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(filters) { filter ->
+                FilterChip(
+                    selected = filter == selectedFilter,
+                    onClick = { onFilterSelected(filter) },
+                    label = {
+                        Text(
+                            text = when (filter) {
+                                ReportListFilter.ALL -> stringResource(R.string.report_list_filter_all)
+                                ReportListFilter.XFEEDER -> stringResource(R.string.report_list_filter_xfeeder)
+                                ReportListFilter.RET -> stringResource(R.string.report_list_filter_ret)
+                                ReportListFilter.NON_GUIDED -> stringResource(R.string.report_list_filter_non_guided)
+                            }
+                        )
+                    }
+                )
             }
         }
     }
@@ -216,6 +276,9 @@ private fun ReportListItemCard(
                 style = MaterialTheme.typography.bodySmall
             )
             SyncStateChip(syncState = report.syncState)
+            report.closureSummary?.let { summary ->
+                ReportClosureSummaryRow(summary = summary)
+            }
             if (report.syncState == ReportSyncState.FAILED) {
                 ReportFailureTrace(
                     lastAttemptAtEpochMillis = report.syncTrace.lastAttemptAtEpochMillis,
@@ -250,6 +313,120 @@ private fun ReportListItemCard(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
+    val workflowLabel = when (summary) {
+        is ReportListClosureSummary.Xfeeder -> stringResource(R.string.report_list_closure_workflow_xfeeder)
+        is ReportListClosureSummary.Ret -> stringResource(R.string.report_list_closure_workflow_ret)
+        is ReportListClosureSummary.Throughput -> stringResource(
+            R.string.report_list_closure_workflow_performance,
+            stringResource(performanceWorkflowTypeLabelRes(com.quartz.platform.domain.model.PerformanceWorkflowType.THROUGHPUT))
+        )
+        is ReportListClosureSummary.Qos -> stringResource(
+            R.string.report_list_closure_workflow_performance,
+            stringResource(performanceWorkflowTypeLabelRes(com.quartz.platform.domain.model.PerformanceWorkflowType.QOS_SCRIPT))
+        )
+    }
+    val resultLabel = when (summary) {
+        is ReportListClosureSummary.Xfeeder -> {
+            stringResource(xfeederSectorOutcomeLabelRes(summary.sectorOutcome))
+        }
+
+        is ReportListClosureSummary.Ret -> {
+            stringResource(retResultOutcomeLabelRes(summary.resultOutcome))
+        }
+
+        is ReportListClosureSummary.Throughput -> {
+            stringResource(
+                performanceSessionStatusLabelRes(summary.sessionStatus)
+            )
+        }
+
+        is ReportListClosureSummary.Qos -> {
+            stringResource(
+                performanceSessionStatusLabelRes(summary.sessionStatus)
+            )
+        }
+    }
+    val signalLabel = when (summary) {
+        is ReportListClosureSummary.Xfeeder -> {
+            when (summary.signal) {
+                XfeederSignal.RELATED_SECTOR -> stringResource(R.string.report_list_closure_signal_related_sector)
+                XfeederSignal.UNRELIABLE -> stringResource(R.string.report_list_closure_signal_unreliable)
+                XfeederSignal.OBSERVED_MULTIPLE -> stringResource(R.string.report_list_closure_signal_observed_multiple)
+                null -> null
+            }
+        }
+
+        is ReportListClosureSummary.Ret -> {
+            stringResource(
+                R.string.report_list_closure_signal_ret_steps,
+                summary.completedRequiredStepCount,
+                summary.requiredStepCount
+            )
+        }
+
+        is ReportListClosureSummary.Throughput -> {
+            stringResource(
+                R.string.report_list_closure_signal_performance_throughput,
+                summary.completedRequiredStepCount,
+                summary.requiredStepCount,
+                if (summary.preconditionsReady) {
+                    stringResource(R.string.value_yes)
+                } else {
+                    stringResource(R.string.value_no)
+                },
+                summary.downloadMbps?.toString() ?: "-",
+                summary.uploadMbps?.toString() ?: "-",
+                summary.latencyMs?.toString() ?: "-"
+            )
+        }
+
+        is ReportListClosureSummary.Qos -> {
+            stringResource(
+                R.string.report_list_closure_signal_performance_qos,
+                summary.completedRequiredStepCount,
+                summary.requiredStepCount,
+                if (summary.preconditionsReady) {
+                    stringResource(R.string.value_yes)
+                } else {
+                    stringResource(R.string.value_no)
+                },
+                summary.scriptName ?: stringResource(R.string.value_not_available),
+                summary.iterationCount,
+                summary.successCount,
+                summary.failureCount
+            )
+        }
+    }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.report_list_closure_summary_title),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.report_list_closure_summary_line,
+                    workflowLabel,
+                    resultLabel
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            signalLabel?.let { signal ->
+                Text(
+                    text = stringResource(R.string.report_list_closure_summary_signal, signal),
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
     }

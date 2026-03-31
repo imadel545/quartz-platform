@@ -26,8 +26,12 @@ The roadmap prioritizes:
   - map/site shell
   - technical site detail
   - guided XFeeder + guided RET shells
+  - bounded Débit/QoS local-first foundation (typed site sessions, prerequisites, structured results, local history)
+  - bounded Débit/QoS closure projection into local report flows (review in draft + triage signal in list)
   - shared workflow/session core reused by multiple guided flows
   - local report-draft continuity with typed provenance
+  - workflow-typed closure projection in report draft flow for XFeeder/RET local review
+  - bounded workflow-typed closure triage summary in report list for faster local draft screening
   - XFeeder geospatial session context with bounded altitude-aware proximity eligibility
   - explicit reference-altitude provenance (`TECHNICAL_DEFAULT`, `OPERATOR_OVERRIDE`, `UNAVAILABLE`)
 
