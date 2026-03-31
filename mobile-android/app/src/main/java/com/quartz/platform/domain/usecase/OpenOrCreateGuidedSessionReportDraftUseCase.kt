@@ -16,7 +16,7 @@ class OpenOrCreateGuidedSessionReportDraftUseCase @Inject constructor(
     suspend operator fun invoke(
         siteId: String,
         originSessionId: String,
-        originSectorId: String,
+        originSectorId: String?,
         originWorkflowType: ReportDraftOriginWorkflowType
     ): GuidedSessionReportDraftResult {
         val existing = reportDraftRepository.findLatestLinkedDraft(

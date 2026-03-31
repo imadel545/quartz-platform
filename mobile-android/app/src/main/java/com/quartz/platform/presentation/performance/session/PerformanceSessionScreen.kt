@@ -21,6 +21,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -29,23 +30,33 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
-import com.quartz.platform.domain.model.LocalQosScriptCatalog
 import com.quartz.platform.domain.model.PerformanceGuidedStep
 import com.quartz.platform.domain.model.PerformanceSession
 import com.quartz.platform.domain.model.PerformanceSessionStatus
 import com.quartz.platform.domain.model.PerformanceStepCode
 import com.quartz.platform.domain.model.PerformanceStepStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
+import com.quartz.platform.domain.model.QosScriptDefinition
+import com.quartz.platform.domain.model.QosTestFamily
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun PerformanceSessionRoute(
     onBack: () -> Unit,
+    onOpenDraft: (String) -> Unit,
     viewModel: PerformanceSessionViewModel = hiltViewModel()
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
+    LaunchedEffect(viewModel) {
+        viewModel.events.collectLatest { event ->
+            when (event) {
+                is PerformanceSessionEvent.OpenDraft -> onOpenDraft(event.draftId)
+            }
+        }
+    }
     PerformanceSessionScreen(
         state = state,
         onBack = onBack,
@@ -66,6 +77,12 @@ fun PerformanceSessionRoute(
         onThroughputMinUploadChanged = viewModel::onThroughputMinUploadChanged,
         onThroughputMaxLatencyChanged = viewModel::onThroughputMaxLatencyChanged,
         onQosScriptSelected = viewModel::onQosScriptSelected,
+        onQosConfiguredRepeatChanged = viewModel::onQosConfiguredRepeatChanged,
+        onQosScriptEditorNameChanged = viewModel::onQosScriptEditorNameChanged,
+        onQosScriptEditorRepeatChanged = viewModel::onQosScriptEditorRepeatChanged,
+        onQosScriptEditorTechnologiesChanged = viewModel::onQosScriptEditorTechnologiesChanged,
+        onQosScriptEditorFamilyToggled = viewModel::onQosScriptEditorFamilyToggled,
+        onSaveQosScriptClicked = viewModel::onSaveQosScriptClicked,
         onQosTargetTechnologyChanged = viewModel::onQosTargetTechnologyChanged,
         onQosTargetPhoneChanged = viewModel::onQosTargetPhoneChanged,
         onQosIterationCountChanged = viewModel::onQosIterationCountChanged,
@@ -73,7 +90,8 @@ fun PerformanceSessionRoute(
         onQosFailureCountChanged = viewModel::onQosFailureCountChanged,
         onNotesChanged = viewModel::onNotesChanged,
         onResultSummaryChanged = viewModel::onResultSummaryChanged,
-        onSaveSummaryClicked = viewModel::onSaveSummaryClicked
+        onSaveSummaryClicked = viewModel::onSaveSummaryClicked,
+        onOpenLinkedDraftClicked = viewModel::onOpenLinkedDraftClicked
     )
 }
 
@@ -99,6 +117,12 @@ fun PerformanceSessionScreen(
     onThroughputMinUploadChanged: (String) -> Unit,
     onThroughputMaxLatencyChanged: (String) -> Unit,
     onQosScriptSelected: (String, String) -> Unit,
+    onQosConfiguredRepeatChanged: (String) -> Unit,
+    onQosScriptEditorNameChanged: (String) -> Unit,
+    onQosScriptEditorRepeatChanged: (String) -> Unit,
+    onQosScriptEditorTechnologiesChanged: (String) -> Unit,
+    onQosScriptEditorFamilyToggled: (QosTestFamily) -> Unit,
+    onSaveQosScriptClicked: () -> Unit,
     onQosTargetTechnologyChanged: (String) -> Unit,
     onQosTargetPhoneChanged: (String) -> Unit,
     onQosIterationCountChanged: (String) -> Unit,
@@ -106,7 +130,8 @@ fun PerformanceSessionScreen(
     onQosFailureCountChanged: (String) -> Unit,
     onNotesChanged: (String) -> Unit,
     onResultSummaryChanged: (String) -> Unit,
-    onSaveSummaryClicked: () -> Unit
+    onSaveSummaryClicked: () -> Unit,
+    onOpenLinkedDraftClicked: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -247,12 +272,26 @@ fun PerformanceSessionScreen(
                             QosPanel(
                                 selectedScriptId = state.qosSelectedScriptId,
                                 selectedScriptName = state.qosSelectedScriptName,
+                                selectedTestFamilies = state.qosSelectedTestFamilies,
+                                configuredRepeat = state.qosConfiguredRepeatInput,
+                                availableScripts = state.availableQosScripts,
+                                scriptEditorName = state.qosScriptEditorNameInput,
+                                scriptEditorRepeat = state.qosScriptEditorRepeatInput,
+                                scriptEditorTechnologies = state.qosScriptEditorTechnologiesInput,
+                                scriptEditorSelectedFamilies = state.qosScriptEditorSelectedFamilies,
+                                isSavingScript = state.isSavingQosScript,
                                 targetTechnology = state.qosTargetTechnologyInput,
                                 targetPhone = state.qosTargetPhoneInput,
                                 iterationCount = state.qosIterationCountInput,
                                 successCount = state.qosSuccessCountInput,
                                 failureCount = state.qosFailureCountInput,
                                 onQosScriptSelected = onQosScriptSelected,
+                                onQosConfiguredRepeatChanged = onQosConfiguredRepeatChanged,
+                                onQosScriptEditorNameChanged = onQosScriptEditorNameChanged,
+                                onQosScriptEditorRepeatChanged = onQosScriptEditorRepeatChanged,
+                                onQosScriptEditorTechnologiesChanged = onQosScriptEditorTechnologiesChanged,
+                                onQosScriptEditorFamilyToggled = onQosScriptEditorFamilyToggled,
+                                onSaveQosScriptClicked = onSaveQosScriptClicked,
                                 onQosTargetTechnologyChanged = onQosTargetTechnologyChanged,
                                 onQosTargetPhoneChanged = onQosTargetPhoneChanged,
                                 onQosIterationCountChanged = onQosIterationCountChanged,
@@ -325,6 +364,16 @@ fun PerformanceSessionScreen(
                             stringResource(R.string.performance_action_save)
                         }
                     )
+                }
+            }
+
+            item {
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = state.session != null,
+                    onClick = onOpenLinkedDraftClicked
+                ) {
+                    Text(stringResource(R.string.action_open_linked_report_draft))
                 }
             }
 
@@ -655,12 +704,26 @@ private fun ThroughputPanel(
 private fun QosPanel(
     selectedScriptId: String?,
     selectedScriptName: String?,
+    selectedTestFamilies: Set<QosTestFamily>,
+    configuredRepeat: String,
+    availableScripts: List<QosScriptDefinition>,
+    scriptEditorName: String,
+    scriptEditorRepeat: String,
+    scriptEditorTechnologies: String,
+    scriptEditorSelectedFamilies: Set<QosTestFamily>,
+    isSavingScript: Boolean,
     targetTechnology: String,
     targetPhone: String,
     iterationCount: String,
     successCount: String,
     failureCount: String,
     onQosScriptSelected: (String, String) -> Unit,
+    onQosConfiguredRepeatChanged: (String) -> Unit,
+    onQosScriptEditorNameChanged: (String) -> Unit,
+    onQosScriptEditorRepeatChanged: (String) -> Unit,
+    onQosScriptEditorTechnologiesChanged: (String) -> Unit,
+    onQosScriptEditorFamilyToggled: (QosTestFamily) -> Unit,
+    onSaveQosScriptClicked: () -> Unit,
     onQosTargetTechnologyChanged: (String) -> Unit,
     onQosTargetPhoneChanged: (String) -> Unit,
     onQosIterationCountChanged: (String) -> Unit,
@@ -683,14 +746,82 @@ private fun QosPanel(
                 ),
                 style = MaterialTheme.typography.bodySmall
             )
-            LocalQosScriptCatalog.defaults.forEach { script ->
+            availableScripts.forEach { script ->
                 Button(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = script.id != selectedScriptId,
                     onClick = { onQosScriptSelected(script.id, script.name) }
                 ) {
-                    Text("${script.name} - ${script.description}")
+                    Text(
+                        stringResource(
+                            R.string.performance_label_qos_script_item,
+                            script.name,
+                            script.repeatCount,
+                            script.testFamilies.size
+                        )
+                    )
                 }
+            }
+            Text(
+                text = stringResource(
+                    R.string.performance_label_qos_selected_test_families,
+                    buildList {
+                        for (family in selectedTestFamilies) {
+                            add(stringResource(qosTestFamilyLabelRes(family)))
+                        }
+                    }.joinToString(", ").ifBlank { stringResource(R.string.value_not_available) }
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = configuredRepeat,
+                onValueChange = onQosConfiguredRepeatChanged,
+                label = { Text(stringResource(R.string.performance_input_qos_configured_repeat_count)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
+            Text(
+                text = stringResource(R.string.performance_header_qos_script_editor),
+                style = MaterialTheme.typography.titleSmall
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = scriptEditorName,
+                onValueChange = onQosScriptEditorNameChanged,
+                label = { Text(stringResource(R.string.performance_input_qos_script_name)) }
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = scriptEditorRepeat,
+                onValueChange = onQosScriptEditorRepeatChanged,
+                label = { Text(stringResource(R.string.performance_input_qos_script_repeat_count)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = scriptEditorTechnologies,
+                onValueChange = onQosScriptEditorTechnologiesChanged,
+                label = { Text(stringResource(R.string.performance_input_qos_script_technologies)) }
+            )
+            QosTestFamily.entries.forEach { family ->
+                ToggleRow(
+                    label = stringResource(qosTestFamilyLabelRes(family)),
+                    value = scriptEditorSelectedFamilies.contains(family),
+                    onChange = { onQosScriptEditorFamilyToggled(family) }
+                )
+            }
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isSavingScript,
+                onClick = onSaveQosScriptClicked
+            ) {
+                Text(
+                    if (isSavingScript) {
+                        stringResource(R.string.performance_action_save_loading)
+                    } else {
+                        stringResource(R.string.performance_action_save_qos_script)
+                    }
+                )
             }
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
@@ -735,4 +866,16 @@ private fun formatEpoch(epochMillis: Long): String {
     return formatter.format(
         Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).toLocalDateTime()
     )
+}
+
+private fun qosTestFamilyLabelRes(family: QosTestFamily): Int {
+    return when (family) {
+        QosTestFamily.THROUGHPUT_LATENCY -> R.string.qos_test_family_throughput_latency
+        QosTestFamily.VIDEO_STREAMING -> R.string.qos_test_family_video_streaming
+        QosTestFamily.SMS -> R.string.qos_test_family_sms
+        QosTestFamily.VOLTE_CALL -> R.string.qos_test_family_volte_call
+        QosTestFamily.CSFB_CALL -> R.string.qos_test_family_csfb_call
+        QosTestFamily.EMERGENCY_CALL -> R.string.qos_test_family_emergency_call
+        QosTestFamily.STANDARD_CALL -> R.string.qos_test_family_standard_call
+    }
 }

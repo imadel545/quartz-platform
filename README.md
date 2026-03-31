@@ -27,6 +27,7 @@ quartz-platform/
   - XFeeder guided workflow shell with geospatial session surface
   - RET guided workflow shell reusing shared workflow/session core
   - Débit/QoS local-first foundation with guided site sessions, prerequisites, structured results, and local history
+  - QoS script shell persisted locally (typed test families, repeat/technology configuration, local script selection)
   - Débit/QoS closure projection in local reports:
     - ReportDraft reviewer panel now includes typed performance closure data (throughput and QoS script sessions)
     - ReportList triage can expose concise performance signals for non-guided drafts when a local performance closure exists

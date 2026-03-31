@@ -133,7 +133,10 @@ fun QuartzNavHost() {
             )
         ) {
             PerformanceSessionRoute(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onOpenDraft = { draftId ->
+                    navController.navigate(QuartzDestination.ReportDraft.routeFor(draftId))
+                }
             )
         }
     }

@@ -25,6 +25,7 @@ enum class ReportListFilter {
     ALL,
     XFEEDER,
     RET,
+    PERFORMANCE,
     NON_GUIDED;
 
     fun matches(item: SiteReportListItem): Boolean {
@@ -32,6 +33,7 @@ enum class ReportListFilter {
             ALL -> true
             XFEEDER -> item.originWorkflowType == ReportDraftOriginWorkflowType.XFEEDER
             RET -> item.originWorkflowType == ReportDraftOriginWorkflowType.RET
+            PERFORMANCE -> item.originWorkflowType == ReportDraftOriginWorkflowType.PERFORMANCE
             NON_GUIDED -> item.originWorkflowType == null
         }
     }
@@ -48,7 +50,7 @@ enum class ReportListFilter {
                 null -> NON_GUIDED
                 ReportDraftOriginWorkflowType.XFEEDER -> XFEEDER
                 ReportDraftOriginWorkflowType.RET -> RET
-                else -> ALL
+                ReportDraftOriginWorkflowType.PERFORMANCE -> PERFORMANCE
             }
         }
     }

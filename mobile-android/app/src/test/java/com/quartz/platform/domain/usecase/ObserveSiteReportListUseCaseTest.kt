@@ -266,6 +266,81 @@ class ObserveSiteReportListUseCaseTest {
             .isInstanceOf(com.quartz.platform.domain.model.ReportListClosureSummary.Throughput::class.java)
     }
 
+    @Test
+    fun `observe use case resolves performance summary for performance linked draft`() = runTest {
+        val drafts = listOf(
+            ReportDraft(
+                id = "draft-perf",
+                siteId = "site-1",
+                originSessionId = "perf-1",
+                originWorkflowType = ReportDraftOriginWorkflowType.PERFORMANCE,
+                title = "Perf draft",
+                observation = "",
+                revision = 1,
+                createdAtEpochMillis = 2L,
+                updatedAtEpochMillis = 11L
+            )
+        )
+        val reportRepository = FakeReportDraftRepository(drafts)
+        val syncRepository = FakeSyncRepository(
+            mapOf("draft-perf" to ReportSyncTrace.localOnly())
+        )
+        val useCase = ObserveSiteReportListUseCase(
+            reportDraftRepository = reportRepository,
+            syncRepository = syncRepository,
+            observeSiteReportClosureProjectionsUseCase = ObserveSiteReportClosureProjectionsUseCase(
+                xfeederRepository = FakeXfeederGuidedSessionRepository(),
+                retRepository = FakeRetGuidedSessionRepository(),
+                performanceSessionRepository = FakePerformanceSessionRepository(
+                    sessions = listOf(
+                        PerformanceSession(
+                            id = "perf-1",
+                            siteId = "site-1",
+                            siteCode = "SITE-1",
+                            workflowType = PerformanceWorkflowType.QOS_SCRIPT,
+                            operatorName = "Op-A",
+                            technology = "4G",
+                            status = PerformanceSessionStatus.COMPLETED,
+                            prerequisiteNetworkReady = true,
+                            prerequisiteBatterySufficient = true,
+                            prerequisiteLocationReady = true,
+                            throughputMetrics = ThroughputMetrics(),
+                            qosRunSummary = QosRunSummary(
+                                scriptId = "qos-1",
+                                scriptName = "Latence + Débit",
+                                iterationCount = 10,
+                                successCount = 9,
+                                failureCount = 1
+                            ),
+                            notes = "",
+                            resultSummary = "OK",
+                            createdAtEpochMillis = 1L,
+                            updatedAtEpochMillis = 100L,
+                            completedAtEpochMillis = 100L,
+                            steps = listOf(
+                                com.quartz.platform.domain.model.PerformanceGuidedStep(
+                                    code = PerformanceStepCode.PRECONDITIONS_CHECK,
+                                    required = true,
+                                    status = PerformanceStepStatus.DONE
+                                ),
+                                com.quartz.platform.domain.model.PerformanceGuidedStep(
+                                    code = PerformanceStepCode.EXECUTE_TEST,
+                                    required = true,
+                                    status = PerformanceStepStatus.DONE
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        val items = useCase("site-1").take(1).toList().first()
+        assertThat(items).hasSize(1)
+        assertThat(items.first().closureSummary)
+            .isInstanceOf(com.quartz.platform.domain.model.ReportListClosureSummary.Qos::class.java)
+    }
+
     private class FakeReportDraftRepository(
         initialDrafts: List<ReportDraft>
     ) : ReportDraftRepository {

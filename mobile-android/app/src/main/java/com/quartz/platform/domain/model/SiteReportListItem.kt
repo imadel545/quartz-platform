@@ -42,6 +42,8 @@ sealed interface ReportListClosureSummary {
         val requiredStepCount: Int,
         val completedRequiredStepCount: Int,
         val scriptName: String?,
+        val configuredRepeatCount: Int? = null,
+        val testFamilyCount: Int = 0,
         val iterationCount: Int,
         val successCount: Int,
         val failureCount: Int

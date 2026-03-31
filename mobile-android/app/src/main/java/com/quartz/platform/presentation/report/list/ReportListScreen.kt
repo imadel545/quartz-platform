@@ -244,6 +244,7 @@ private fun ReportListFilterRow(
                                 ReportListFilter.ALL -> stringResource(R.string.report_list_filter_all)
                                 ReportListFilter.XFEEDER -> stringResource(R.string.report_list_filter_xfeeder)
                                 ReportListFilter.RET -> stringResource(R.string.report_list_filter_ret)
+                                ReportListFilter.PERFORMANCE -> stringResource(R.string.report_list_filter_performance)
                                 ReportListFilter.NON_GUIDED -> stringResource(R.string.report_list_filter_non_guided)
                             }
                         )
@@ -398,6 +399,8 @@ private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
                     stringResource(R.string.value_no)
                 },
                 summary.scriptName ?: stringResource(R.string.value_not_available),
+                summary.configuredRepeatCount?.toString() ?: "-",
+                summary.testFamilyCount,
                 summary.iterationCount,
                 summary.successCount,
                 summary.failureCount

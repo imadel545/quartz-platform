@@ -39,6 +39,8 @@ data class PerformanceSessionEntity(
     val throughputMaxLatencyMs: Int?,
     val qosScriptId: String?,
     val qosScriptName: String?,
+    val qosConfiguredRepeatCount: Int?,
+    val qosTestFamiliesCsv: String,
     val qosTargetTechnology: String?,
     val qosTargetPhoneNumber: String?,
     val qosIterationCount: Int,

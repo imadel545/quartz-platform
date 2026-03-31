@@ -9,6 +9,7 @@ import com.quartz.platform.domain.model.PerformanceStepCode
 import com.quartz.platform.domain.model.PerformanceStepStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
 import com.quartz.platform.domain.model.QosRunSummary
+import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ThroughputMetrics
 
 fun PerformanceSessionEntity.toDomain(steps: List<PerformanceStepEntity>): PerformanceSession {
@@ -38,6 +39,12 @@ fun PerformanceSessionEntity.toDomain(steps: List<PerformanceStepEntity>): Perfo
         qosRunSummary = QosRunSummary(
             scriptId = qosScriptId,
             scriptName = qosScriptName,
+            configuredRepeatCount = qosConfiguredRepeatCount,
+            selectedTestFamilies = qosTestFamiliesCsv.split(',')
+                .map { value -> value.trim() }
+                .filter { value -> value.isNotBlank() }
+                .mapNotNull { raw -> runCatching { QosTestFamily.valueOf(raw) }.getOrNull() }
+                .toSet(),
             targetTechnology = qosTargetTechnology,
             targetPhoneNumber = qosTargetPhoneNumber,
             iterationCount = qosIterationCount,
@@ -81,6 +88,11 @@ fun PerformanceSession.toEntity(): PerformanceSessionEntity {
         throughputMaxLatencyMs = throughputMetrics.maxLatencyMs,
         qosScriptId = qosRunSummary.scriptId,
         qosScriptName = qosRunSummary.scriptName,
+        qosConfiguredRepeatCount = qosRunSummary.configuredRepeatCount,
+        qosTestFamiliesCsv = qosRunSummary.selectedTestFamilies
+            .map { family -> family.name }
+            .sorted()
+            .joinToString(","),
         qosTargetTechnology = qosRunSummary.targetTechnology,
         qosTargetPhoneNumber = qosRunSummary.targetPhoneNumber,
         qosIterationCount = qosRunSummary.iterationCount,

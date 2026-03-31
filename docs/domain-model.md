@@ -198,6 +198,7 @@ For guided geospatial sessions (for example XFeeder), a bounded geospatial conte
 
 For bounded site-level performance workflows (Débit/QoS foundation), local session state tracks:
 - workflow type (`THROUGHPUT`, `QOS_SCRIPT`)
+- QoS test families (`THROUGHPUT_LATENCY`, `VIDEO_STREAMING`, `SMS`, `VOLTE_CALL`, `CSFB_CALL`, `EMERGENCY_CALL`, `STANDARD_CALL`)
 - prerequisite readiness flags
 - structured throughput metrics and thresholds
 - structured QoS script execution summary
@@ -205,6 +206,8 @@ For bounded site-level performance workflows (Débit/QoS foundation), local sess
 - bounded closure projection for local report review:
   - detailed projection in ReportDraft
   - concise triage projection in ReportList
+- linked report-draft continuity with explicit provenance (`originWorkflowType = PERFORMANCE`, `originSessionId`).
+- local QoS script definitions persisted in Room (`qos_scripts`) with name, repeat count, technologies, and selected test families.
 
 Possible status values:
 - CREATED

@@ -619,4 +619,132 @@ object DatabaseMigrations {
             )
         }
     }
+
+    val MIGRATION_15_16: Migration = object : Migration(15, 16) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                UPDATE report_drafts
+                SET originWorkflowType = NULL
+                WHERE originWorkflowType IS NOT NULL
+                  AND originWorkflowType NOT IN ('XFEEDER', 'RET', 'PERFORMANCE')
+                """.trimIndent()
+            )
+
+            db.execSQL("DROP TRIGGER IF EXISTS trg_report_drafts_origin_workflow_type_insert")
+            db.execSQL("DROP TRIGGER IF EXISTS trg_report_drafts_origin_workflow_type_update")
+
+            db.execSQL(
+                """
+                CREATE TRIGGER IF NOT EXISTS trg_report_drafts_origin_workflow_type_insert
+                BEFORE INSERT ON report_drafts
+                WHEN NEW.originWorkflowType IS NOT NULL
+                     AND NEW.originWorkflowType NOT IN ('XFEEDER', 'RET', 'PERFORMANCE')
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid originWorkflowType');
+                END
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE TRIGGER IF NOT EXISTS trg_report_drafts_origin_workflow_type_update
+                BEFORE UPDATE OF originWorkflowType ON report_drafts
+                WHEN NEW.originWorkflowType IS NOT NULL
+                     AND NEW.originWorkflowType NOT IN ('XFEEDER', 'RET', 'PERFORMANCE')
+                BEGIN
+                    SELECT RAISE(ABORT, 'invalid originWorkflowType');
+                END
+                """.trimIndent()
+            )
+        }
+    }
+
+    val MIGRATION_16_17: Migration = object : Migration(16, 17) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                ALTER TABLE performance_sessions
+                ADD COLUMN qosConfiguredRepeatCount INTEGER
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                ALTER TABLE performance_sessions
+                ADD COLUMN qosTestFamiliesCsv TEXT NOT NULL DEFAULT ''
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS qos_scripts (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    repeatCount INTEGER NOT NULL,
+                    targetTechnologiesCsv TEXT NOT NULL,
+                    testFamiliesCsv TEXT NOT NULL,
+                    isArchived INTEGER NOT NULL,
+                    createdAtEpochMillis INTEGER NOT NULL,
+                    updatedAtEpochMillis INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_qos_scripts_isArchived_updatedAtEpochMillis
+                ON qos_scripts(isArchived, updatedAtEpochMillis)
+                """.trimIndent()
+            )
+
+            val now = System.currentTimeMillis()
+            db.execSQL(
+                """
+                INSERT OR IGNORE INTO qos_scripts (
+                    id, name, repeatCount, targetTechnologiesCsv, testFamiliesCsv, isArchived, createdAtEpochMillis, updatedAtEpochMillis
+                ) VALUES (
+                    'qos-script-latency-throughput',
+                    'Latence + Débit',
+                    1,
+                    '4G,5G',
+                    'THROUGHPUT_LATENCY',
+                    0,
+                    $now,
+                    $now
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                INSERT OR IGNORE INTO qos_scripts (
+                    id, name, repeatCount, targetTechnologiesCsv, testFamiliesCsv, isArchived, createdAtEpochMillis, updatedAtEpochMillis
+                ) VALUES (
+                    'qos-script-voice-sms',
+                    'Voix / SMS',
+                    1,
+                    '4G,5G',
+                    'SMS,VOLTE_CALL,CSFB_CALL,EMERGENCY_CALL,STANDARD_CALL',
+                    0,
+                    $now,
+                    $now
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                INSERT OR IGNORE INTO qos_scripts (
+                    id, name, repeatCount, targetTechnologiesCsv, testFamiliesCsv, isArchived, createdAtEpochMillis, updatedAtEpochMillis
+                ) VALUES (
+                    'qos-script-video-streaming',
+                    'Streaming vidéo',
+                    1,
+                    '4G,5G',
+                    'VIDEO_STREAMING',
+                    0,
+                    $now,
+                    $now
+                )
+                """.trimIndent()
+            )
+        }
+    }
 }

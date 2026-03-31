@@ -62,6 +62,24 @@ class OpenOrCreateGuidedSessionReportDraftUseCaseTest {
         assertThat(repository.createDraftCalls).isEqualTo(1)
     }
 
+    @Test
+    fun `supports performance workflow linkage without sector origin`() = runTest {
+        val repository = FakeReportDraftRepository()
+        val useCase = OpenOrCreateGuidedSessionReportDraftUseCase(repository)
+
+        val result = useCase(
+            siteId = "site-1",
+            originSessionId = "perf-session-1",
+            originSectorId = null,
+            originWorkflowType = ReportDraftOriginWorkflowType.PERFORMANCE
+        )
+
+        assertThat(result.created).isTrue()
+        assertThat(result.draft.originWorkflowType).isEqualTo(ReportDraftOriginWorkflowType.PERFORMANCE)
+        assertThat(result.draft.originSessionId).isEqualTo("perf-session-1")
+        assertThat(result.draft.originSectorId).isNull()
+    }
+
     private class FakeReportDraftRepository(
         initialDrafts: List<ReportDraft> = emptyList()
     ) : ReportDraftRepository {

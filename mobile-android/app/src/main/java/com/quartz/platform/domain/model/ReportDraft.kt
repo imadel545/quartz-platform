@@ -2,7 +2,8 @@ package com.quartz.platform.domain.model
 
 enum class ReportDraftOriginWorkflowType {
     XFEEDER,
-    RET
+    RET,
+    PERFORMANCE
 }
 
 data class ReportDraft(

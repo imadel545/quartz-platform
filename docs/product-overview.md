@@ -75,9 +75,11 @@ The mobile application must support structured field sessions with:
 
 Current validated guided-session coverage includes XFeeder and RET shells with local persistence/resume, completion guards, and report-draft continuity. XFeeder proximity handling is altitude-aware with explicit local reference-altitude provenance (technical default vs operator override vs unavailable), while remaining intentionally bounded (no full telecom automation claims).
 Current validated performance coverage also includes a bounded local-first Débit/QoS foundation (site-level guided sessions, prerequisites, structured result capture, and local session history) without claiming final telecom automation.
+The QoS shell now includes typed test families aligned with the manual (`THROUGHPUT_LATENCY`, `VIDEO_STREAMING`, `SMS`, `VOLTE_CALL`, `CSFB_CALL`, `EMERGENCY_CALL`, `STANDARD_CALL`) and a local script definition layer (create/edit/configure/select) persisted in Room.
 Current validated local reporting now includes bounded Débit/QoS closure review projection:
 - ReportDraft shows typed performance closure signals (workflow type, execution state, required-step progress, prerequisites, and implemented metrics/results).
 - ReportList may expose a concise performance triage summary for non-guided drafts when a local performance closure exists.
+- Performance sessions can now open-or-create a linked local report draft with explicit `PERFORMANCE` provenance for continuity and supervisor review.
 
 ### 4. Throughput and QoS testing
 The system should support:

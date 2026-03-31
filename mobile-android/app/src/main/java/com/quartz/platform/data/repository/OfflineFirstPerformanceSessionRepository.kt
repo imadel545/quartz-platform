@@ -136,6 +136,8 @@ class OfflineFirstPerformanceSessionRepository @Inject constructor(
                 throughputMaxLatencyMs = existing.throughputMaxLatencyMs,
                 qosScriptId = existing.qosScriptId,
                 qosScriptName = existing.qosScriptName,
+                qosConfiguredRepeatCount = existing.qosConfiguredRepeatCount,
+                qosTestFamiliesCsv = existing.qosTestFamiliesCsv,
                 qosTargetTechnology = existing.qosTargetTechnology,
                 qosTargetPhoneNumber = existing.qosTargetPhoneNumber,
                 qosIterationCount = existing.qosIterationCount,
@@ -174,6 +176,8 @@ class OfflineFirstPerformanceSessionRepository @Inject constructor(
         val sanitizedQos = qosRunSummary.copy(
             scriptId = qosRunSummary.scriptId?.trim()?.takeIf { it.isNotBlank() },
             scriptName = qosRunSummary.scriptName?.trim()?.takeIf { it.isNotBlank() },
+            configuredRepeatCount = qosRunSummary.configuredRepeatCount?.coerceAtLeast(1),
+            selectedTestFamilies = qosRunSummary.selectedTestFamilies,
             targetTechnology = qosRunSummary.targetTechnology?.trim()?.takeIf { it.isNotBlank() },
             targetPhoneNumber = qosRunSummary.targetPhoneNumber?.trim()?.takeIf { it.isNotBlank() },
             iterationCount = qosRunSummary.iterationCount.coerceAtLeast(0),
@@ -195,6 +199,11 @@ class OfflineFirstPerformanceSessionRepository @Inject constructor(
             throughputMaxLatencyMs = throughputMetrics.maxLatencyMs,
             qosScriptId = sanitizedQos.scriptId,
             qosScriptName = sanitizedQos.scriptName,
+            qosConfiguredRepeatCount = sanitizedQos.configuredRepeatCount,
+            qosTestFamiliesCsv = sanitizedQos.selectedTestFamilies
+                .map { family -> family.name }
+                .sorted()
+                .joinToString(","),
             qosTargetTechnology = sanitizedQos.targetTechnology,
             qosTargetPhoneNumber = sanitizedQos.targetPhoneNumber,
             qosIterationCount = sanitizedQos.iterationCount,

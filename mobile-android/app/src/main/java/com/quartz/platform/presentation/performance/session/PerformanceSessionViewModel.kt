@@ -10,18 +10,27 @@ import com.quartz.platform.domain.model.PerformanceSessionStatus
 import com.quartz.platform.domain.model.PerformanceStepCode
 import com.quartz.platform.domain.model.PerformanceStepStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
+import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.model.QosRunSummary
+import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ThroughputMetrics
 import com.quartz.platform.domain.usecase.CreateSitePerformanceSessionUseCase
+import com.quartz.platform.domain.usecase.EnsureDefaultQosScriptsUseCase
 import com.quartz.platform.domain.usecase.ObserveSiteDetailUseCase
+import com.quartz.platform.domain.usecase.ObserveQosScriptsUseCase
 import com.quartz.platform.domain.usecase.ObserveSitePerformanceSessionHistoryUseCase
+import com.quartz.platform.domain.usecase.OpenOrCreateGuidedSessionReportDraftUseCase
 import com.quartz.platform.domain.usecase.UpdatePerformanceSessionExecutionUseCase
 import com.quartz.platform.domain.usecase.UpdatePerformanceStepStatusUseCase
+import com.quartz.platform.domain.usecase.UpsertQosScriptUseCase
 import com.quartz.platform.presentation.navigation.QuartzDestination
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -33,7 +42,11 @@ class PerformanceSessionViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val observeSiteDetailUseCase: ObserveSiteDetailUseCase,
     private val observeSitePerformanceSessionHistoryUseCase: ObserveSitePerformanceSessionHistoryUseCase,
+    private val observeQosScriptsUseCase: ObserveQosScriptsUseCase,
+    private val ensureDefaultQosScriptsUseCase: EnsureDefaultQosScriptsUseCase,
     private val createSitePerformanceSessionUseCase: CreateSitePerformanceSessionUseCase,
+    private val upsertQosScriptUseCase: UpsertQosScriptUseCase,
+    private val openOrCreateGuidedSessionReportDraftUseCase: OpenOrCreateGuidedSessionReportDraftUseCase,
     private val updatePerformanceStepStatusUseCase: UpdatePerformanceStepStatusUseCase,
     private val updatePerformanceSessionExecutionUseCase: UpdatePerformanceSessionExecutionUseCase,
     private val uiStrings: UiStrings
@@ -44,8 +57,17 @@ class PerformanceSessionViewModel @Inject constructor(
         PerformanceSessionUiState(siteId = siteId)
     )
     val uiState: StateFlow<PerformanceSessionUiState> = mutableState.asStateFlow()
+    private val _events = MutableSharedFlow<PerformanceSessionEvent>(
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    val events = _events.asSharedFlow()
 
     init {
+        viewModelScope.launch {
+            ensureDefaultQosScriptsUseCase()
+        }
         observeContext()
     }
 
@@ -66,6 +88,37 @@ class PerformanceSessionViewModel @Inject constructor(
                 errorMessage = null,
                 infoMessage = null
             )
+        }
+    }
+
+    fun onOpenLinkedDraftClicked() {
+        val session = mutableState.value.session ?: return
+        viewModelScope.launch {
+            runCatching {
+                openOrCreateGuidedSessionReportDraftUseCase(
+                    siteId = session.siteId,
+                    originSessionId = session.id,
+                    originSectorId = null,
+                    originWorkflowType = ReportDraftOriginWorkflowType.PERFORMANCE
+                )
+            }.onFailure { throwable ->
+                mutableState.update { state ->
+                    state.copy(
+                        errorMessage = throwable.message ?: uiStrings.get(R.string.error_create_linked_report_draft),
+                        infoMessage = null
+                    )
+                }
+            }.onSuccess { result ->
+                val infoRes = if (result.created) {
+                    R.string.info_created_linked_report_draft
+                } else {
+                    R.string.info_opened_existing_linked_report_draft
+                }
+                mutableState.update { state ->
+                    state.copy(infoMessage = uiStrings.get(infoRes), errorMessage = null)
+                }
+                _events.tryEmit(PerformanceSessionEvent.OpenDraft(result.draft.id))
+            }
         }
     }
 
@@ -185,15 +238,98 @@ class PerformanceSessionViewModel @Inject constructor(
     fun onThroughputMaxLatencyChanged(value: String) = updateField { copy(throughputMaxLatencyInput = sanitizeInteger(value)) }
 
     fun onQosScriptSelected(scriptId: String, scriptName: String) {
+        val script = mutableState.value.availableQosScripts.firstOrNull { it.id == scriptId }
         mutableState.update { state ->
             state.copy(
                 qosSelectedScriptId = scriptId,
                 qosSelectedScriptName = scriptName,
+                qosSelectedTestFamilies = script?.testFamilies.orEmpty(),
+                qosConfiguredRepeatInput = script?.repeatCount?.toString().orEmpty(),
+                qosScriptEditorNameInput = script?.name.orEmpty(),
+                qosScriptEditorRepeatInput = script?.repeatCount?.toString() ?: state.qosScriptEditorRepeatInput,
+                qosScriptEditorTechnologiesInput = script?.targetTechnologies?.joinToString(", ").orEmpty(),
+                qosScriptEditorSelectedFamilies = script?.testFamilies.orEmpty(),
+                qosTargetTechnologyInput = script?.targetTechnologies?.firstOrNull().orEmpty(),
+                qosIterationCountInput = script?.repeatCount?.toString() ?: state.qosIterationCountInput,
                 hasUnsavedChanges = true,
                 completionGuardMessage = null,
                 errorMessage = null,
                 infoMessage = null
             )
+        }
+    }
+
+    fun onQosConfiguredRepeatChanged(value: String) = updateField {
+        copy(qosConfiguredRepeatInput = sanitizeInteger(value))
+    }
+
+    fun onQosScriptEditorNameChanged(value: String) = updateField {
+        copy(qosScriptEditorNameInput = value)
+    }
+
+    fun onQosScriptEditorRepeatChanged(value: String) = updateField {
+        copy(qosScriptEditorRepeatInput = sanitizeInteger(value))
+    }
+
+    fun onQosScriptEditorTechnologiesChanged(value: String) = updateField {
+        copy(qosScriptEditorTechnologiesInput = value)
+    }
+
+    fun onQosScriptEditorFamilyToggled(family: QosTestFamily) {
+        updateField {
+            copy(
+                qosScriptEditorSelectedFamilies = qosScriptEditorSelectedFamilies.toggle(family)
+            )
+        }
+    }
+
+    fun onSaveQosScriptClicked() {
+        val current = mutableState.value
+        if (current.isSavingQosScript) return
+
+        val repeat = parseOptionalInt(
+            value = current.qosScriptEditorRepeatInput,
+            errorRes = R.string.error_performance_invalid_integer
+        ) ?: return
+
+        viewModelScope.launch {
+            mutableState.update { state ->
+                state.copy(isSavingQosScript = true, errorMessage = null, infoMessage = null)
+            }
+            runCatching {
+                upsertQosScriptUseCase(
+                    id = current.qosSelectedScriptId,
+                    name = current.qosScriptEditorNameInput,
+                    repeatCount = repeat.coerceAtLeast(1),
+                    targetTechnologies = current.qosScriptEditorTechnologiesInput
+                        .split(',')
+                        .map { value -> value.trim() }
+                        .filter { value -> value.isNotBlank() }
+                        .toSet(),
+                    testFamilies = current.qosScriptEditorSelectedFamilies
+                )
+            }.onFailure { throwable ->
+                mutableState.update { state ->
+                    state.copy(
+                        isSavingQosScript = false,
+                        errorMessage = throwable.message ?: uiStrings.get(R.string.error_performance_save_qos_script),
+                        infoMessage = null
+                    )
+                }
+            }.onSuccess { script ->
+                mutableState.update { state ->
+                    state.copy(
+                        isSavingQosScript = false,
+                        qosSelectedScriptId = script.id,
+                        qosSelectedScriptName = script.name,
+                        qosSelectedTestFamilies = script.testFamilies,
+                        qosConfiguredRepeatInput = script.repeatCount.toString(),
+                        qosTargetTechnologyInput = script.targetTechnologies.firstOrNull().orEmpty(),
+                        infoMessage = uiStrings.get(R.string.info_performance_saved_qos_script),
+                        errorMessage = null
+                    )
+                }
+            }
         }
     }
 
@@ -234,7 +370,11 @@ class PerformanceSessionViewModel @Inject constructor(
                 }
 
                 PerformanceWorkflowType.QOS_SCRIPT -> {
-                    if (qosSummary.scriptId.isNullOrBlank() || qosSummary.scriptName.isNullOrBlank()) {
+                    if (
+                        qosSummary.scriptId.isNullOrBlank() ||
+                        qosSummary.scriptName.isNullOrBlank() ||
+                        qosSummary.selectedTestFamilies.isEmpty()
+                    ) {
                         mutableState.update { state ->
                             state.copy(errorMessage = uiStrings.get(R.string.error_performance_qos_script_required))
                         }
@@ -326,8 +466,9 @@ class PerformanceSessionViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 observeSiteDetailUseCase(siteId),
-                observeSitePerformanceSessionHistoryUseCase(siteId)
-            ) { site, history -> site to history }
+                observeSitePerformanceSessionHistoryUseCase(siteId),
+                observeQosScriptsUseCase()
+            ) { site, history, qosScripts -> Triple(site, history, qosScripts) }
                 .catch { throwable ->
                     mutableState.update { state ->
                         state.copy(
@@ -336,7 +477,7 @@ class PerformanceSessionViewModel @Inject constructor(
                         )
                     }
                 }
-                .collect { (site, history) ->
+                .collect { (site, history, qosScripts) ->
                     val operators = site?.sectors
                         .orEmpty()
                         .flatMap { sector -> sector.cells }
@@ -361,6 +502,7 @@ class PerformanceSessionViewModel @Inject constructor(
                     val selectedSession = history.firstOrNull { session -> session.id == selectedSessionId }
                     val shouldHydrateInputs =
                         !current.hasUnsavedChanges || current.session?.id != selectedSession?.id
+                    val firstScript = qosScripts.firstOrNull()
 
                     val baseState = current.copy(
                         isLoading = false,
@@ -374,7 +516,31 @@ class PerformanceSessionViewModel @Inject constructor(
                         selectedTechnology = current.selectedTechnology ?: technologies.firstOrNull(),
                         selectedSessionId = selectedSessionId,
                         session = selectedSession,
-                        sessionHistory = history
+                        sessionHistory = history,
+                        availableQosScripts = qosScripts,
+                        qosScriptEditorNameInput = if (current.qosScriptEditorNameInput.isBlank()) {
+                            firstScript?.name.orEmpty()
+                        } else {
+                            current.qosScriptEditorNameInput
+                        },
+                        qosScriptEditorRepeatInput = if (
+                            current.qosScriptEditorRepeatInput.isBlank() ||
+                            current.qosScriptEditorRepeatInput == "0"
+                        ) {
+                            firstScript?.repeatCount?.toString() ?: "1"
+                        } else {
+                            current.qosScriptEditorRepeatInput
+                        },
+                        qosScriptEditorTechnologiesInput = if (current.qosScriptEditorTechnologiesInput.isBlank()) {
+                            firstScript?.targetTechnologies?.joinToString(", ").orEmpty()
+                        } else {
+                            current.qosScriptEditorTechnologiesInput
+                        },
+                        qosScriptEditorSelectedFamilies = if (current.qosScriptEditorSelectedFamilies.isEmpty()) {
+                            firstScript?.testFamilies.orEmpty()
+                        } else {
+                            current.qosScriptEditorSelectedFamilies
+                        }
                     )
 
                     mutableState.value = if (shouldHydrateInputs) {
@@ -404,6 +570,12 @@ class PerformanceSessionViewModel @Inject constructor(
                 throughputMaxLatencyInput = "",
                 qosSelectedScriptId = null,
                 qosSelectedScriptName = null,
+                qosSelectedTestFamilies = emptySet(),
+                qosConfiguredRepeatInput = "",
+                qosScriptEditorNameInput = "",
+                qosScriptEditorRepeatInput = "1",
+                qosScriptEditorTechnologiesInput = "",
+                qosScriptEditorSelectedFamilies = emptySet(),
                 qosTargetTechnologyInput = "",
                 qosTargetPhoneInput = "",
                 qosIterationCountInput = "",
@@ -431,6 +603,12 @@ class PerformanceSessionViewModel @Inject constructor(
             throughputMaxLatencyInput = session.throughputMetrics.maxLatencyMs?.toString().orEmpty(),
             qosSelectedScriptId = session.qosRunSummary.scriptId,
             qosSelectedScriptName = session.qosRunSummary.scriptName,
+            qosSelectedTestFamilies = session.qosRunSummary.selectedTestFamilies,
+            qosConfiguredRepeatInput = session.qosRunSummary.configuredRepeatCount?.toString().orEmpty(),
+            qosScriptEditorNameInput = session.qosRunSummary.scriptName.orEmpty(),
+            qosScriptEditorRepeatInput = session.qosRunSummary.configuredRepeatCount?.toString() ?: "1",
+            qosScriptEditorTechnologiesInput = session.qosRunSummary.targetTechnology.orEmpty(),
+            qosScriptEditorSelectedFamilies = session.qosRunSummary.selectedTestFamilies,
             qosTargetTechnologyInput = session.qosRunSummary.targetTechnology.orEmpty(),
             qosTargetPhoneInput = session.qosRunSummary.targetPhoneNumber.orEmpty(),
             qosIterationCountInput = session.qosRunSummary.iterationCount.toString(),
@@ -503,10 +681,16 @@ class PerformanceSessionViewModel @Inject constructor(
             value = state.qosFailureCountInput,
             errorRes = R.string.error_performance_invalid_integer
         ) ?: return null
+        val configuredRepeat = parseOptionalInt(
+            value = state.qosConfiguredRepeatInput,
+            errorRes = R.string.error_performance_invalid_integer
+        )
 
         return QosRunSummary(
             scriptId = state.qosSelectedScriptId,
             scriptName = state.qosSelectedScriptName,
+            configuredRepeatCount = (configuredRepeat ?: iterations ?: 1).coerceAtLeast(1),
+            selectedTestFamilies = state.qosSelectedTestFamilies,
             targetTechnology = state.qosTargetTechnologyInput.trim().ifBlank { null },
             targetPhoneNumber = state.qosTargetPhoneInput.trim().ifBlank { null },
             iterationCount = iterations ?: 0,
@@ -555,4 +739,12 @@ class PerformanceSessionViewModel @Inject constructor(
             c.isDigit() || (c == '-' && index == 0)
         }
     }
+}
+
+private fun <T> Set<T>.toggle(item: T): Set<T> {
+    return if (contains(item)) this - item else this + item
+}
+
+sealed interface PerformanceSessionEvent {
+    data class OpenDraft(val draftId: String) : PerformanceSessionEvent
 }

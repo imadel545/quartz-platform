@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
 import com.quartz.platform.data.remote.simulation.SyncSimulationMode
 import com.quartz.platform.domain.model.QosReportClosureProjection
+import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ReportClosureProjection
 import com.quartz.platform.domain.model.RetReportClosureProjection
 import com.quartz.platform.domain.model.ThroughputReportClosureProjection
@@ -529,6 +530,26 @@ private fun QosClosureProjectionContent(
         ),
         style = MaterialTheme.typography.bodySmall
     )
+    projection.configuredRepeatCount?.let { repeat ->
+        Text(
+            text = stringResource(R.string.report_closure_performance_qos_repeat_configured, repeat),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    if (projection.testFamilies.isNotEmpty()) {
+        val familyLabels = buildList {
+            for (family in projection.testFamilies) {
+                add(stringResource(qosTestFamilyLabelRes(family)))
+            }
+        }
+        Text(
+            text = stringResource(
+                R.string.report_closure_performance_qos_test_families,
+                familyLabels.joinToString(", ")
+            ),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
     projection.targetTechnology?.let { technology ->
         Text(
             text = stringResource(R.string.report_closure_performance_qos_target_technology, technology),
@@ -759,6 +780,18 @@ private fun xfeederOutcomeLabelRes(outcome: XfeederSectorOutcome): Int {
         XfeederSectorOutcome.CROSSED -> R.string.xfeeder_outcome_crossed
         XfeederSectorOutcome.MIXFEEDER -> R.string.xfeeder_outcome_mixfeeder
         XfeederSectorOutcome.UNRELIABLE -> R.string.xfeeder_outcome_unreliable
+    }
+}
+
+private fun qosTestFamilyLabelRes(family: QosTestFamily): Int {
+    return when (family) {
+        QosTestFamily.THROUGHPUT_LATENCY -> R.string.qos_test_family_throughput_latency
+        QosTestFamily.VIDEO_STREAMING -> R.string.qos_test_family_video_streaming
+        QosTestFamily.SMS -> R.string.qos_test_family_sms
+        QosTestFamily.VOLTE_CALL -> R.string.qos_test_family_volte_call
+        QosTestFamily.CSFB_CALL -> R.string.qos_test_family_csfb_call
+        QosTestFamily.EMERGENCY_CALL -> R.string.qos_test_family_emergency_call
+        QosTestFamily.STANDARD_CALL -> R.string.qos_test_family_standard_call
     }
 }
 

@@ -28,6 +28,8 @@ The roadmap prioritizes:
   - guided XFeeder + guided RET shells
   - bounded Débit/QoS local-first foundation (typed site sessions, prerequisites, structured results, local history)
   - bounded Débit/QoS closure projection into local report flows (review in draft + triage signal in list)
+  - Débit/QoS report-draft continuity from session context (open existing linked draft or create with `PERFORMANCE` provenance)
+  - typed QoS test-family model aligned with Quartz manual and persisted local QoS script shell (create/edit/configure/select)
   - shared workflow/session core reused by multiple guided flows
   - local report-draft continuity with typed provenance
   - workflow-typed closure projection in report draft flow for XFeeder/RET local review

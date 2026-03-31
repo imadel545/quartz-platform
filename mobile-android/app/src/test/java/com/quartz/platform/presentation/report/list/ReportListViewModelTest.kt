@@ -287,6 +287,8 @@ class ReportListViewModelTest {
             .isEqualTo(ReportListFilter.XFEEDER)
         assertThat(ReportListFilter.forWorkflowTypeOrDefault(ReportDraftOriginWorkflowType.RET))
             .isEqualTo(ReportListFilter.RET)
+        assertThat(ReportListFilter.forWorkflowTypeOrDefault(ReportDraftOriginWorkflowType.PERFORMANCE))
+            .isEqualTo(ReportListFilter.PERFORMANCE)
         assertThat(ReportListFilter.forWorkflowTypeOrDefault(null))
             .isEqualTo(ReportListFilter.NON_GUIDED)
     }

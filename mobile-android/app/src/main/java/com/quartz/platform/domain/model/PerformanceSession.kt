@@ -12,6 +12,16 @@ enum class PerformanceWorkflowType {
     QOS_SCRIPT
 }
 
+enum class QosTestFamily {
+    THROUGHPUT_LATENCY,
+    VIDEO_STREAMING,
+    SMS,
+    VOLTE_CALL,
+    CSFB_CALL,
+    EMERGENCY_CALL,
+    STANDARD_CALL
+}
+
 typealias PerformanceSessionStatus = WorkflowSessionStatus
 typealias PerformanceStepStatus = WorkflowStepStatus
 typealias PerformanceGuidedStep = WorkflowStepState<PerformanceStepCode>
@@ -38,38 +48,14 @@ data class ThroughputMetrics(
 data class QosRunSummary(
     val scriptId: String? = null,
     val scriptName: String? = null,
+    val configuredRepeatCount: Int? = null,
+    val selectedTestFamilies: Set<QosTestFamily> = emptySet(),
     val targetTechnology: String? = null,
     val targetPhoneNumber: String? = null,
     val iterationCount: Int = 0,
     val successCount: Int = 0,
     val failureCount: Int = 0
 )
-
-data class QosScriptTemplate(
-    val id: String,
-    val name: String,
-    val description: String
-)
-
-object LocalQosScriptCatalog {
-    val defaults: List<QosScriptTemplate> = listOf(
-        QosScriptTemplate(
-            id = "qos-latency-throughput",
-            name = "Latence + Débit",
-            description = "Ping série + upload/download avec vérification des seuils."
-        ),
-        QosScriptTemplate(
-            id = "qos-voice-sms",
-            name = "Voix / SMS",
-            description = "Vérification appel VoLTE/CSFB, appel standard et confirmation SMS."
-        ),
-        QosScriptTemplate(
-            id = "qos-video-streaming",
-            name = "Streaming vidéo",
-            description = "Lecture multi-résolution, buffering et latence de session vidéo."
-        )
-    )
-}
 
 data class PerformanceSession(
     val id: String,

@@ -105,6 +105,33 @@ class ObserveSiteReportListUseCase @Inject constructor(
                         )
                     }
 
+                    is ThroughputReportClosureProjection -> {
+                        ReportListClosureSummary.Throughput(
+                            sessionStatus = matched.sessionStatus,
+                            preconditionsReady = matched.preconditionsReady,
+                            requiredStepCount = matched.requiredStepCount,
+                            completedRequiredStepCount = matched.completedRequiredStepCount,
+                            downloadMbps = matched.downloadMbps,
+                            uploadMbps = matched.uploadMbps,
+                            latencyMs = matched.latencyMs
+                        )
+                    }
+
+                    is QosReportClosureProjection -> {
+                        ReportListClosureSummary.Qos(
+                            sessionStatus = matched.sessionStatus,
+                            preconditionsReady = matched.preconditionsReady,
+                            requiredStepCount = matched.requiredStepCount,
+                            completedRequiredStepCount = matched.completedRequiredStepCount,
+                            scriptName = matched.scriptName,
+                            configuredRepeatCount = matched.configuredRepeatCount,
+                            testFamilyCount = matched.testFamilies.size,
+                            iterationCount = matched.iterationCount,
+                            successCount = matched.successCount,
+                            failureCount = matched.failureCount
+                        )
+                    }
+
                     else -> null
                 }
             }
@@ -141,6 +168,8 @@ class ObserveSiteReportListUseCase @Inject constructor(
                     requiredStepCount = latestPerformanceProjection.requiredStepCount,
                     completedRequiredStepCount = latestPerformanceProjection.completedRequiredStepCount,
                     scriptName = latestPerformanceProjection.scriptName,
+                    configuredRepeatCount = latestPerformanceProjection.configuredRepeatCount,
+                    testFamilyCount = latestPerformanceProjection.testFamilies.size,
                     iterationCount = latestPerformanceProjection.iterationCount,
                     successCount = latestPerformanceProjection.successCount,
                     failureCount = latestPerformanceProjection.failureCount

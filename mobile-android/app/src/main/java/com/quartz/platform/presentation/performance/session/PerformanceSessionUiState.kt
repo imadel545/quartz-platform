@@ -3,7 +3,9 @@ package com.quartz.platform.presentation.performance.session
 import com.quartz.platform.domain.model.PerformanceSession
 import com.quartz.platform.domain.model.PerformanceSessionStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
+import com.quartz.platform.domain.model.QosScriptDefinition
 import com.quartz.platform.domain.model.QosRunSummary
+import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ThroughputMetrics
 
 data class PerformanceSessionUiState(
@@ -30,6 +32,14 @@ data class PerformanceSessionUiState(
     val throughputMaxLatencyInput: String = "",
     val qosSelectedScriptId: String? = null,
     val qosSelectedScriptName: String? = null,
+    val qosSelectedTestFamilies: Set<QosTestFamily> = emptySet(),
+    val qosConfiguredRepeatInput: String = "",
+    val availableQosScripts: List<QosScriptDefinition> = emptyList(),
+    val qosScriptEditorNameInput: String = "",
+    val qosScriptEditorRepeatInput: String = "1",
+    val qosScriptEditorTechnologiesInput: String = "",
+    val qosScriptEditorSelectedFamilies: Set<QosTestFamily> = emptySet(),
+    val isSavingQosScript: Boolean = false,
     val qosTargetTechnologyInput: String = "",
     val qosTargetPhoneInput: String = "",
     val qosIterationCountInput: String = "",

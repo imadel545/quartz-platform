@@ -67,6 +67,8 @@ fun PerformanceSession.toReportClosureProjection(): ReportClosureProjection {
                 requiredStepCount = requiredStepCount,
                 completedRequiredStepCount = completedRequiredStepCount,
                 scriptName = qosRunSummary.scriptName,
+                configuredRepeatCount = qosRunSummary.configuredRepeatCount,
+                testFamilies = qosRunSummary.selectedTestFamilies,
                 targetTechnology = qosRunSummary.targetTechnology,
                 iterationCount = qosRunSummary.iterationCount,
                 successCount = qosRunSummary.successCount,

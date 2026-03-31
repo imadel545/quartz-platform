@@ -45,6 +45,10 @@ Current Android implementation covers a bounded local-first workflow baseline:
 - bounded local performance closure projection (`THROUGHPUT`, `QOS_SCRIPT`) into report surfaces:
   - detailed reviewer view in ReportDraft
   - concise triage signal in ReportList for non-guided drafts
+- bounded local QoS script layer persisted in Room (`qos_scripts`) with:
+  - typed test-family selection
+  - repeat count and technology configuration
+  - deterministic projection of configured QoS context into report closures
 
 For XFeeder proximity, implementation is intentionally explicit and bounded:
 - `UNAVAILABLE`: location/altitude data cannot be trusted for eligibility

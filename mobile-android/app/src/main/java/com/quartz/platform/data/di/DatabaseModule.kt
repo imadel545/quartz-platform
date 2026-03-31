@@ -8,6 +8,7 @@ import com.quartz.platform.data.local.QuartzDatabase
 import com.quartz.platform.data.local.dao.ReportDraftDao
 import com.quartz.platform.data.local.dao.PerformanceSessionDao
 import com.quartz.platform.data.local.dao.PerformanceStepDao
+import com.quartz.platform.data.local.dao.QosScriptDao
 import com.quartz.platform.data.local.dao.RetSessionDao
 import com.quartz.platform.data.local.dao.RetStepDao
 import com.quartz.platform.data.local.dao.SiteAntennaDao
@@ -49,7 +50,9 @@ object DatabaseModule {
             DatabaseMigrations.MIGRATION_11_12,
             DatabaseMigrations.MIGRATION_12_13,
             DatabaseMigrations.MIGRATION_13_14,
-            DatabaseMigrations.MIGRATION_14_15
+            DatabaseMigrations.MIGRATION_14_15,
+            DatabaseMigrations.MIGRATION_15_16,
+            DatabaseMigrations.MIGRATION_16_17
         )
             .build()
     }
@@ -79,6 +82,9 @@ object DatabaseModule {
     @Provides
     fun providePerformanceStepDao(database: QuartzDatabase): PerformanceStepDao =
         database.performanceStepDao()
+
+    @Provides
+    fun provideQosScriptDao(database: QuartzDatabase): QosScriptDao = database.qosScriptDao()
 
     @Provides
     fun provideRetSessionDao(database: QuartzDatabase): RetSessionDao = database.retSessionDao()

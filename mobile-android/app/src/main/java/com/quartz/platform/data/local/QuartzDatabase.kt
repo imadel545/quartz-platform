@@ -6,6 +6,7 @@ import androidx.room.TypeConverters
 import com.quartz.platform.data.local.dao.ReportDraftDao
 import com.quartz.platform.data.local.dao.PerformanceSessionDao
 import com.quartz.platform.data.local.dao.PerformanceStepDao
+import com.quartz.platform.data.local.dao.QosScriptDao
 import com.quartz.platform.data.local.dao.RetSessionDao
 import com.quartz.platform.data.local.dao.RetStepDao
 import com.quartz.platform.data.local.dao.SiteAntennaDao
@@ -18,6 +19,7 @@ import com.quartz.platform.data.local.dao.XfeederStepDao
 import com.quartz.platform.data.local.entity.ReportDraftEntity
 import com.quartz.platform.data.local.entity.PerformanceSessionEntity
 import com.quartz.platform.data.local.entity.PerformanceStepEntity
+import com.quartz.platform.data.local.entity.QosScriptEntity
 import com.quartz.platform.data.local.entity.RetSessionEntity
 import com.quartz.platform.data.local.entity.RetStepEntity
 import com.quartz.platform.data.local.entity.SiteAntennaEntity
@@ -38,12 +40,13 @@ import com.quartz.platform.data.local.entity.XfeederStepEntity
         XfeederStepEntity::class,
         PerformanceSessionEntity::class,
         PerformanceStepEntity::class,
+        QosScriptEntity::class,
         RetSessionEntity::class,
         RetStepEntity::class,
         SyncJobEntity::class,
         ReportDraftEntity::class
     ],
-    version = 15,
+    version = 17,
     exportSchema = true
 )
 @TypeConverters(QuartzTypeConverters::class)
@@ -56,6 +59,7 @@ abstract class QuartzDatabase : RoomDatabase() {
     abstract fun xfeederStepDao(): XfeederStepDao
     abstract fun performanceSessionDao(): PerformanceSessionDao
     abstract fun performanceStepDao(): PerformanceStepDao
+    abstract fun qosScriptDao(): QosScriptDao
     abstract fun retSessionDao(): RetSessionDao
     abstract fun retStepDao(): RetStepDao
     abstract fun syncJobDao(): SyncJobDao
