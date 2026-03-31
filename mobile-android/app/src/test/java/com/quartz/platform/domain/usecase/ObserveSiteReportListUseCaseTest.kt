@@ -311,6 +311,7 @@ class ObserveSiteReportListUseCaseTest {
                             qosRunSummary = QosRunSummary(
                                 scriptId = "qos-1",
                                 scriptName = "Latence + Débit",
+                                configuredRepeatCount = 2,
                                 configuredTechnologies = setOf("4G", "5G"),
                                 selectedTestFamilies = setOf(
                                     QosTestFamily.SMS,
@@ -325,6 +326,34 @@ class ObserveSiteReportListUseCaseTest {
                                         family = QosTestFamily.VOLTE_CALL,
                                         status = QosFamilyExecutionStatus.FAILED,
                                         failureReason = "No ack"
+                                    )
+                                ),
+                                executionTimelineEvents = listOf(
+                                    com.quartz.platform.domain.model.QosExecutionTimelineEvent(
+                                        family = QosTestFamily.SMS,
+                                        repetitionIndex = 1,
+                                        eventType = com.quartz.platform.domain.model.QosExecutionEventType.PASSED,
+                                        occurredAtEpochMillis = 1000L
+                                    ),
+                                    com.quartz.platform.domain.model.QosExecutionTimelineEvent(
+                                        family = QosTestFamily.SMS,
+                                        repetitionIndex = 2,
+                                        eventType = com.quartz.platform.domain.model.QosExecutionEventType.PASSED,
+                                        occurredAtEpochMillis = 1100L
+                                    ),
+                                    com.quartz.platform.domain.model.QosExecutionTimelineEvent(
+                                        family = QosTestFamily.VOLTE_CALL,
+                                        repetitionIndex = 1,
+                                        eventType = com.quartz.platform.domain.model.QosExecutionEventType.FAILED,
+                                        reason = "No ack",
+                                        occurredAtEpochMillis = 1200L
+                                    ),
+                                    com.quartz.platform.domain.model.QosExecutionTimelineEvent(
+                                        family = QosTestFamily.VOLTE_CALL,
+                                        repetitionIndex = 2,
+                                        eventType = com.quartz.platform.domain.model.QosExecutionEventType.BLOCKED,
+                                        reason = "No signal",
+                                        occurredAtEpochMillis = 1300L
                                     )
                                 ),
                                 targetTechnology = "4G",
@@ -363,6 +392,13 @@ class ObserveSiteReportListUseCaseTest {
         assertThat(qosSummary.testFamilyCount).isEqualTo(2)
         assertThat(qosSummary.completedFamilyCount).isEqualTo(2)
         assertThat(qosSummary.failedFamilyCount).isEqualTo(1)
+        assertThat(qosSummary.blockedFamilyCount).isEqualTo(0)
+        assertThat(qosSummary.timelineEventCount).isEqualTo(4)
+        assertThat(qosSummary.timelineFamilyCoverageCount).isEqualTo(2)
+        assertThat(qosSummary.requiredRepeatCount).isEqualTo(2)
+        assertThat(qosSummary.familiesMeetingRequiredRepeatCount).isEqualTo(1)
+        assertThat(qosSummary.passFailRunCount).isEqualTo(3)
+        assertThat(qosSummary.blockedRunCount).isEqualTo(1)
         assertThat(qosSummary.targetTechnology).isEqualTo("4G")
         assertThat(qosSummary.configuredTechnologyCount).isEqualTo(2)
         assertThat(qosSummary.targetTechnologyAligned).isTrue()

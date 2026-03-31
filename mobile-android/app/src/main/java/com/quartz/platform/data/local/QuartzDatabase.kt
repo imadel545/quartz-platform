@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.quartz.platform.data.local.dao.ReportDraftDao
 import com.quartz.platform.data.local.dao.PerformanceQosFamilyResultDao
+import com.quartz.platform.data.local.dao.PerformanceQosTimelineEventDao
 import com.quartz.platform.data.local.dao.PerformanceSessionDao
 import com.quartz.platform.data.local.dao.PerformanceStepDao
 import com.quartz.platform.data.local.dao.QosScriptDao
@@ -19,6 +20,7 @@ import com.quartz.platform.data.local.dao.XfeederSessionDao
 import com.quartz.platform.data.local.dao.XfeederStepDao
 import com.quartz.platform.data.local.entity.ReportDraftEntity
 import com.quartz.platform.data.local.entity.PerformanceQosFamilyResultEntity
+import com.quartz.platform.data.local.entity.PerformanceQosTimelineEventEntity
 import com.quartz.platform.data.local.entity.PerformanceSessionEntity
 import com.quartz.platform.data.local.entity.PerformanceStepEntity
 import com.quartz.platform.data.local.entity.QosScriptEntity
@@ -43,13 +45,14 @@ import com.quartz.platform.data.local.entity.XfeederStepEntity
         PerformanceSessionEntity::class,
         PerformanceStepEntity::class,
         PerformanceQosFamilyResultEntity::class,
+        PerformanceQosTimelineEventEntity::class,
         QosScriptEntity::class,
         RetSessionEntity::class,
         RetStepEntity::class,
         SyncJobEntity::class,
         ReportDraftEntity::class
     ],
-    version = 19,
+    version = 20,
     exportSchema = true
 )
 @TypeConverters(QuartzTypeConverters::class)
@@ -63,6 +66,7 @@ abstract class QuartzDatabase : RoomDatabase() {
     abstract fun performanceSessionDao(): PerformanceSessionDao
     abstract fun performanceStepDao(): PerformanceStepDao
     abstract fun performanceQosFamilyResultDao(): PerformanceQosFamilyResultDao
+    abstract fun performanceQosTimelineEventDao(): PerformanceQosTimelineEventDao
     abstract fun qosScriptDao(): QosScriptDao
     abstract fun retSessionDao(): RetSessionDao
     abstract fun retStepDao(): RetStepDao

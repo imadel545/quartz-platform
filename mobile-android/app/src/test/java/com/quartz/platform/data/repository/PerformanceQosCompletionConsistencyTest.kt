@@ -27,6 +27,21 @@ class PerformanceQosCompletionConsistencyTest {
                     failureReason = "No response"
                 )
             ),
+            executionTimelineEvents = listOf(
+                com.quartz.platform.domain.model.QosExecutionTimelineEvent(
+                    family = QosTestFamily.SMS,
+                    repetitionIndex = 1,
+                    eventType = com.quartz.platform.domain.model.QosExecutionEventType.PASSED,
+                    occurredAtEpochMillis = 1000L
+                ),
+                com.quartz.platform.domain.model.QosExecutionTimelineEvent(
+                    family = QosTestFamily.VOLTE_CALL,
+                    repetitionIndex = 1,
+                    eventType = com.quartz.platform.domain.model.QosExecutionEventType.FAILED,
+                    reason = "No response",
+                    occurredAtEpochMillis = 1100L
+                )
+            ),
             targetTechnology = "4G",
             targetPhoneNumber = "+212600000001",
             iterationCount = 2,
@@ -82,6 +97,14 @@ class PerformanceQosCompletionConsistencyTest {
                     status = QosFamilyExecutionStatus.FAILED
                 )
             ),
+            executionTimelineEvents = listOf(
+                com.quartz.platform.domain.model.QosExecutionTimelineEvent(
+                    family = QosTestFamily.THROUGHPUT_LATENCY,
+                    repetitionIndex = 1,
+                    eventType = com.quartz.platform.domain.model.QosExecutionEventType.FAILED,
+                    occurredAtEpochMillis = 1000L
+                )
+            ),
             targetTechnology = "4G",
             iterationCount = 1,
             successCount = 0,
@@ -106,6 +129,14 @@ class PerformanceQosCompletionConsistencyTest {
                     status = QosFamilyExecutionStatus.PASSED
                 )
             ),
+            executionTimelineEvents = listOf(
+                com.quartz.platform.domain.model.QosExecutionTimelineEvent(
+                    family = QosTestFamily.SMS,
+                    repetitionIndex = 1,
+                    eventType = com.quartz.platform.domain.model.QosExecutionEventType.PASSED,
+                    occurredAtEpochMillis = 1000L
+                )
+            ),
             targetTechnology = "4G",
             iterationCount = 1,
             successCount = 1,
@@ -128,6 +159,14 @@ class PerformanceQosCompletionConsistencyTest {
                 QosFamilyExecutionResult(
                     family = QosTestFamily.THROUGHPUT_LATENCY,
                     status = QosFamilyExecutionStatus.PASSED
+                )
+            ),
+            executionTimelineEvents = listOf(
+                com.quartz.platform.domain.model.QosExecutionTimelineEvent(
+                    family = QosTestFamily.THROUGHPUT_LATENCY,
+                    repetitionIndex = 1,
+                    eventType = com.quartz.platform.domain.model.QosExecutionEventType.PASSED,
+                    occurredAtEpochMillis = 1000L
                 )
             ),
             targetTechnology = "4G",

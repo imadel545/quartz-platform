@@ -82,10 +82,12 @@ QoS session closure now enforces bounded family-specific execution rules for rev
 - selected call/SMS families require target phone number,
 - target technology must align with configured script technologies when present.
 QoS script launch context is persisted as a local snapshot (configured technologies + snapshot timestamp) for deterministic review of what was actually executed.
+QoS execution now keeps a bounded local timeline per selected family (`STARTED`, `PASSED`, `FAILED`, `BLOCKED`) so operator/supervisor review can inspect execution progression without exposing raw internal session state.
 Current validated local reporting now includes bounded Débit/QoS closure review projection:
 - ReportDraft shows typed performance closure signals (workflow type, execution state, required-step progress, prerequisites, and implemented metrics/results).
 - ReportDraft includes concise per-family QoS execution review for supervisor/operator readability.
-- ReportList exposes a concise performance triage summary for non-guided drafts, including family coverage/failure signal for QoS sessions.
+- ReportDraft includes a bounded QoS timeline section for closure auditability.
+- ReportList exposes a concise performance triage summary for non-guided drafts, including family coverage/failure plus blocked/timeline coverage signals for QoS sessions.
 - Performance sessions can now open-or-create a linked local report draft with explicit `PERFORMANCE` provenance for continuity and supervisor review.
 
 ### 4. Throughput and QoS testing

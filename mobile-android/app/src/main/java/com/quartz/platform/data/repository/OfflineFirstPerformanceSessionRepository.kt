@@ -3,6 +3,7 @@ package com.quartz.platform.data.repository
 import androidx.room.withTransaction
 import com.quartz.platform.data.local.QuartzDatabase
 import com.quartz.platform.data.local.dao.PerformanceQosFamilyResultDao
+import com.quartz.platform.data.local.dao.PerformanceQosTimelineEventDao
 import com.quartz.platform.data.local.dao.PerformanceSessionDao
 import com.quartz.platform.data.local.dao.PerformanceStepDao
 import com.quartz.platform.data.local.entity.PerformanceStepEntity
@@ -14,10 +15,13 @@ import com.quartz.platform.domain.model.PerformanceSessionStatus
 import com.quartz.platform.domain.model.PerformanceStepCode
 import com.quartz.platform.domain.model.PerformanceStepStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
+import com.quartz.platform.domain.model.QosCompletionIssue
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
+import com.quartz.platform.domain.model.QosExecutionEventType
+import com.quartz.platform.domain.model.QosExecutionTimelineEvent
 import com.quartz.platform.domain.model.QosRunSummary
-import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ThroughputMetrics
+import com.quartz.platform.domain.model.assessQosCompletion
 import com.quartz.platform.domain.model.workflow.WorkflowCompletionGuard
 import com.quartz.platform.domain.repository.PerformanceSessionRepository
 import java.util.UUID
@@ -34,6 +38,7 @@ class OfflineFirstPerformanceSessionRepository @Inject constructor(
     private val sessionDao: PerformanceSessionDao,
     private val stepDao: PerformanceStepDao,
     private val qosFamilyResultDao: PerformanceQosFamilyResultDao,
+    private val qosTimelineEventDao: PerformanceQosTimelineEventDao,
     private val database: QuartzDatabase
 ) : PerformanceSessionRepository {
 
@@ -46,14 +51,17 @@ class OfflineFirstPerformanceSessionRepository @Inject constructor(
                     val sessionIds = sessions.map { it.id }
                     combine(
                         stepDao.observeBySessionIds(sessionIds),
-                        qosFamilyResultDao.observeBySessionIds(sessionIds)
-                    ) { steps, familyResults ->
+                        qosFamilyResultDao.observeBySessionIds(sessionIds),
+                        qosTimelineEventDao.observeBySessionIds(sessionIds)
+                    ) { steps, familyResults, timelineEvents ->
                         val stepsBySession = steps.groupBy { step -> step.sessionId }
                         val familyResultsBySession = familyResults.groupBy { result -> result.sessionId }
+                        val timelineBySession = timelineEvents.groupBy { event -> event.sessionId }
                         sessions.map { session ->
                             session.toDomain(
                                 steps = stepsBySession[session.id].orEmpty(),
-                                familyResults = familyResultsBySession[session.id].orEmpty()
+                                familyResults = familyResultsBySession[session.id].orEmpty(),
+                                timelineEvents = timelineBySession[session.id].orEmpty()
                             )
                         }
                     }
@@ -72,9 +80,14 @@ class OfflineFirstPerformanceSessionRepository @Inject constructor(
                 } else {
                     combine(
                         stepDao.observeBySession(session.id),
-                        qosFamilyResultDao.observeBySession(session.id)
-                    ) { steps, familyResults ->
-                        session.toDomain(steps = steps, familyResults = familyResults)
+                        qosFamilyResultDao.observeBySession(session.id),
+                        qosTimelineEventDao.observeBySession(session.id)
+                    ) { steps, familyResults, timelineEvents ->
+                        session.toDomain(
+                            steps = steps,
+                            familyResults = familyResults,
+                            timelineEvents = timelineEvents
+                        )
                     }
                 }
             }
@@ -257,6 +270,17 @@ class OfflineFirstPerformanceSessionRepository @Inject constructor(
             if (familyResults.isNotEmpty()) {
                 qosFamilyResultDao.upsertAll(familyResults)
             }
+
+            qosTimelineEventDao.deleteBySession(sessionId)
+            val timelineEvents = sanitizeTimelineEventsForPersistence(
+                qosRunSummary = sanitizedQos,
+                fallbackOccurredAtEpochMillis = now
+            ).map { event ->
+                event.toEntity(sessionId = sessionId)
+            }
+            if (timelineEvents.isNotEmpty()) {
+                qosTimelineEventDao.upsertAll(timelineEvents)
+            }
         }
     }
 
@@ -305,68 +329,93 @@ class OfflineFirstPerformanceSessionRepository @Inject constructor(
     }
 }
 
-internal fun validateQosCompletionConsistency(qosRunSummary: QosRunSummary) {
-    if (qosRunSummary.selectedTestFamilies.isEmpty()) {
-        throw IllegalStateException("At least one QoS family must be selected before closing the session.")
-    }
-
-    val byFamily = qosRunSummary.familyExecutionResults.associateBy { result -> result.family }
-    val selectedResults = qosRunSummary.selectedTestFamilies.map { family ->
-        family to byFamily[family]
-    }
-    val missing = selectedResults.any { (_, result) ->
-        val status = result?.status ?: QosFamilyExecutionStatus.NOT_RUN
-        status != QosFamilyExecutionStatus.PASSED && status != QosFamilyExecutionStatus.FAILED
-    }
-    if (missing) {
-        throw IllegalStateException("All selected QoS families must be marked PASSED or FAILED before completion.")
-    }
-
-    val missingFailureReason = selectedResults.any { (_, result) ->
-        result?.status == QosFamilyExecutionStatus.FAILED && result.failureReason.isNullOrBlank()
-    }
-    if (missingFailureReason) {
-        throw IllegalStateException("Failed QoS families must provide a failure reason before completion.")
-    }
-
-    val requiresPhoneTarget = qosRunSummary.selectedTestFamilies.any { family ->
-        family in PHONE_REQUIRED_QOS_FAMILIES
-    }
-    if (requiresPhoneTarget && qosRunSummary.targetPhoneNumber.isNullOrBlank()) {
-        throw IllegalStateException("A target phone number is required for selected QoS call/SMS families.")
-    }
-
-    if (qosRunSummary.configuredTechnologies.isNotEmpty()) {
-        val targetTechnology = qosRunSummary.targetTechnology
-            ?: throw IllegalStateException("Select a target technology before completing this QoS script session.")
-        if (targetTechnology !in qosRunSummary.configuredTechnologies) {
-            throw IllegalStateException("Selected target technology is not part of the configured QoS script technologies.")
+private fun sanitizeTimelineEventsForPersistence(
+    qosRunSummary: QosRunSummary,
+    fallbackOccurredAtEpochMillis: Long
+): List<QosExecutionTimelineEvent> {
+    val selectedFamilies = qosRunSummary.selectedTestFamilies
+    val providedEvents = qosRunSummary.executionTimelineEvents
+        .filter { event -> event.family in selectedFamilies }
+        .map { event ->
+            event.copy(
+                repetitionIndex = event.repetitionIndex.coerceAtLeast(1),
+                occurredAtEpochMillis = event.occurredAtEpochMillis.coerceAtLeast(1L)
+            )
         }
+        .distinctBy { event ->
+            listOf(event.family, event.repetitionIndex, event.eventType)
+        }
+
+    if (providedEvents.isNotEmpty()) {
+        return providedEvents
+            .sortedWith(
+                compareBy<QosExecutionTimelineEvent> { event -> event.occurredAtEpochMillis }
+                    .thenBy { event -> event.family.name }
+                    .thenBy { event -> event.repetitionIndex }
+                    .thenBy { event -> event.eventType.name }
+            )
     }
 
-    val passedCount = selectedResults.count { (_, result) ->
-        result?.status == QosFamilyExecutionStatus.PASSED
-    }
-    val failedCount = selectedResults.count { (_, result) ->
-        result?.status == QosFamilyExecutionStatus.FAILED
-    }
-    val completedCount = passedCount + failedCount
+    // Backward-compatible fallback for sessions persisted before explicit runner timeline support.
+    return qosRunSummary.selectedTestFamilies
+        .sortedBy { family -> family.name }
+        .flatMap { family ->
+            val result = qosRunSummary.familyExecutionResults.firstOrNull { it.family == family }
+            val status = result?.status ?: QosFamilyExecutionStatus.NOT_RUN
+            if (status == QosFamilyExecutionStatus.NOT_RUN) {
+                emptyList()
+            } else {
+                val terminalType = when (status) {
+                    QosFamilyExecutionStatus.PASSED -> QosExecutionEventType.PASSED
+                    QosFamilyExecutionStatus.FAILED -> QosExecutionEventType.FAILED
+                    QosFamilyExecutionStatus.BLOCKED -> QosExecutionEventType.BLOCKED
+                    QosFamilyExecutionStatus.NOT_RUN -> null
+                } ?: return@flatMap emptyList()
 
-    if (qosRunSummary.successCount != passedCount ||
-        qosRunSummary.failureCount != failedCount ||
-        qosRunSummary.iterationCount != completedCount
-    ) {
-        throw IllegalStateException("QoS aggregate counters are inconsistent with family execution results.")
-    }
+                listOf(
+                    QosExecutionTimelineEvent(
+                        family = family,
+                        repetitionIndex = 1,
+                        eventType = QosExecutionEventType.STARTED,
+                        occurredAtEpochMillis = fallbackOccurredAtEpochMillis
+                    ),
+                    QosExecutionTimelineEvent(
+                        family = family,
+                        repetitionIndex = 1,
+                        eventType = terminalType,
+                        reason = result?.failureReason,
+                        occurredAtEpochMillis = fallbackOccurredAtEpochMillis
+                    )
+                )
+            }
+        }
 }
 
-private val PHONE_REQUIRED_QOS_FAMILIES: Set<QosTestFamily> = setOf(
-    QosTestFamily.SMS,
-    QosTestFamily.VOLTE_CALL,
-    QosTestFamily.CSFB_CALL,
-    QosTestFamily.EMERGENCY_CALL,
-    QosTestFamily.STANDARD_CALL
-)
+internal fun validateQosCompletionConsistency(qosRunSummary: QosRunSummary) {
+    val assessment = assessQosCompletion(qosRunSummary)
+    if (assessment.canComplete) return
+
+    val firstIssue = assessment.issues.first()
+    val message = when (firstIssue) {
+        QosCompletionIssue.SCRIPT_REFERENCE_MISSING ->
+            "QoS script reference is missing before completion."
+        QosCompletionIssue.TEST_FAMILIES_MISSING ->
+            "At least one QoS family must be selected before closing the session."
+        QosCompletionIssue.FAMILY_RESULT_INCOMPLETE ->
+            "All selected QoS families must be marked PASSED or FAILED before completion."
+        QosCompletionIssue.REPETITION_COVERAGE_INCOMPLETE ->
+            "Each selected QoS family must cover the configured repeat count with PASS/FAIL results."
+        QosCompletionIssue.FAILED_REASON_MISSING ->
+            "Failed QoS families must provide a failure reason before completion."
+        QosCompletionIssue.PHONE_TARGET_MISSING ->
+            "A target phone number is required for selected QoS call/SMS families."
+        QosCompletionIssue.TARGET_TECHNOLOGY_INVALID ->
+            "Selected target technology is not part of the configured QoS script technologies."
+        QosCompletionIssue.COUNTERS_INCONSISTENT ->
+            "QoS aggregate counters are inconsistent with family execution results."
+    }
+    throw IllegalStateException(message)
+}
 
 internal fun buildPerformanceCompletionGuard(
     steps: List<PerformanceStepEntity>

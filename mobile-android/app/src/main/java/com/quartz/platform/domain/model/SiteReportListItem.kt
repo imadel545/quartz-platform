@@ -49,6 +49,13 @@ sealed interface ReportListClosureSummary {
         val testFamilyCount: Int = 0,
         val completedFamilyCount: Int = 0,
         val failedFamilyCount: Int = 0,
+        val blockedFamilyCount: Int = 0,
+        val timelineEventCount: Int = 0,
+        val timelineFamilyCoverageCount: Int = 0,
+        val requiredRepeatCount: Int = 1,
+        val familiesMeetingRequiredRepeatCount: Int = 0,
+        val passFailRunCount: Int = 0,
+        val blockedRunCount: Int = 0,
         val iterationCount: Int,
         val successCount: Int,
         val failureCount: Int

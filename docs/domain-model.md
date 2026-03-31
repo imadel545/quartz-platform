@@ -200,6 +200,7 @@ For bounded site-level performance workflows (Débit/QoS foundation), local sess
 - workflow type (`THROUGHPUT`, `QOS_SCRIPT`)
 - QoS test families (`THROUGHPUT_LATENCY`, `VIDEO_STREAMING`, `SMS`, `VOLTE_CALL`, `CSFB_CALL`, `EMERGENCY_CALL`, `STANDARD_CALL`)
 - QoS family execution evidence per selected family with explicit status (`NOT_RUN`, `PASSED`, `FAILED`, `BLOCKED`)
+- QoS timeline evidence per selected family with typed events (`STARTED`, `PASSED`, `FAILED`, `BLOCKED`) and timestamped occurrence
 - script snapshot context captured at execution time:
   - configured technologies set
   - script snapshot timestamp
@@ -216,7 +217,7 @@ For bounded site-level performance workflows (Débit/QoS foundation), local sess
   - aggregate counters coherent with family evidence
 - bounded closure projection for local report review:
   - detailed projection in ReportDraft
-  - concise triage projection in ReportList (including QoS family coverage/failure signals)
+  - concise triage projection in ReportList (including QoS family coverage/failure/blocked/timeline signals)
 - linked report-draft continuity with explicit provenance (`originWorkflowType = PERFORMANCE`, `originSessionId`).
 - local QoS script definitions persisted in Room (`qos_scripts`) with name, repeat count, technologies, and selected test families.
 

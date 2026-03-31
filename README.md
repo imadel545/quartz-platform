@@ -32,9 +32,12 @@ quartz-platform/
   - QoS completion guard is hardened for `QOS_SCRIPT`: selected families must have completed evidence and coherent aggregate counters before completion
   - QoS script launch snapshot integrity is local-first: configured technologies and script snapshot timestamp are persisted in session closure data
   - QoS family-specific closure checks require phone target for call/SMS families, failure reason on failed families, and target-technology alignment with script configuration
+  - QoS execution timeline is now persisted locally per selected family (`STARTED`, `PASSED`, `FAILED`, `BLOCKED`) for deterministic closure auditability
+  - QoS completion assessment is centralized in shared domain logic (single rule source reused by repository + ViewModel)
   - Débit/QoS closure projection in local reports:
     - ReportDraft reviewer panel now includes typed performance closure data (throughput and QoS script sessions)
-    - ReportList triage exposes concise performance health for non-guided drafts, including family coverage/failure signal for QoS sessions
+    - ReportDraft now includes a bounded QoS execution timeline review block
+    - ReportList triage exposes concise performance health for non-guided drafts, including family coverage/failure signal plus blocked/timeline coverage signal for QoS sessions
   - Local report draft continuity with typed workflow provenance (`XFEEDER`, `RET`)
   - Workflow-typed local closure projection in report draft view (XFeeder + RET review fields)
   - Workflow-typed closure triage summary in report list rows (concise operator/supervisor signal)

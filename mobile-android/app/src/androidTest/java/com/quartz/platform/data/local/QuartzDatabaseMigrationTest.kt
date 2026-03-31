@@ -662,6 +662,104 @@ class QuartzDatabaseMigrationTest {
 
         migrated.close()
     }
+
+    @Test
+    fun migration_19_20_adds_qos_timeline_events_table_with_indexes() {
+        val dbName = "quartz-migration-19-20-test"
+
+        migrationTestHelper.createDatabase(dbName, 19).apply {
+            insertPerformanceSessionV19(
+                id = "perf-qos-19",
+                siteId = "site-1",
+                workflowType = "QOS_SCRIPT"
+            )
+            close()
+        }
+
+        val migrated = migrationTestHelper.runMigrationsAndValidate(
+            dbName,
+            20,
+            true,
+            DatabaseMigrations.MIGRATION_19_20
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM sqlite_master
+                WHERE type = 'table'
+                  AND name = 'performance_qos_timeline_events'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM sqlite_master
+                WHERE type = 'index'
+                  AND name = 'index_performance_qos_timeline_events_sessionId'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM sqlite_master
+                WHERE type = 'index'
+                  AND name = 'index_performance_qos_timeline_events_sessionId_occurredAtEpochMillis'
+                """.trimIndent()
+            )
+        )
+
+        migrated.execSQL(
+            """
+            INSERT INTO performance_qos_timeline_events(
+                sessionId,
+                family,
+                repetitionIndex,
+                eventType,
+                reason,
+                occurredAtEpochMillis
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+            arrayOf("perf-qos-19", "SMS", 1, "STARTED", null, 300L)
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM performance_qos_timeline_events
+                WHERE sessionId = 'perf-qos-19'
+                  AND family = 'SMS'
+                  AND repetitionIndex = 1
+                  AND eventType = 'STARTED'
+                """.trimIndent()
+            )
+        )
+
+        val duplicateInsert = runCatching {
+            migrated.execSQL(
+                """
+                INSERT INTO performance_qos_timeline_events(
+                    sessionId,
+                    family,
+                    repetitionIndex,
+                    eventType,
+                    reason,
+                    occurredAtEpochMillis
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """.trimIndent(),
+                arrayOf("perf-qos-19", "SMS", 1, "STARTED", "duplicate", 400L)
+            )
+        }
+        assertNotNull(duplicateInsert.exceptionOrNull())
+
+        migrated.close()
+    }
 }
 
 private fun SupportSQLiteDatabase.insertDraft(
@@ -980,6 +1078,85 @@ private fun SupportSQLiteDatabase.insertPerformanceSessionV17(
             "qos-script-latency-throughput",
             "Latence + Débit",
             1,
+            "THROUGHPUT_LATENCY",
+            "4G",
+            null,
+            0,
+            0,
+            0,
+            "",
+            "",
+            100L,
+            100L,
+            null
+        )
+    )
+}
+
+private fun SupportSQLiteDatabase.insertPerformanceSessionV19(
+    id: String,
+    siteId: String,
+    workflowType: String
+) {
+    execSQL(
+        """
+        INSERT INTO performance_sessions(
+            id,
+            siteId,
+            siteCode,
+            workflowType,
+            operatorName,
+            technology,
+            status,
+            prerequisiteNetworkReady,
+            prerequisiteBatterySufficient,
+            prerequisiteLocationReady,
+            throughputDownloadMbps,
+            throughputUploadMbps,
+            throughputLatencyMs,
+            throughputMinDownloadMbps,
+            throughputMinUploadMbps,
+            throughputMaxLatencyMs,
+            qosScriptId,
+            qosScriptName,
+            qosConfiguredRepeatCount,
+            qosConfiguredTechnologiesCsv,
+            qosScriptSnapshotUpdatedAtEpochMillis,
+            qosTestFamiliesCsv,
+            qosTargetTechnology,
+            qosTargetPhoneNumber,
+            qosIterationCount,
+            qosSuccessCount,
+            qosFailureCount,
+            notes,
+            resultSummary,
+            createdAtEpochMillis,
+            updatedAtEpochMillis,
+            completedAtEpochMillis
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """.trimIndent(),
+        arrayOf(
+            id,
+            siteId,
+            "SITE-1",
+            workflowType,
+            null,
+            null,
+            "IN_PROGRESS",
+            1,
+            1,
+            1,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "qos-script-latency-throughput",
+            "Latence + Débit",
+            1,
+            "4G,5G",
+            100L,
             "THROUGHPUT_LATENCY",
             "4G",
             null,

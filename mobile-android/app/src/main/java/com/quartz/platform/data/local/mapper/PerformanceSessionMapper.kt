@@ -1,9 +1,12 @@
 package com.quartz.platform.data.local.mapper
 
 import com.quartz.platform.data.local.entity.PerformanceQosFamilyResultEntity
+import com.quartz.platform.data.local.entity.PerformanceQosTimelineEventEntity
 import com.quartz.platform.data.local.entity.PerformanceSessionEntity
 import com.quartz.platform.data.local.entity.PerformanceStepEntity
 import com.quartz.platform.domain.model.QosFamilyExecutionResult
+import com.quartz.platform.domain.model.QosExecutionEventType
+import com.quartz.platform.domain.model.QosExecutionTimelineEvent
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.PerformanceGuidedStep
 import com.quartz.platform.domain.model.PerformanceSession
@@ -17,7 +20,8 @@ import com.quartz.platform.domain.model.ThroughputMetrics
 
 fun PerformanceSessionEntity.toDomain(
     steps: List<PerformanceStepEntity>,
-    familyResults: List<PerformanceQosFamilyResultEntity>
+    familyResults: List<PerformanceQosFamilyResultEntity>,
+    timelineEvents: List<PerformanceQosTimelineEventEntity>
 ): PerformanceSession {
     return PerformanceSession(
         id = id,
@@ -71,6 +75,29 @@ fun PerformanceSessionEntity.toDomain(
                     observedUploadMbps = result.observedUploadMbps
                 )
             }.sortedBy { result -> result.family.name },
+            executionTimelineEvents = timelineEvents.mapNotNull { event ->
+                val family = runCatching { QosTestFamily.valueOf(event.family) }.getOrNull()
+                    ?: return@mapNotNull null
+                QosExecutionTimelineEvent(
+                    family = family,
+                    repetitionIndex = event.repetitionIndex,
+                    eventType = runCatching {
+                        QosExecutionEventType.valueOf(event.eventType)
+                    }.getOrDefault(QosExecutionEventType.STARTED),
+                    reason = event.reason,
+                    occurredAtEpochMillis = event.occurredAtEpochMillis
+                )
+            }.sortedWith(
+                compareByDescending<QosExecutionTimelineEvent> { event ->
+                    event.occurredAtEpochMillis
+                }.thenBy { event ->
+                    event.family.name
+                }.thenBy { event ->
+                    event.repetitionIndex
+                }.thenBy { event ->
+                    event.eventType.name
+                }
+            ),
             targetTechnology = qosTargetTechnology,
             targetPhoneNumber = qosTargetPhoneNumber,
             iterationCount = qosIterationCount,
@@ -107,6 +134,19 @@ fun QosFamilyExecutionResult.toEntity(
         observedDownloadMbps = observedDownloadMbps,
         observedUploadMbps = observedUploadMbps,
         updatedAtEpochMillis = updatedAtEpochMillis
+    )
+}
+
+fun QosExecutionTimelineEvent.toEntity(
+    sessionId: String
+): PerformanceQosTimelineEventEntity {
+    return PerformanceQosTimelineEventEntity(
+        sessionId = sessionId,
+        family = family.name,
+        repetitionIndex = repetitionIndex.coerceAtLeast(1),
+        eventType = eventType.name,
+        reason = reason?.trim()?.takeIf { value -> value.isNotBlank() },
+        occurredAtEpochMillis = occurredAtEpochMillis
     )
 }
 

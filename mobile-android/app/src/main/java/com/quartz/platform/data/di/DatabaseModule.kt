@@ -7,6 +7,7 @@ import com.quartz.platform.data.local.DatabaseMigrations
 import com.quartz.platform.data.local.QuartzDatabase
 import com.quartz.platform.data.local.dao.ReportDraftDao
 import com.quartz.platform.data.local.dao.PerformanceQosFamilyResultDao
+import com.quartz.platform.data.local.dao.PerformanceQosTimelineEventDao
 import com.quartz.platform.data.local.dao.PerformanceSessionDao
 import com.quartz.platform.data.local.dao.PerformanceStepDao
 import com.quartz.platform.data.local.dao.QosScriptDao
@@ -55,7 +56,8 @@ object DatabaseModule {
             DatabaseMigrations.MIGRATION_15_16,
             DatabaseMigrations.MIGRATION_16_17,
             DatabaseMigrations.MIGRATION_17_18,
-            DatabaseMigrations.MIGRATION_18_19
+            DatabaseMigrations.MIGRATION_18_19,
+            DatabaseMigrations.MIGRATION_19_20
         )
             .build()
     }
@@ -89,6 +91,10 @@ object DatabaseModule {
     @Provides
     fun providePerformanceQosFamilyResultDao(database: QuartzDatabase): PerformanceQosFamilyResultDao =
         database.performanceQosFamilyResultDao()
+
+    @Provides
+    fun providePerformanceQosTimelineEventDao(database: QuartzDatabase): PerformanceQosTimelineEventDao =
+        database.performanceQosTimelineEventDao()
 
     @Provides
     fun provideQosScriptDao(database: QuartzDatabase): QosScriptDao = database.qosScriptDao()

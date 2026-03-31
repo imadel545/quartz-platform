@@ -39,6 +39,27 @@ class ReportClosureProjectionMapperPerformanceTest {
                         failureReason = "No carrier"
                     )
                 ),
+                executionTimelineEvents = listOf(
+                    QosExecutionTimelineEvent(
+                        family = QosTestFamily.SMS,
+                        repetitionIndex = 1,
+                        eventType = QosExecutionEventType.STARTED,
+                        occurredAtEpochMillis = 2000L
+                    ),
+                    QosExecutionTimelineEvent(
+                        family = QosTestFamily.SMS,
+                        repetitionIndex = 1,
+                        eventType = QosExecutionEventType.PASSED,
+                        occurredAtEpochMillis = 2100L
+                    ),
+                    QosExecutionTimelineEvent(
+                        family = QosTestFamily.VOLTE_CALL,
+                        repetitionIndex = 1,
+                        eventType = QosExecutionEventType.FAILED,
+                        reason = "No carrier",
+                        occurredAtEpochMillis = 2200L
+                    )
+                ),
                 targetTechnology = "4G",
                 iterationCount = 2,
                 successCount = 1,
@@ -68,6 +89,11 @@ class ReportClosureProjectionMapperPerformanceTest {
         assertThat(qos.testFamilies).containsExactly(QosTestFamily.SMS, QosTestFamily.VOLTE_CALL)
         assertThat(qos.completedFamilyCount).isEqualTo(2)
         assertThat(qos.failedFamilyCount).isEqualTo(1)
+        assertThat(qos.timelineFamilyCoverageCount).isEqualTo(2)
+        assertThat(qos.requiredRepeatCount).isEqualTo(3)
+        assertThat(qos.passFailRunCount).isEqualTo(2)
+        assertThat(qos.familiesMeetingRequiredRepeatCount).isEqualTo(0)
+        assertThat(qos.executionTimelineEvents).hasSize(3)
         assertThat(qos.familyExecutionResults).hasSize(2)
     }
 }

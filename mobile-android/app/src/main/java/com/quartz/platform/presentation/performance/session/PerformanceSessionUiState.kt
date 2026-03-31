@@ -3,7 +3,11 @@ package com.quartz.platform.presentation.performance.session
 import com.quartz.platform.domain.model.PerformanceSession
 import com.quartz.platform.domain.model.PerformanceSessionStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
+import com.quartz.platform.domain.model.QosCompletionIssue
+import com.quartz.platform.domain.model.QosFamilyRunCoverage
+import com.quartz.platform.domain.model.QosPreflightIssue
 import com.quartz.platform.domain.model.QosScriptDefinition
+import com.quartz.platform.domain.model.QosExecutionTimelineEvent
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosRunSummary
 import com.quartz.platform.domain.model.QosTestFamily
@@ -45,6 +49,10 @@ data class PerformanceSessionUiState(
     val isSavingQosScript: Boolean = false,
     val qosFamilyStatusByType: Map<QosTestFamily, QosFamilyExecutionStatus> = emptyMap(),
     val qosFamilyFailureReasonByType: Map<QosTestFamily, String> = emptyMap(),
+    val qosFamilyRunCoverageByType: Map<QosTestFamily, QosFamilyRunCoverage> = emptyMap(),
+    val qosPreflightIssuesByFamily: Map<QosTestFamily, Set<QosPreflightIssue>> = emptyMap(),
+    val qosExecutionTimelineEvents: List<QosExecutionTimelineEvent> = emptyList(),
+    val qosCompletionIssues: Set<QosCompletionIssue> = emptySet(),
     val qosTargetTechnologyInput: String = "",
     val qosTargetPhoneInput: String = "",
     val qosIterationCountInput: String = "",

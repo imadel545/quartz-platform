@@ -51,6 +51,8 @@ Current Android implementation covers a bounded local-first workflow baseline:
   - deterministic projection of configured QoS context into report closures
 - bounded QoS family execution evidence persisted per performance session (`performance_qos_family_results`) with explicit status:
   - `NOT_RUN`, `PASSED`, `FAILED`, `BLOCKED`
+- bounded QoS timeline evidence persisted per performance session (`performance_qos_timeline_events`) with typed events:
+  - `STARTED`, `PASSED`, `FAILED`, `BLOCKED`
 - `QOS_SCRIPT` completion hardening in repository/domain flow:
   - selected families required
   - each selected family must be completed (`PASSED`/`FAILED`)
@@ -61,6 +63,9 @@ Current Android implementation covers a bounded local-first workflow baseline:
 - session closure keeps an immutable QoS script snapshot context for review:
   - configured script technologies
   - script snapshot timestamp (`updatedAtEpochMillis` at selection/save time)
+- report-side performance projection is strengthened but still bounded:
+  - ReportDraft includes per-family QoS closure details and timeline review
+  - ReportList includes concise QoS triage for failed/blocked/coverage signals
 
 For XFeeder proximity, implementation is intentionally explicit and bounded:
 - `UNAVAILABLE`: location/altitude data cannot be trusted for eligibility

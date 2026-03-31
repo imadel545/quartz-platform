@@ -410,6 +410,13 @@ private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
                 summary.testFamilyCount,
                 summary.completedFamilyCount,
                 summary.failedFamilyCount,
+                summary.blockedFamilyCount,
+                summary.timelineEventCount,
+                summary.timelineFamilyCoverageCount,
+                summary.requiredRepeatCount,
+                summary.familiesMeetingRequiredRepeatCount,
+                summary.passFailRunCount,
+                summary.blockedRunCount,
                 summary.iterationCount,
                 summary.successCount,
                 summary.failureCount

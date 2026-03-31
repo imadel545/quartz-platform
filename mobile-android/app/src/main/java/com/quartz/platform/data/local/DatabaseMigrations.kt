@@ -800,4 +800,37 @@ object DatabaseMigrations {
             )
         }
     }
+
+    val MIGRATION_19_20: Migration = object : Migration(19, 20) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS performance_qos_timeline_events (
+                    sessionId TEXT NOT NULL,
+                    family TEXT NOT NULL,
+                    repetitionIndex INTEGER NOT NULL,
+                    eventType TEXT NOT NULL,
+                    reason TEXT,
+                    occurredAtEpochMillis INTEGER NOT NULL,
+                    PRIMARY KEY(sessionId, family, repetitionIndex, eventType),
+                    FOREIGN KEY(sessionId) REFERENCES performance_sessions(id) ON DELETE CASCADE
+                )
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_performance_qos_timeline_events_sessionId
+                ON performance_qos_timeline_events(sessionId)
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_performance_qos_timeline_events_sessionId_occurredAtEpochMillis
+                ON performance_qos_timeline_events(sessionId, occurredAtEpochMillis)
+                """.trimIndent()
+            )
+        }
+    }
 }

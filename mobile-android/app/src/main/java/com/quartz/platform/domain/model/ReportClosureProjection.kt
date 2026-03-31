@@ -78,6 +78,7 @@ data class QosReportClosureProjection(
     val scriptSnapshotUpdatedAtEpochMillis: Long? = null,
     val testFamilies: Set<QosTestFamily> = emptySet(),
     val familyExecutionResults: List<QosFamilyExecutionResult> = emptyList(),
+    val executionTimelineEvents: List<QosExecutionTimelineEvent> = emptyList(),
     val targetTechnology: String?,
     val iterationCount: Int,
     val successCount: Int,
@@ -97,4 +98,33 @@ data class QosReportClosureProjection(
 
     val failedFamilyCount: Int
         get() = familyExecutionResults.count { result -> result.status == QosFamilyExecutionStatus.FAILED }
+
+    val blockedFamilyCount: Int
+        get() = familyExecutionResults.count { result -> result.status == QosFamilyExecutionStatus.BLOCKED }
+
+    val timelineFamilyCoverageCount: Int
+        get() = executionTimelineEvents.map { event -> event.family }.toSet().size
+
+    val requiredRepeatCount: Int
+        get() = configuredRepeatCount?.coerceAtLeast(1) ?: 1
+
+    val passFailRunCount: Int
+        get() = executionTimelineEvents.count { event ->
+            event.eventType == QosExecutionEventType.PASSED ||
+                event.eventType == QosExecutionEventType.FAILED
+        }
+
+    val blockedRunCount: Int
+        get() = executionTimelineEvents.count { event ->
+            event.eventType == QosExecutionEventType.BLOCKED
+        }
+
+    val familiesMeetingRequiredRepeatCount: Int
+        get() = testFamilies.count { family ->
+            executionTimelineEvents.count { event ->
+                event.family == family &&
+                    (event.eventType == QosExecutionEventType.PASSED ||
+                        event.eventType == QosExecutionEventType.FAILED)
+            } >= requiredRepeatCount
+        }
 }

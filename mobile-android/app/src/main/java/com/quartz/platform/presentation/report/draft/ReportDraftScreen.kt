@@ -27,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
 import com.quartz.platform.data.remote.simulation.SyncSimulationMode
+import com.quartz.platform.domain.model.QosExecutionEventType
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosReportClosureProjection
 import com.quartz.platform.domain.model.QosTestFamily
@@ -605,6 +606,60 @@ private fun QosClosureProjectionContent(
     }
     Text(
         text = stringResource(
+            R.string.report_closure_performance_qos_run_coverage,
+            projection.familiesMeetingRequiredRepeatCount,
+            projection.selectedFamilyCount,
+            projection.requiredRepeatCount,
+            projection.passFailRunCount,
+            projection.blockedRunCount
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    if (projection.executionTimelineEvents.isNotEmpty()) {
+        Text(
+            text = stringResource(R.string.report_closure_performance_qos_timeline_header),
+            style = MaterialTheme.typography.bodySmall
+        )
+        val orderedEvents = projection.executionTimelineEvents.sortedWith(
+            compareByDescending<com.quartz.platform.domain.model.QosExecutionTimelineEvent> { event ->
+                event.occurredAtEpochMillis
+            }.thenBy { event ->
+                event.family.name
+            }.thenBy { event ->
+                event.repetitionIndex
+            }.thenBy { event ->
+                event.eventType.name
+            }
+        )
+        val visibleEvents = orderedEvents.take(12)
+        visibleEvents.forEach { event ->
+            val line = stringResource(
+                R.string.report_closure_performance_qos_timeline_line,
+                formatEpoch(event.occurredAtEpochMillis),
+                stringResource(qosTestFamilyLabelRes(event.family)),
+                event.repetitionIndex,
+                stringResource(qosExecutionEventTypeLabelRes(event.eventType))
+            )
+            Text(
+                text = event.reason?.takeIf { it.isNotBlank() }?.let { reason ->
+                    "$line (${stringResource(R.string.label_failure_reason, reason)})"
+                } ?: line,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        val hiddenCount = orderedEvents.size - visibleEvents.size
+        if (hiddenCount > 0) {
+            Text(
+                text = stringResource(
+                    R.string.report_closure_performance_qos_timeline_more,
+                    hiddenCount
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+    Text(
+        text = stringResource(
             R.string.report_closure_performance_qos_results,
             projection.iterationCount,
             projection.successCount,
@@ -848,6 +903,15 @@ private fun qosFamilyExecutionStatusLabelRes(status: QosFamilyExecutionStatus): 
         QosFamilyExecutionStatus.PASSED -> R.string.performance_qos_family_status_passed
         QosFamilyExecutionStatus.FAILED -> R.string.performance_qos_family_status_failed
         QosFamilyExecutionStatus.BLOCKED -> R.string.performance_qos_family_status_blocked
+    }
+}
+
+private fun qosExecutionEventTypeLabelRes(eventType: QosExecutionEventType): Int {
+    return when (eventType) {
+        QosExecutionEventType.STARTED -> R.string.performance_qos_event_started
+        QosExecutionEventType.PASSED -> R.string.performance_qos_family_status_passed
+        QosExecutionEventType.FAILED -> R.string.performance_qos_family_status_failed
+        QosExecutionEventType.BLOCKED -> R.string.performance_qos_family_status_blocked
     }
 }
 

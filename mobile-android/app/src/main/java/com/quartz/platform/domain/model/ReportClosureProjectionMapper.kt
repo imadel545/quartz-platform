@@ -72,6 +72,7 @@ fun PerformanceSession.toReportClosureProjection(): ReportClosureProjection {
                 scriptSnapshotUpdatedAtEpochMillis = qosRunSummary.scriptSnapshotUpdatedAtEpochMillis,
                 testFamilies = qosRunSummary.selectedTestFamilies,
                 familyExecutionResults = qosRunSummary.familyExecutionResults,
+                executionTimelineEvents = qosRunSummary.executionTimelineEvents,
                 targetTechnology = qosRunSummary.targetTechnology,
                 iterationCount = qosRunSummary.iterationCount,
                 successCount = qosRunSummary.successCount,

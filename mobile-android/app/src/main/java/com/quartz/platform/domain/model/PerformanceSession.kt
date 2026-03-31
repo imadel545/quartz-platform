@@ -29,6 +29,21 @@ enum class QosFamilyExecutionStatus {
     BLOCKED
 }
 
+enum class QosExecutionEventType {
+    STARTED,
+    PASSED,
+    FAILED,
+    BLOCKED
+}
+
+data class QosExecutionTimelineEvent(
+    val family: QosTestFamily,
+    val repetitionIndex: Int,
+    val eventType: QosExecutionEventType,
+    val reason: String? = null,
+    val occurredAtEpochMillis: Long
+)
+
 data class QosFamilyExecutionResult(
     val family: QosTestFamily,
     val status: QosFamilyExecutionStatus,
@@ -72,6 +87,7 @@ data class QosRunSummary(
     val scriptSnapshotUpdatedAtEpochMillis: Long? = null,
     val selectedTestFamilies: Set<QosTestFamily> = emptySet(),
     val familyExecutionResults: List<QosFamilyExecutionResult> = emptyList(),
+    val executionTimelineEvents: List<QosExecutionTimelineEvent> = emptyList(),
     val targetTechnology: String? = null,
     val targetPhoneNumber: String? = null,
     val iterationCount: Int = 0,
