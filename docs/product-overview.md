@@ -99,6 +99,11 @@ Current validated local reporting now includes bounded Débit/QoS closure review
 - ReportDraft includes a bounded QoS timeline section for closure auditability.
 - ReportList exposes a concise performance triage summary for non-guided drafts, including family coverage/failure plus blocked/timeline, dominant issue code, engine/run-plan signals, and compact device diagnostics signals for QoS sessions.
 - Performance sessions can now open-or-create a linked local report draft with explicit `PERFORMANCE` provenance for continuity and supervisor review.
+Current validated supervisor visibility now also includes a mobile-first Reviewer Control Tower:
+- cross-site draft aggregation for faster supervisor triage without opening each site manually,
+- deterministic attention prioritization based on sync failures, QoS risk, and staleness,
+- bounded filters (`ALL`, `NEEDS_ATTENTION`, `SYNC_FAILED`, `QOS_RISK`, `GUIDED`, `NON_GUIDED`),
+- row actions to open the draft review directly or jump to site detail.
 
 ### 4. Throughput and QoS testing
 The system should support:

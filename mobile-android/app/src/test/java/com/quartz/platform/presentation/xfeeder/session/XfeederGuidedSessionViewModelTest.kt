@@ -618,6 +618,8 @@ class XfeederGuidedSessionViewModelTest {
 
         override fun observeDraft(draftId: String): Flow<ReportDraft?> = flowOf(null)
 
+        override fun listAllDrafts(): Flow<List<ReportDraft>> = drafts
+
         override fun listDraftsBySite(siteId: String): Flow<List<ReportDraft>> =
             drafts.map { list -> list.filter { draft -> draft.siteId == siteId } }
 

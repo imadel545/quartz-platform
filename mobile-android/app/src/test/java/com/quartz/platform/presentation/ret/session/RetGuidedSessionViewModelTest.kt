@@ -489,6 +489,10 @@ class RetGuidedSessionViewModelTest {
             return draftFlows.getOrPut(draftId) { MutableStateFlow(draftsById[draftId]) }
         }
 
+        override fun listAllDrafts(): Flow<List<ReportDraft>> {
+            return flowOf(draftsById.values.sortedByDescending { it.updatedAtEpochMillis })
+        }
+
         override fun listDraftsBySite(siteId: String): Flow<List<ReportDraft>> {
             return flowOf(
                 draftsById.values.filter { it.siteId == siteId }.sortedByDescending { it.updatedAtEpochMillis }

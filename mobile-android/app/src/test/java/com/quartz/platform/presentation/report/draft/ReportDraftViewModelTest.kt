@@ -572,6 +572,8 @@ class ReportDraftViewModelTest {
 
         override fun observeDraft(draftId: String): Flow<ReportDraft?> = state
 
+        override fun listAllDrafts(): Flow<List<ReportDraft>> = state.map { listOf(it) }
+
         override fun listDraftsBySite(siteId: String): Flow<List<ReportDraft>> = flowOf(emptyList())
     }
 

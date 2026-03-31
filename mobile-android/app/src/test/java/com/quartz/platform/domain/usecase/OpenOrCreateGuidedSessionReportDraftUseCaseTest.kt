@@ -129,6 +129,9 @@ class OpenOrCreateGuidedSessionReportDraftUseCaseTest {
         override fun observeDraft(draftId: String): Flow<ReportDraft?> =
             drafts.map { list -> list.firstOrNull { draft -> draft.id == draftId } }
 
+        override fun listAllDrafts(): Flow<List<ReportDraft>> =
+            drafts
+
         override fun listDraftsBySite(siteId: String): Flow<List<ReportDraft>> =
             drafts.map { list -> list.filter { draft -> draft.siteId == siteId } }
     }

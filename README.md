@@ -51,6 +51,11 @@ quartz-platform/
   - Local report draft continuity with typed workflow provenance (`XFEEDER`, `RET`)
   - Workflow-typed local closure projection in report draft view (XFeeder + RET review fields)
   - Workflow-typed closure triage summary in report list rows (concise operator/supervisor signal)
+  - Reviewer/Supervisor Control Tower mobile-first:
+    - cross-site draft aggregation (all sites) with deterministic attention ranking
+    - bounded attention taxonomy (`SYNC_FAILED`, `SYNC_PENDING`, `QOS_FAILED_OR_BLOCKED`, `QOS_PREREQUISITES_NOT_READY`, `STALE_DRAFT`)
+    - persisted triage filter state in ViewModel saved state (`ALL`, `NEEDS_ATTENTION`, `SYNC_FAILED`, `QOS_RISK`, `GUIDED`, `NON_GUIDED`)
+    - quick actions from control-tower row to open the linked draft or site detail
   - Room migrations and schema snapshots kept explicit
 
 ## Explicitly out of scope at this stage

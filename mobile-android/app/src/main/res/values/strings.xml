@@ -8,6 +8,7 @@
     <string name="title_local_reports">Rapports locaux</string>
     <string name="title_xfeeder_guided_session">Session guidée XFeeder / MixFeeder</string>
     <string name="title_ret_guided_session">Session guidée RET</string>
+    <string name="title_reviewer_control_tower">Control Tower Reviewer</string>
 
     <string name="action_back_to_list">Retour à la liste</string>
     <string name="action_back_to_site">Retour au site</string>
@@ -20,6 +21,7 @@
     <string name="action_create_local_draft">Créer un brouillon local</string>
     <string name="action_create_local_draft_loading">Création en cours...</string>
     <string name="action_open_site_local_reports">Voir tous les rapports locaux</string>
+    <string name="action_open_control_tower">Ouvrir Control Tower reviewer</string>
     <string name="action_open_xfeeder_guided_session">Ouvrir la session guidée secteur</string>
     <string name="action_open_ret_guided_session">Ouvrir la session guidée RET</string>
     <string name="action_open_site_reports">Voir tous les rapports du site</string>
@@ -154,6 +156,25 @@
     <string name="report_list_filter_performance">Performance</string>
     <string name="report_list_filter_non_guided">Non guidé</string>
     <string name="empty_filtered_local_reports">Aucun brouillon local ne correspond à ce filtre.</string>
+    <string name="reviewer_control_tower_summary_title">Synthèse multi-sites</string>
+    <string name="reviewer_control_tower_summary_counts">Brouillons: %1$d • Guidés: %2$d • Non guidés: %3$d</string>
+    <string name="reviewer_control_tower_summary_attention">Attention: %1$d • Sync KO: %2$d • Sync pending: %3$d • Risque QoS: %4$d • Stale: %5$d</string>
+    <string name="reviewer_control_tower_filter_label">Filtre contrôle reviewer</string>
+    <string name="reviewer_control_tower_filter_all">Tous</string>
+    <string name="reviewer_control_tower_filter_attention">Attention requise</string>
+    <string name="reviewer_control_tower_filter_sync_failed">Sync KO</string>
+    <string name="reviewer_control_tower_filter_qos_risk">Risque QoS</string>
+    <string name="reviewer_control_tower_filter_guided">Guidé</string>
+    <string name="reviewer_control_tower_filter_non_guided">Non guidé</string>
+    <string name="reviewer_control_tower_empty">Aucun brouillon ne correspond au filtre actuel.</string>
+    <string name="reviewer_control_tower_workflow">Workflow: %1$s</string>
+    <string name="reviewer_control_tower_action_open_site">Ouvrir le site</string>
+    <string name="reviewer_control_tower_signal_sync_failed">Échec sync</string>
+    <string name="reviewer_control_tower_signal_sync_pending">Sync en attente</string>
+    <string name="reviewer_control_tower_signal_qos_failed_or_blocked">QoS échec/bloqué</string>
+    <string name="reviewer_control_tower_signal_qos_preflight_blocked">Préconditions QoS non prêtes</string>
+    <string name="reviewer_control_tower_signal_stale_draft">Brouillon ancien (&gt;24h)</string>
+    <string name="error_load_reviewer_control_tower">Impossible de charger la vue Control Tower reviewer.</string>
     <string name="title_performance_session">Sessions Débit / QoS</string>
     <string name="action_open_performance_session">Ouvrir Débit / QoS local</string>
     <string name="performance_shell_disclaimer">Fondation locale Débit/QoS: exécution guidée et structurée sans automatisation réseau OEM.</string>

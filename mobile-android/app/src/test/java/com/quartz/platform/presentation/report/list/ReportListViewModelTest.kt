@@ -341,6 +341,10 @@ class ReportListViewModelTest {
             return draftsFlow.map { drafts -> drafts.firstOrNull { it.id == draftId } }
         }
 
+        override fun listAllDrafts(): Flow<List<ReportDraft>> {
+            return draftsFlow
+        }
+
         override fun listDraftsBySite(siteId: String): Flow<List<ReportDraft>> {
             return draftsFlow.map { drafts -> drafts.filter { it.siteId == siteId } }
         }

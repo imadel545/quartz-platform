@@ -7,6 +7,8 @@ sealed class QuartzDestination(val route: String) {
 
     data object SiteList : QuartzDestination("site_list")
 
+    data object ReviewerControlTower : QuartzDestination("reviewer_control_tower")
+
     data object SiteDetail : QuartzDestination("site_detail/{siteId}") {
         const val ARG_SITE_ID = "siteId"
         fun routeFor(siteId: String): String = "site_detail/${Uri.encode(siteId)}"

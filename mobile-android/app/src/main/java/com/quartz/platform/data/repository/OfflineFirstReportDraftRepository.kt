@@ -70,6 +70,10 @@ class OfflineFirstReportDraftRepository @Inject constructor(
         return reportDraftDao.observeById(draftId).map { entity -> entity?.toDomain() }
     }
 
+    override fun listAllDrafts(): Flow<List<ReportDraft>> {
+        return reportDraftDao.listAll().map { entities -> entities.map { it.toDomain() } }
+    }
+
     override fun listDraftsBySite(siteId: String): Flow<List<ReportDraft>> {
         return reportDraftDao.listBySite(siteId).map { entities -> entities.map { it.toDomain() } }
     }

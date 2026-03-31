@@ -48,6 +48,7 @@ import org.osmdroid.views.overlay.Marker
 
 @Composable
 fun HomeMapRoute(
+    onOpenControlTower: () -> Unit,
     onSiteSelected: (String) -> Unit,
     viewModel: HomeMapViewModel = hiltViewModel()
 ) {
@@ -65,6 +66,7 @@ fun HomeMapRoute(
         onSearchQueryChanged = viewModel::onSearchQueryChanged,
         onLoadDemoSnapshot = viewModel::onLoadDemoSnapshotClicked,
         onMapSiteSelected = viewModel::onSiteSelected,
+        onOpenControlTower = onOpenControlTower,
         onOpenSelectedSite = { siteId -> onSiteSelected(siteId) },
         onRecenter = {
             val hasFine = ContextCompat.checkSelfPermission(
@@ -96,6 +98,7 @@ fun HomeMapScreen(
     onSearchQueryChanged: (String) -> Unit,
     onLoadDemoSnapshot: () -> Unit,
     onMapSiteSelected: (String) -> Unit,
+    onOpenControlTower: () -> Unit,
     onOpenSelectedSite: (String) -> Unit,
     onRecenter: () -> Unit
 ) {
@@ -162,6 +165,13 @@ fun HomeMapScreen(
                         }
                     )
                 }
+            }
+
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onOpenControlTower
+            ) {
+                Text(stringResource(R.string.action_open_control_tower))
             }
 
             state.errorMessage?.let { error ->

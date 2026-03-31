@@ -38,6 +38,11 @@ The roadmap prioritizes:
   - QoS finalization cycle 5 hardening: transactional timeline checkpoints (no event overwrite), deterministic recovery-state projection, and stronger run continuity visibility in performance/report surfaces
   - QoS finalization cycle 6 hardening: typed failure/block reason taxonomy persisted in family evidence + timeline, actionable operator guidance on execution surfaces, and dominant-issue triage signal in report list
   - QoS finalization cycle 7 hardening: device-aware preflight diagnostics (network/battery/GPS) with explicit operator refresh/apply flow, persisted diagnostics snapshot in `performance_sessions`, and diagnostics projection into ReportDraft/ReportList review surfaces
+  - reviewer/supervisor control-tower mobile-first baseline:
+    - cross-site local draft aggregation
+    - deterministic attention ranking (sync/QoS/staleness)
+    - bounded triage filters with saved-state persistence
+    - quick actions to draft review and site detail
   - shared workflow/session core reused by multiple guided flows
   - local report-draft continuity with typed provenance
   - workflow-typed closure projection in report draft flow for XFeeder/RET local review

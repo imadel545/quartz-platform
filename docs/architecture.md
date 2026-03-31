@@ -84,6 +84,11 @@ Current Android implementation covers a bounded local-first workflow baseline:
   - ReportDraft includes typed QoS issue taxonomy visibility (code + optional detail) for failed/blocked outcomes
   - ReportDraft includes QoS execution-engine context (state, active run, plan progress)
   - ReportList includes concise QoS triage for failed/blocked/coverage signals plus engine-state/run-plan signal, dominant issue code, and compact device diagnostics signals
+- reviewer/supervisor control-tower projection is now available as a mobile-first cross-site triage surface:
+  - deterministic aggregation over all local drafts (not site-scoped only)
+  - bounded attention-signal taxonomy (`SYNC_FAILED`, `SYNC_PENDING`, `QOS_FAILED_OR_BLOCKED`, `QOS_PREREQUISITES_NOT_READY`, `STALE_DRAFT`)
+  - deterministic rank ordering and bounded saved-state filter for triage continuity
+  - row-level actions to open report draft review or jump to site detail
 
 For XFeeder proximity, implementation is intentionally explicit and bounded:
 - `UNAVAILABLE`: location/altitude data cannot be trusted for eligibility

@@ -404,6 +404,12 @@ class OfflineFirstSyncRepositoryTest {
             }
         }
 
+        override fun listAll(): Flow<List<ReportDraftEntity>> {
+            return drafts.map { draftMap ->
+                draftMap.values.sortedByDescending { it.updatedAtEpochMillis }
+            }
+        }
+
         override suspend fun getById(draftId: String): ReportDraftEntity? = drafts.value[draftId]
 
         override suspend fun findLatestLinkedBySession(

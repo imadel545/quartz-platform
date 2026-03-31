@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.quartz.platform.presentation.home.map.HomeMapRoute
 import com.quartz.platform.presentation.performance.session.PerformanceSessionRoute
+import com.quartz.platform.presentation.reviewer.controltower.ReviewerControlTowerRoute
 import com.quartz.platform.presentation.ret.session.RetGuidedSessionRoute
 import com.quartz.platform.presentation.report.draft.ReportDraftRoute
 import com.quartz.platform.presentation.report.list.ReportListRoute
@@ -24,7 +25,22 @@ fun QuartzNavHost() {
     ) {
         composable(QuartzDestination.HomeMap.route) {
             HomeMapRoute(
+                onOpenControlTower = {
+                    navController.navigate(QuartzDestination.ReviewerControlTower.route)
+                },
                 onSiteSelected = { siteId ->
+                    navController.navigate(QuartzDestination.SiteDetail.routeFor(siteId))
+                }
+            )
+        }
+
+        composable(QuartzDestination.ReviewerControlTower.route) {
+            ReviewerControlTowerRoute(
+                onBack = { navController.popBackStack() },
+                onOpenDraft = { draftId ->
+                    navController.navigate(QuartzDestination.ReportDraft.routeFor(draftId))
+                },
+                onOpenSite = { siteId ->
                     navController.navigate(QuartzDestination.SiteDetail.routeFor(siteId))
                 }
             )

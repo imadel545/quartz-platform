@@ -18,6 +18,9 @@ interface ReportDraftDao {
     @Query("SELECT * FROM report_drafts WHERE siteId = :siteId ORDER BY updatedAtEpochMillis DESC")
     fun listBySite(siteId: String): Flow<List<ReportDraftEntity>>
 
+    @Query("SELECT * FROM report_drafts ORDER BY updatedAtEpochMillis DESC")
+    fun listAll(): Flow<List<ReportDraftEntity>>
+
     @Query("SELECT * FROM report_drafts WHERE id = :draftId LIMIT 1")
     suspend fun getById(draftId: String): ReportDraftEntity?
 

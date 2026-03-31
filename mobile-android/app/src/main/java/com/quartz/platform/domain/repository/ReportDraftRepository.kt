@@ -18,5 +18,6 @@ interface ReportDraftRepository {
         originWorkflowType: ReportDraftOriginWorkflowType? = null
     ): ReportDraft?
     fun observeDraft(draftId: String): Flow<ReportDraft?>
+    fun listAllDrafts(): Flow<List<ReportDraft>>
     fun listDraftsBySite(siteId: String): Flow<List<ReportDraft>>
 }

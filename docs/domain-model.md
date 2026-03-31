@@ -48,6 +48,7 @@ This model is intentionally designed to avoid vague generic objects and to prese
 - Report
 - SyncJob
 - AuditEntry
+- ReviewerControlTowerSnapshot (bounded cross-site triage projection for supervisors)
 
 ---
 
@@ -235,6 +236,23 @@ For bounded site-level performance workflows (Débit/QoS foundation), local sess
   - concise triage projection in ReportList (including QoS family coverage/failure/blocked/timeline signals + dominant issue code)
 - linked report-draft continuity with explicit provenance (`originWorkflowType = PERFORMANCE`, `originSessionId`).
 - local QoS script definitions persisted in Room (`qos_scripts`) with name, repeat count, technologies, and selected test families.
+
+For bounded supervisor triage workflows, a reviewer-focused projection layer tracks:
+- `ReviewerControlTowerSnapshot` (generated timestamp + summary KPIs + ordered row items)
+- `ReviewerControlTowerItem` (draft/site identity, workflow provenance, closure summary signal, sync trace, attention signals, attention rank)
+- bounded attention taxonomy:
+  - `SYNC_FAILED`
+  - `SYNC_PENDING`
+  - `QOS_FAILED_OR_BLOCKED`
+  - `QOS_PREREQUISITES_NOT_READY`
+  - `STALE_DRAFT`
+- deterministic triage filter state:
+  - `ALL`
+  - `NEEDS_ATTENTION`
+  - `SYNC_FAILED`
+  - `QOS_RISK`
+  - `GUIDED`
+  - `NON_GUIDED`
 
 Possible status values:
 - CREATED
