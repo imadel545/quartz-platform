@@ -4,6 +4,8 @@ import com.quartz.platform.domain.model.PerformanceSession
 import com.quartz.platform.domain.model.PerformanceSessionStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
 import com.quartz.platform.domain.model.QosCompletionIssue
+import com.quartz.platform.domain.model.QosExecutionSnapshot
+import com.quartz.platform.domain.model.QosRunPlanItem
 import com.quartz.platform.domain.model.QosFamilyRunCoverage
 import com.quartz.platform.domain.model.QosPreflightIssue
 import com.quartz.platform.domain.model.QosScriptDefinition
@@ -50,6 +52,8 @@ data class PerformanceSessionUiState(
     val qosFamilyStatusByType: Map<QosTestFamily, QosFamilyExecutionStatus> = emptyMap(),
     val qosFamilyFailureReasonByType: Map<QosTestFamily, String> = emptyMap(),
     val qosFamilyRunCoverageByType: Map<QosTestFamily, QosFamilyRunCoverage> = emptyMap(),
+    val qosRunPlan: List<QosRunPlanItem> = emptyList(),
+    val qosExecutionSnapshot: QosExecutionSnapshot? = null,
     val qosPreflightIssuesByFamily: Map<QosTestFamily, Set<QosPreflightIssue>> = emptyMap(),
     val qosExecutionTimelineEvents: List<QosExecutionTimelineEvent> = emptyList(),
     val qosCompletionIssues: Set<QosCompletionIssue> = emptySet(),

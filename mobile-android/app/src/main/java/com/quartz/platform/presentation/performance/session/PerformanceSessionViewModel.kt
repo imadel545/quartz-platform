@@ -13,7 +13,9 @@ import com.quartz.platform.domain.model.PerformanceWorkflowType
 import com.quartz.platform.domain.model.QosCompletionIssue
 import com.quartz.platform.domain.model.QosExecutionEventType
 import com.quartz.platform.domain.model.QosExecutionTimelineEvent
+import com.quartz.platform.domain.model.QosExecutionSnapshot
 import com.quartz.platform.domain.model.QosPreflightIssue
+import com.quartz.platform.domain.model.QosRunPlanItemStatus
 import com.quartz.platform.domain.model.QosRunnerAction
 import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.model.QosRunSummary
@@ -23,7 +25,11 @@ import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ThroughputMetrics
 import com.quartz.platform.domain.model.assessQosFamilyPreflight
 import com.quartz.platform.domain.model.assessQosCompletion
+import com.quartz.platform.domain.model.computeQosRunPlan
 import com.quartz.platform.domain.model.computeQosFamilyRunCoverage
+import com.quartz.platform.domain.model.deriveQosExecutionSnapshot
+import com.quartz.platform.domain.model.deriveQosPassFailCounters
+import com.quartz.platform.domain.model.qosExecutionEventSortOrder
 import com.quartz.platform.domain.usecase.CreateSitePerformanceSessionUseCase
 import com.quartz.platform.domain.usecase.EnsureDefaultQosScriptsUseCase
 import com.quartz.platform.domain.usecase.ObserveSiteDetailUseCase
@@ -382,6 +388,22 @@ class PerformanceSessionViewModel @Inject constructor(
         )
     }
 
+    fun onQosRunnerPauseClicked(family: QosTestFamily) {
+        applyQosRunnerAction(
+            family = family,
+            action = QosRunnerAction.PAUSE,
+            terminalEventType = QosExecutionEventType.PAUSED
+        )
+    }
+
+    fun onQosRunnerResumeClicked(family: QosTestFamily) {
+        applyQosRunnerAction(
+            family = family,
+            action = QosRunnerAction.RESUME,
+            terminalEventType = QosExecutionEventType.RESUMED
+        )
+    }
+
     fun onQosFamilyFailureReasonChanged(family: QosTestFamily, value: String) {
         updateField {
             copy(
@@ -396,6 +418,7 @@ class PerformanceSessionViewModel @Inject constructor(
         terminalEventType: QosExecutionEventType
     ) {
         val state = mutableState.value
+        val session = state.session ?: return
         val summary = qosSummaryForAssessment(state)
         val preflightIssues = assessQosFamilyPreflight(
             qosRunSummary = summary,
@@ -419,6 +442,7 @@ class PerformanceSessionViewModel @Inject constructor(
             return
         }
 
+        val runPlan = computeQosRunPlan(summary)
         val nextTimeline = when (action) {
             QosRunnerAction.START -> {
                 val nextRepetitionIndex = computeQosFamilyRunCoverage(summary, family).nextRepetitionIndex
@@ -426,6 +450,30 @@ class PerformanceSessionViewModel @Inject constructor(
                     family = family,
                     repetitionIndex = nextRepetitionIndex,
                     eventType = QosExecutionEventType.STARTED,
+                    occurredAtEpochMillis = System.currentTimeMillis()
+                )
+            }
+
+            QosRunnerAction.PAUSE -> {
+                val activeRepetitionIndex = runPlan.firstOrNull { item ->
+                    item.family == family && item.status == QosRunPlanItemStatus.RUNNING
+                }?.repetitionIndex ?: return
+                state.qosExecutionTimelineEvents + QosExecutionTimelineEvent(
+                    family = family,
+                    repetitionIndex = activeRepetitionIndex,
+                    eventType = QosExecutionEventType.PAUSED,
+                    occurredAtEpochMillis = System.currentTimeMillis()
+                )
+            }
+
+            QosRunnerAction.RESUME -> {
+                val pausedRepetitionIndex = runPlan.firstOrNull { item ->
+                    item.family == family && item.status == QosRunPlanItemStatus.PAUSED
+                }?.repetitionIndex ?: return
+                state.qosExecutionTimelineEvents + QosExecutionTimelineEvent(
+                    family = family,
+                    repetitionIndex = pausedRepetitionIndex,
+                    eventType = QosExecutionEventType.RESUMED,
                     occurredAtEpochMillis = System.currentTimeMillis()
                 )
             }
@@ -447,9 +495,13 @@ class PerformanceSessionViewModel @Inject constructor(
             }
         }
 
+        var persistedState: PerformanceSessionUiState? = null
         mutableState.update { current ->
             val nextStatus = when (terminalEventType) {
                 QosExecutionEventType.STARTED -> current.qosFamilyStatusByType[family]
+                    ?: QosFamilyExecutionStatus.NOT_RUN
+                QosExecutionEventType.PAUSED,
+                QosExecutionEventType.RESUMED -> current.qosFamilyStatusByType[family]
                     ?: QosFamilyExecutionStatus.NOT_RUN
                 QosExecutionEventType.PASSED -> QosFamilyExecutionStatus.PASSED
                 QosExecutionEventType.FAILED -> QosFamilyExecutionStatus.FAILED
@@ -458,11 +510,18 @@ class PerformanceSessionViewModel @Inject constructor(
             val nextReasons = when (terminalEventType) {
                 QosExecutionEventType.PASSED,
                 QosExecutionEventType.STARTED -> current.qosFamilyFailureReasonByType - family
+                QosExecutionEventType.PAUSED,
+                QosExecutionEventType.RESUMED -> current.qosFamilyFailureReasonByType
                 QosExecutionEventType.FAILED,
                 QosExecutionEventType.BLOCKED -> current.qosFamilyFailureReasonByType
             }
-            deriveQosUiState(
+            val nextUiState = deriveQosUiState(
                 current.copy(
+                    selectedStatus = if (current.selectedStatus == PerformanceSessionStatus.COMPLETED) {
+                        PerformanceSessionStatus.IN_PROGRESS
+                    } else {
+                        current.selectedStatus
+                    },
                     qosExecutionTimelineEvents = nextTimeline
                         .sortedWith(
                             compareByDescending<QosExecutionTimelineEvent> { event ->
@@ -472,13 +531,23 @@ class PerformanceSessionViewModel @Inject constructor(
                             }.thenBy { event ->
                                 event.repetitionIndex
                             }.thenBy { event ->
-                                event.eventType.name
+                                qosExecutionEventSortOrder(event.eventType)
                             }
                         ),
                     qosFamilyStatusByType = current.qosFamilyStatusByType + (family to nextStatus),
                     qosFamilyFailureReasonByType = nextReasons,
-                    qosPreflightIssuesByFamily = current.qosPreflightIssuesByFamily + (family to emptySet())
+                    qosPreflightIssuesByFamily = current.qosPreflightIssuesByFamily + (family to emptySet()),
+                    hasUnsavedChanges = true
                 )
+            )
+            persistedState = nextUiState
+            nextUiState
+        }
+
+        persistedState?.let { latest ->
+            persistQosRunnerProgress(
+                sessionId = session.id,
+                state = latest
             )
         }
     }
@@ -726,6 +795,8 @@ class PerformanceSessionViewModel @Inject constructor(
                 qosFamilyStatusByType = emptyMap(),
                 qosFamilyFailureReasonByType = emptyMap(),
                 qosFamilyRunCoverageByType = emptyMap(),
+                qosRunPlan = emptyList(),
+                qosExecutionSnapshot = null,
                 qosPreflightIssuesByFamily = emptyMap(),
                 qosExecutionTimelineEvents = emptyList(),
                 qosCompletionIssues = emptySet(),
@@ -802,6 +873,39 @@ class PerformanceSessionViewModel @Inject constructor(
         }
     }
 
+    private fun persistQosRunnerProgress(
+        sessionId: String,
+        state: PerformanceSessionUiState
+    ) {
+        viewModelScope.launch {
+            runCatching {
+                val status = when (state.selectedStatus) {
+                    PerformanceSessionStatus.CREATED,
+                    PerformanceSessionStatus.COMPLETED -> PerformanceSessionStatus.IN_PROGRESS
+                    else -> state.selectedStatus
+                }
+                updatePerformanceSessionExecutionUseCase(
+                    sessionId = sessionId,
+                    status = status,
+                    prerequisiteNetworkReady = state.prerequisiteNetworkReady,
+                    prerequisiteBatterySufficient = state.prerequisiteBatterySufficient,
+                    prerequisiteLocationReady = state.prerequisiteLocationReady,
+                    throughputMetrics = state.session?.throughputMetrics ?: ThroughputMetrics(),
+                    qosRunSummary = qosSummaryForAssessment(state),
+                    notes = state.notesInput.trim(),
+                    resultSummary = state.resultSummaryInput.trim()
+                )
+            }.onFailure { throwable ->
+                mutableState.update { current ->
+                    current.copy(
+                        errorMessage = throwable.message ?: uiStrings.get(R.string.error_performance_save_summary),
+                        infoMessage = null
+                    )
+                }
+            }
+        }
+    }
+
     private fun parseThroughputMetrics(state: PerformanceSessionUiState): ThroughputMetrics? {
         val download = parseOptionalDouble(
             value = state.throughputDownloadInput,
@@ -858,23 +962,13 @@ class PerformanceSessionViewModel @Inject constructor(
                     ?.takeIf { value -> value.isNotBlank() }
             )
         }.sortedBy { result -> result.family.name }
-        val timelinePassedCount = state.qosExecutionTimelineEvents.count { event ->
-            event.eventType == QosExecutionEventType.PASSED
-        }
-        val timelineFailedCount = state.qosExecutionTimelineEvents.count { event ->
-            event.eventType == QosExecutionEventType.FAILED
-        }
-        val passedCount = if (timelinePassedCount + timelineFailedCount > 0) {
-            timelinePassedCount
-        } else {
-            familyResults.count { result -> result.status == QosFamilyExecutionStatus.PASSED }
-        }
-        val failedCount = if (timelinePassedCount + timelineFailedCount > 0) {
-            timelineFailedCount
-        } else {
-            familyResults.count { result -> result.status == QosFamilyExecutionStatus.FAILED }
-        }
-        val completedCount = passedCount + failedCount
+        val counters = deriveQosPassFailCounters(
+            QosRunSummary(
+                selectedTestFamilies = snapshotFamilies,
+                familyExecutionResults = familyResults,
+                executionTimelineEvents = state.qosExecutionTimelineEvents
+            )
+        )
 
         return QosRunSummary(
             scriptId = state.qosSelectedScriptId,
@@ -887,9 +981,9 @@ class PerformanceSessionViewModel @Inject constructor(
             executionTimelineEvents = state.qosExecutionTimelineEvents,
             targetTechnology = state.qosTargetTechnologyInput.trim().ifBlank { null },
             targetPhoneNumber = state.qosTargetPhoneInput.trim().ifBlank { null },
-            iterationCount = completedCount,
-            successCount = passedCount,
-            failureCount = failedCount
+            iterationCount = counters.iterationCount,
+            successCount = counters.successCount,
+            failureCount = counters.failureCount
         )
     }
 
@@ -936,32 +1030,13 @@ class PerformanceSessionViewModel @Inject constructor(
 }
 
 private fun deriveQosExecutionAggregate(state: PerformanceSessionUiState): PerformanceSessionUiState {
-    val timeline = state.qosExecutionTimelineEvents
-    val timelinePassedCount = timeline.count { event ->
-        event.eventType == QosExecutionEventType.PASSED
-    }
-    val timelineFailedCount = timeline.count { event ->
-        event.eventType == QosExecutionEventType.FAILED
-    }
-    val passedCount = if (timelinePassedCount + timelineFailedCount > 0) {
-        timelinePassedCount
-    } else {
-        state.qosSelectedTestFamilies.count { family ->
-            state.qosFamilyStatusByType[family] == QosFamilyExecutionStatus.PASSED
-        }
-    }
-    val failedCount = if (timelinePassedCount + timelineFailedCount > 0) {
-        timelineFailedCount
-    } else {
-        state.qosSelectedTestFamilies.count { family ->
-            state.qosFamilyStatusByType[family] == QosFamilyExecutionStatus.FAILED
-        }
-    }
-    val completedCount = passedCount + failedCount
+    val counters = deriveQosPassFailCounters(
+        qosSummaryForAssessment(state)
+    )
     return state.copy(
-        qosIterationCountInput = completedCount.toString(),
-        qosSuccessCountInput = passedCount.toString(),
-        qosFailureCountInput = failedCount.toString()
+        qosIterationCountInput = counters.iterationCount.toString(),
+        qosSuccessCountInput = counters.successCount.toString(),
+        qosFailureCountInput = counters.failureCount.toString()
     )
 }
 
@@ -972,10 +1047,19 @@ private fun deriveQosUiState(state: PerformanceSessionUiState): PerformanceSessi
         return aggregated.copy(
             qosCompletionIssues = emptySet(),
             qosFamilyRunCoverageByType = emptyMap(),
+            qosRunPlan = emptyList(),
+            qosExecutionSnapshot = null,
             qosPreflightIssuesByFamily = emptyMap()
         )
     }
     val summary = qosSummaryForAssessment(aggregated)
+    val runPlan = computeQosRunPlan(summary)
+    val executionSnapshot = deriveQosExecutionSnapshot(
+        qosRunSummary = summary,
+        preconditionsReady = aggregated.prerequisiteNetworkReady &&
+            aggregated.prerequisiteBatterySufficient &&
+            aggregated.prerequisiteLocationReady
+    )
     val coverageByFamily = aggregated.qosSelectedTestFamilies.associateWith { family ->
         computeQosFamilyRunCoverage(summary, family)
     }
@@ -993,6 +1077,8 @@ private fun deriveQosUiState(state: PerformanceSessionUiState): PerformanceSessi
     return aggregated.copy(
         qosCompletionIssues = assessQosCompletion(summary).issues,
         qosFamilyRunCoverageByType = coverageByFamily,
+        qosRunPlan = runPlan,
+        qosExecutionSnapshot = executionSnapshot,
         qosPreflightIssuesByFamily = preflightByFamily
     )
 }
@@ -1012,22 +1098,13 @@ private fun qosSummaryForAssessment(state: PerformanceSessionUiState): QosRunSum
                 ?.takeIf { value -> value.isNotBlank() }
         )
     }.sortedBy { result -> result.family.name }
-    val timelinePassedCount = state.qosExecutionTimelineEvents.count { event ->
-        event.eventType == QosExecutionEventType.PASSED
-    }
-    val timelineFailedCount = state.qosExecutionTimelineEvents.count { event ->
-        event.eventType == QosExecutionEventType.FAILED
-    }
-    val passedCount = if (timelinePassedCount + timelineFailedCount > 0) {
-        timelinePassedCount
-    } else {
-        familyResults.count { result -> result.status == QosFamilyExecutionStatus.PASSED }
-    }
-    val failedCount = if (timelinePassedCount + timelineFailedCount > 0) {
-        timelineFailedCount
-    } else {
-        familyResults.count { result -> result.status == QosFamilyExecutionStatus.FAILED }
-    }
+    val counters = deriveQosPassFailCounters(
+        QosRunSummary(
+            selectedTestFamilies = families,
+            familyExecutionResults = familyResults,
+            executionTimelineEvents = state.qosExecutionTimelineEvents
+        )
+    )
     return QosRunSummary(
         scriptId = state.qosSelectedScriptId,
         scriptName = state.qosSelectedScriptName,
@@ -1039,9 +1116,9 @@ private fun qosSummaryForAssessment(state: PerformanceSessionUiState): QosRunSum
         executionTimelineEvents = state.qosExecutionTimelineEvents,
         targetTechnology = state.qosTargetTechnologyInput.trim().ifBlank { null },
         targetPhoneNumber = state.qosTargetPhoneInput.trim().ifBlank { null },
-        iterationCount = passedCount + failedCount,
-        successCount = passedCount,
-        failureCount = failedCount
+        iterationCount = counters.iterationCount,
+        successCount = counters.successCount,
+        failureCount = counters.failureCount
     )
 }
 
@@ -1066,7 +1143,10 @@ private fun qosPreflightIssueToErrorRes(issue: QosPreflightIssue): Int {
         QosPreflightIssue.PHONE_TARGET_MISSING -> R.string.error_performance_qos_phone_required
         QosPreflightIssue.TARGET_TECHNOLOGY_INVALID -> R.string.error_performance_qos_target_technology_required
         QosPreflightIssue.REPETITION_ALREADY_STARTED -> R.string.error_performance_qos_repetition_already_started
+        QosPreflightIssue.REPETITION_ALREADY_COMPLETED -> R.string.error_performance_qos_repetition_coverage_required
+        QosPreflightIssue.ANOTHER_REPETITION_ACTIVE -> R.string.error_performance_qos_another_repetition_active
         QosPreflightIssue.REPETITION_NOT_STARTED -> R.string.error_performance_qos_repetition_not_started
+        QosPreflightIssue.REPETITION_NOT_PAUSED -> R.string.error_performance_qos_repetition_not_paused
         QosPreflightIssue.FAILURE_REASON_REQUIRED -> R.string.error_performance_qos_failed_reason_required
     }
 }
@@ -1086,7 +1166,7 @@ private fun resolveFamilyStatusFromTimeline(
         .maxWithOrNull(
             compareBy<QosExecutionTimelineEvent> { event -> event.occurredAtEpochMillis }
                 .thenBy { event -> event.repetitionIndex }
-                .thenBy { event -> event.eventType.name }
+                .thenBy { event -> qosExecutionEventSortOrder(event.eventType) }
         )
         ?: return null
 
@@ -1094,7 +1174,9 @@ private fun resolveFamilyStatusFromTimeline(
         QosExecutionEventType.PASSED -> QosFamilyExecutionStatus.PASSED
         QosExecutionEventType.FAILED -> QosFamilyExecutionStatus.FAILED
         QosExecutionEventType.BLOCKED -> QosFamilyExecutionStatus.BLOCKED
-        QosExecutionEventType.STARTED -> null
+        QosExecutionEventType.STARTED,
+        QosExecutionEventType.PAUSED,
+        QosExecutionEventType.RESUMED -> null
     }
 }
 

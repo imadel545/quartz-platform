@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
+import com.quartz.platform.domain.model.QosExecutionEngineState
+import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ReportListClosureSummary
 import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.SiteReportListItem
@@ -417,6 +419,13 @@ private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
                 summary.familiesMeetingRequiredRepeatCount,
                 summary.passFailRunCount,
                 summary.blockedRunCount,
+                summary.plannedRunCount,
+                summary.pendingRunCount,
+                stringResource(qosEngineStateLabelRes(summary.executionEngineState)),
+                summary.activeFamily?.let { family ->
+                    stringResource(qosTestFamilyLabelRes(family))
+                } ?: stringResource(R.string.value_not_available),
+                summary.activeRepetitionIndex?.toString() ?: "-",
                 summary.iterationCount,
                 summary.successCount,
                 summary.failureCount
@@ -498,4 +507,29 @@ private fun formatEpoch(epochMillis: Long): String {
     return formatter.format(
         Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).toLocalDateTime()
     )
+}
+
+private fun qosEngineStateLabelRes(state: QosExecutionEngineState): Int {
+    return when (state) {
+        QosExecutionEngineState.READY -> R.string.performance_qos_engine_state_ready
+        QosExecutionEngineState.PREFLIGHT_BLOCKED -> R.string.performance_qos_engine_state_preflight_blocked
+        QosExecutionEngineState.RUNNING -> R.string.performance_qos_engine_state_running
+        QosExecutionEngineState.PAUSED -> R.string.performance_qos_engine_state_paused
+        QosExecutionEngineState.RESUMED -> R.string.performance_qos_engine_state_resumed
+        QosExecutionEngineState.COMPLETED -> R.string.performance_qos_engine_state_completed
+        QosExecutionEngineState.FAILED -> R.string.performance_qos_engine_state_failed
+        QosExecutionEngineState.BLOCKED -> R.string.performance_qos_engine_state_blocked
+    }
+}
+
+private fun qosTestFamilyLabelRes(family: QosTestFamily): Int {
+    return when (family) {
+        QosTestFamily.THROUGHPUT_LATENCY -> R.string.qos_test_family_throughput_latency
+        QosTestFamily.VIDEO_STREAMING -> R.string.qos_test_family_video_streaming
+        QosTestFamily.SMS -> R.string.qos_test_family_sms
+        QosTestFamily.VOLTE_CALL -> R.string.qos_test_family_volte_call
+        QosTestFamily.CSFB_CALL -> R.string.qos_test_family_csfb_call
+        QosTestFamily.EMERGENCY_CALL -> R.string.qos_test_family_emergency_call
+        QosTestFamily.STANDARD_CALL -> R.string.qos_test_family_standard_call
+    }
 }

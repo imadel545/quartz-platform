@@ -79,6 +79,9 @@ data class QosReportClosureProjection(
     val testFamilies: Set<QosTestFamily> = emptySet(),
     val familyExecutionResults: List<QosFamilyExecutionResult> = emptyList(),
     val executionTimelineEvents: List<QosExecutionTimelineEvent> = emptyList(),
+    val executionEngineState: QosExecutionEngineState = QosExecutionEngineState.READY,
+    val activeFamily: QosTestFamily? = null,
+    val activeRepetitionIndex: Int? = null,
     val targetTechnology: String?,
     val iterationCount: Int,
     val successCount: Int,
@@ -119,6 +122,9 @@ data class QosReportClosureProjection(
             event.eventType == QosExecutionEventType.BLOCKED
         }
 
+    val plannedRunCount: Int
+        get() = selectedFamilyCount * requiredRepeatCount
+
     val familiesMeetingRequiredRepeatCount: Int
         get() = testFamilies.count { family ->
             executionTimelineEvents.count { event ->
@@ -127,4 +133,7 @@ data class QosReportClosureProjection(
                         event.eventType == QosExecutionEventType.FAILED)
             } >= requiredRepeatCount
         }
+
+    val pendingRunCount: Int
+        get() = (plannedRunCount - passFailRunCount - blockedRunCount).coerceAtLeast(0)
 }

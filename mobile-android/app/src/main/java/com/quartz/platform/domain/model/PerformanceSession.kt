@@ -31,6 +31,8 @@ enum class QosFamilyExecutionStatus {
 
 enum class QosExecutionEventType {
     STARTED,
+    PAUSED,
+    RESUMED,
     PASSED,
     FAILED,
     BLOCKED

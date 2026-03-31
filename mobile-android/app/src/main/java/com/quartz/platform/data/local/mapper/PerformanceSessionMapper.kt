@@ -17,6 +17,7 @@ import com.quartz.platform.domain.model.PerformanceWorkflowType
 import com.quartz.platform.domain.model.QosRunSummary
 import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ThroughputMetrics
+import com.quartz.platform.domain.model.qosExecutionEventSortOrder
 
 fun PerformanceSessionEntity.toDomain(
     steps: List<PerformanceStepEntity>,
@@ -95,7 +96,7 @@ fun PerformanceSessionEntity.toDomain(
                 }.thenBy { event ->
                     event.repetitionIndex
                 }.thenBy { event ->
-                    event.eventType.name
+                    qosExecutionEventSortOrder(event.eventType)
                 }
             ),
             targetTechnology = qosTargetTechnology,

@@ -34,6 +34,7 @@ The roadmap prioritizes:
   - QoS finalization cycle 2 hardening: script snapshot integrity (configured technologies + snapshot timestamp) and family-specific closure constraints (failure reason, phone target, technology alignment)
   - QoS report review hardening: per-family review details in draft and stronger family coverage/failure triage in list
   - QoS finalization cycle 3 hardening: persisted family timeline evidence, shared completion-assessment rule source, and stronger report triage signals (blocked/timeline coverage)
+  - QoS finalization cycle 4 hardening: explicit execution-engine state projection, pause/resume timeline semantics, deterministic run-plan coverage, and persisted runner-progress updates for stronger interruption/recovery integrity
   - shared workflow/session core reused by multiple guided flows
   - local report-draft continuity with typed provenance
   - workflow-typed closure projection in report draft flow for XFeeder/RET local review

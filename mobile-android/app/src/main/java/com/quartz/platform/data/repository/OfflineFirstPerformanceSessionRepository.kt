@@ -22,6 +22,7 @@ import com.quartz.platform.domain.model.QosExecutionTimelineEvent
 import com.quartz.platform.domain.model.QosRunSummary
 import com.quartz.platform.domain.model.ThroughputMetrics
 import com.quartz.platform.domain.model.assessQosCompletion
+import com.quartz.platform.domain.model.qosExecutionEventSortOrder
 import com.quartz.platform.domain.model.workflow.WorkflowCompletionGuard
 import com.quartz.platform.domain.repository.PerformanceSessionRepository
 import java.util.UUID
@@ -352,7 +353,7 @@ private fun sanitizeTimelineEventsForPersistence(
                 compareBy<QosExecutionTimelineEvent> { event -> event.occurredAtEpochMillis }
                     .thenBy { event -> event.family.name }
                     .thenBy { event -> event.repetitionIndex }
-                    .thenBy { event -> event.eventType.name }
+                    .thenBy { event -> qosExecutionEventSortOrder(event.eventType) }
             )
     }
 

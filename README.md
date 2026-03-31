@@ -33,6 +33,8 @@ quartz-platform/
   - QoS script launch snapshot integrity is local-first: configured technologies and script snapshot timestamp are persisted in session closure data
   - QoS family-specific closure checks require phone target for call/SMS families, failure reason on failed families, and target-technology alignment with script configuration
   - QoS execution timeline is now persisted locally per selected family (`STARTED`, `PASSED`, `FAILED`, `BLOCKED`) for deterministic closure auditability
+  - QoS execution engine now exposes explicit runtime states (`READY`, `PREFLIGHT_BLOCKED`, `RUNNING`, `PAUSED`, `RESUMED`, `COMPLETED`, `FAILED`, `BLOCKED`) with deterministic transition-driven projection
+  - QoS runner now tracks a structured local run plan per family/repetition and persists runner progress updates during execution to strengthen interruption/recovery behavior
   - QoS completion assessment is centralized in shared domain logic (single rule source reused by repository + ViewModel)
   - Débit/QoS closure projection in local reports:
     - ReportDraft reviewer panel now includes typed performance closure data (throughput and QoS script sessions)
@@ -48,6 +50,6 @@ quartz-platform/
 - Backend sync transport and auth/session integration
 - Full drive mode / GPS trace automation
 - RET telecom automation engines
-- QoS execution engine and scripts runtime
+- Telecom-grade QoS execution automation and modem/OEM orchestration
 
 Use `mobile-android/README.md` for Android setup/run details and operational quality-gate commands.

@@ -38,10 +38,14 @@ import com.quartz.platform.domain.model.PerformanceStepCode
 import com.quartz.platform.domain.model.PerformanceStepStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
 import com.quartz.platform.domain.model.QosCompletionIssue
+import com.quartz.platform.domain.model.QosExecutionEngineState
+import com.quartz.platform.domain.model.QosExecutionSnapshot
 import com.quartz.platform.domain.model.QosFamilyRunCoverage
 import com.quartz.platform.domain.model.QosPreflightIssue
 import com.quartz.platform.domain.model.QosExecutionEventType
 import com.quartz.platform.domain.model.QosExecutionTimelineEvent
+import com.quartz.platform.domain.model.QosRunPlanItem
+import com.quartz.platform.domain.model.QosRunPlanItemStatus
 import com.quartz.platform.domain.model.QosScriptDefinition
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosTestFamily
@@ -91,6 +95,8 @@ fun PerformanceSessionRoute(
         onQosScriptEditorFamilyToggled = viewModel::onQosScriptEditorFamilyToggled,
         onSaveQosScriptClicked = viewModel::onSaveQosScriptClicked,
         onQosRunnerStartClicked = viewModel::onQosRunnerStartClicked,
+        onQosRunnerPauseClicked = viewModel::onQosRunnerPauseClicked,
+        onQosRunnerResumeClicked = viewModel::onQosRunnerResumeClicked,
         onQosRunnerPassClicked = viewModel::onQosRunnerPassClicked,
         onQosRunnerFailClicked = viewModel::onQosRunnerFailClicked,
         onQosRunnerBlockClicked = viewModel::onQosRunnerBlockClicked,
@@ -136,6 +142,8 @@ fun PerformanceSessionScreen(
     onQosScriptEditorFamilyToggled: (QosTestFamily) -> Unit,
     onSaveQosScriptClicked: () -> Unit,
     onQosRunnerStartClicked: (QosTestFamily) -> Unit,
+    onQosRunnerPauseClicked: (QosTestFamily) -> Unit,
+    onQosRunnerResumeClicked: (QosTestFamily) -> Unit,
     onQosRunnerPassClicked: (QosTestFamily) -> Unit,
     onQosRunnerFailClicked: (QosTestFamily) -> Unit,
     onQosRunnerBlockClicked: (QosTestFamily) -> Unit,
@@ -302,6 +310,8 @@ fun PerformanceSessionScreen(
                                 familyStatusByType = state.qosFamilyStatusByType,
                                 familyFailureReasonByType = state.qosFamilyFailureReasonByType,
                                 runCoverageByType = state.qosFamilyRunCoverageByType,
+                                runPlan = state.qosRunPlan,
+                                executionSnapshot = state.qosExecutionSnapshot,
                                 preflightIssuesByFamily = state.qosPreflightIssuesByFamily,
                                 timelineEvents = state.qosExecutionTimelineEvents,
                                 completionIssues = state.qosCompletionIssues,
@@ -319,6 +329,8 @@ fun PerformanceSessionScreen(
                                 onQosScriptEditorFamilyToggled = onQosScriptEditorFamilyToggled,
                                 onSaveQosScriptClicked = onSaveQosScriptClicked,
                                 onQosRunnerStartClicked = onQosRunnerStartClicked,
+                                onQosRunnerPauseClicked = onQosRunnerPauseClicked,
+                                onQosRunnerResumeClicked = onQosRunnerResumeClicked,
                                 onQosRunnerPassClicked = onQosRunnerPassClicked,
                                 onQosRunnerFailClicked = onQosRunnerFailClicked,
                                 onQosRunnerBlockClicked = onQosRunnerBlockClicked,
@@ -748,6 +760,8 @@ private fun QosPanel(
     familyStatusByType: Map<QosTestFamily, QosFamilyExecutionStatus>,
     familyFailureReasonByType: Map<QosTestFamily, String>,
     runCoverageByType: Map<QosTestFamily, QosFamilyRunCoverage>,
+    runPlan: List<QosRunPlanItem>,
+    executionSnapshot: QosExecutionSnapshot?,
     preflightIssuesByFamily: Map<QosTestFamily, Set<QosPreflightIssue>>,
     timelineEvents: List<QosExecutionTimelineEvent>,
     completionIssues: Set<QosCompletionIssue>,
@@ -765,6 +779,8 @@ private fun QosPanel(
     onQosScriptEditorFamilyToggled: (QosTestFamily) -> Unit,
     onSaveQosScriptClicked: () -> Unit,
     onQosRunnerStartClicked: (QosTestFamily) -> Unit,
+    onQosRunnerPauseClicked: (QosTestFamily) -> Unit,
+    onQosRunnerResumeClicked: (QosTestFamily) -> Unit,
     onQosRunnerPassClicked: (QosTestFamily) -> Unit,
     onQosRunnerFailClicked: (QosTestFamily) -> Unit,
     onQosRunnerBlockClicked: (QosTestFamily) -> Unit,
@@ -840,6 +856,64 @@ private fun QosPanel(
                 text = stringResource(R.string.performance_header_qos_family_execution),
                 style = MaterialTheme.typography.titleSmall
             )
+            executionSnapshot?.let { snapshot ->
+                Text(
+                    text = stringResource(
+                        R.string.performance_label_qos_engine_state,
+                        stringResource(qosExecutionEngineStateLabelRes(snapshot.engineState))
+                    ),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = stringResource(
+                        R.string.performance_label_qos_engine_progress,
+                        snapshot.plannedRunCount,
+                        snapshot.pendingRunCount,
+                        snapshot.runningRunCount,
+                        snapshot.pausedRunCount,
+                        snapshot.failedRunCount,
+                        snapshot.blockedRunCount
+                    ),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                snapshot.activeFamily?.let { activeFamily ->
+                    Text(
+                        text = stringResource(
+                            R.string.performance_label_qos_engine_active_run,
+                            stringResource(qosTestFamilyLabelRes(activeFamily)),
+                            snapshot.activeRepetitionIndex ?: 1
+                        ),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+            if (runPlan.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.performance_header_qos_run_plan),
+                    style = MaterialTheme.typography.titleSmall
+                )
+                runPlan.take(10).forEach { run ->
+                    Text(
+                        text = stringResource(
+                            R.string.performance_label_qos_run_plan_line,
+                            stringResource(qosTestFamilyLabelRes(run.family)),
+                            run.repetitionIndex,
+                            stringResource(qosRunPlanStatusLabelRes(run.status))
+                        ),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                val hiddenRunCount = runPlan.size - 10
+                if (hiddenRunCount > 0) {
+                    Text(
+                        text = stringResource(
+                            R.string.performance_label_qos_run_plan_more,
+                            hiddenRunCount
+                        ),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
             if (showCompletionIssues && completionIssues.isNotEmpty()) {
                 Text(
                     text = stringResource(R.string.performance_header_qos_preflight_issues),
@@ -906,15 +980,27 @@ private fun QosPanel(
                     }
                     OutlinedButton(
                         modifier = Modifier.weight(1f),
-                        onClick = { onQosRunnerPassClicked(family) }
+                        onClick = { onQosRunnerPauseClicked(family) }
                     ) {
-                        Text(stringResource(R.string.performance_action_qos_runner_pass))
+                        Text(stringResource(R.string.performance_action_qos_runner_pause))
+                    }
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = { onQosRunnerResumeClicked(family) }
+                    ) {
+                        Text(stringResource(R.string.performance_action_qos_runner_resume))
                     }
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = { onQosRunnerPassClicked(family) }
+                    ) {
+                        Text(stringResource(R.string.performance_action_qos_runner_pass))
+                    }
                     OutlinedButton(
                         modifier = Modifier.weight(1f),
                         onClick = { onQosRunnerFailClicked(family) }
@@ -1109,6 +1195,8 @@ private fun qosFamilyExecutionStatusLabelRes(status: QosFamilyExecutionStatus): 
 private fun qosExecutionEventTypeLabelRes(eventType: QosExecutionEventType): Int {
     return when (eventType) {
         QosExecutionEventType.STARTED -> R.string.performance_qos_event_started
+        QosExecutionEventType.PAUSED -> R.string.performance_qos_event_paused
+        QosExecutionEventType.RESUMED -> R.string.performance_qos_event_resumed
         QosExecutionEventType.PASSED -> R.string.performance_qos_family_status_passed
         QosExecutionEventType.FAILED -> R.string.performance_qos_family_status_failed
         QosExecutionEventType.BLOCKED -> R.string.performance_qos_family_status_blocked
@@ -1136,7 +1224,34 @@ private fun qosPreflightIssueLabelRes(issue: QosPreflightIssue): Int {
         QosPreflightIssue.PHONE_TARGET_MISSING -> R.string.error_performance_qos_issue_phone_target_missing
         QosPreflightIssue.TARGET_TECHNOLOGY_INVALID -> R.string.error_performance_qos_issue_target_technology_invalid
         QosPreflightIssue.REPETITION_ALREADY_STARTED -> R.string.error_performance_qos_issue_repetition_already_started
+        QosPreflightIssue.REPETITION_ALREADY_COMPLETED -> R.string.error_performance_qos_issue_repetition_coverage_incomplete
+        QosPreflightIssue.ANOTHER_REPETITION_ACTIVE -> R.string.error_performance_qos_issue_another_repetition_active
         QosPreflightIssue.REPETITION_NOT_STARTED -> R.string.error_performance_qos_issue_repetition_not_started
+        QosPreflightIssue.REPETITION_NOT_PAUSED -> R.string.error_performance_qos_issue_repetition_not_paused
         QosPreflightIssue.FAILURE_REASON_REQUIRED -> R.string.error_performance_qos_issue_failure_reason_missing
+    }
+}
+
+private fun qosExecutionEngineStateLabelRes(state: QosExecutionEngineState): Int {
+    return when (state) {
+        QosExecutionEngineState.READY -> R.string.performance_qos_engine_state_ready
+        QosExecutionEngineState.PREFLIGHT_BLOCKED -> R.string.performance_qos_engine_state_preflight_blocked
+        QosExecutionEngineState.RUNNING -> R.string.performance_qos_engine_state_running
+        QosExecutionEngineState.PAUSED -> R.string.performance_qos_engine_state_paused
+        QosExecutionEngineState.RESUMED -> R.string.performance_qos_engine_state_resumed
+        QosExecutionEngineState.COMPLETED -> R.string.performance_qos_engine_state_completed
+        QosExecutionEngineState.FAILED -> R.string.performance_qos_engine_state_failed
+        QosExecutionEngineState.BLOCKED -> R.string.performance_qos_engine_state_blocked
+    }
+}
+
+private fun qosRunPlanStatusLabelRes(status: QosRunPlanItemStatus): Int {
+    return when (status) {
+        QosRunPlanItemStatus.PENDING -> R.string.performance_qos_run_plan_status_pending
+        QosRunPlanItemStatus.RUNNING -> R.string.performance_qos_run_plan_status_running
+        QosRunPlanItemStatus.PAUSED -> R.string.performance_qos_run_plan_status_paused
+        QosRunPlanItemStatus.PASSED -> R.string.performance_qos_run_plan_status_passed
+        QosRunPlanItemStatus.FAILED -> R.string.performance_qos_run_plan_status_failed
+        QosRunPlanItemStatus.BLOCKED -> R.string.performance_qos_run_plan_status_blocked
     }
 }

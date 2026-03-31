@@ -200,7 +200,11 @@ For bounded site-level performance workflows (Débit/QoS foundation), local sess
 - workflow type (`THROUGHPUT`, `QOS_SCRIPT`)
 - QoS test families (`THROUGHPUT_LATENCY`, `VIDEO_STREAMING`, `SMS`, `VOLTE_CALL`, `CSFB_CALL`, `EMERGENCY_CALL`, `STANDARD_CALL`)
 - QoS family execution evidence per selected family with explicit status (`NOT_RUN`, `PASSED`, `FAILED`, `BLOCKED`)
-- QoS timeline evidence per selected family with typed events (`STARTED`, `PASSED`, `FAILED`, `BLOCKED`) and timestamped occurrence
+- QoS timeline evidence per selected family with typed events (`STARTED`, `PAUSED`, `RESUMED`, `PASSED`, `FAILED`, `BLOCKED`) and timestamped occurrence
+- QoS execution-engine projection derived deterministically from timeline/family evidence:
+  - explicit runtime state (`READY`, `PREFLIGHT_BLOCKED`, `RUNNING`, `PAUSED`, `RESUMED`, `COMPLETED`, `FAILED`, `BLOCKED`)
+  - active family and repetition index
+  - run-plan coverage (`planned`, `pending`, terminal counters)
 - script snapshot context captured at execution time:
   - configured technologies set
   - script snapshot timestamp
@@ -208,6 +212,7 @@ For bounded site-level performance workflows (Débit/QoS foundation), local sess
 - structured throughput metrics and thresholds
 - structured QoS script execution summary
 - required step progression and completion guard
+- runner progress persistence during execution updates to preserve local truth across interruption/restart paths
 - completion invariant for `QOS_SCRIPT` closure:
   - selected families present
   - selected families covered by completed family evidence

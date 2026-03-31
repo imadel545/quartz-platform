@@ -18,12 +18,17 @@ enum class QosPreflightIssue {
     PHONE_TARGET_MISSING,
     TARGET_TECHNOLOGY_INVALID,
     REPETITION_ALREADY_STARTED,
+    REPETITION_ALREADY_COMPLETED,
+    ANOTHER_REPETITION_ACTIVE,
     REPETITION_NOT_STARTED,
+    REPETITION_NOT_PAUSED,
     FAILURE_REASON_REQUIRED
 }
 
 enum class QosRunnerAction {
     START,
+    PAUSE,
+    RESUME,
     MARK_PASSED,
     MARK_FAILED,
     MARK_BLOCKED
@@ -110,30 +115,10 @@ fun assessQosCompletion(qosRunSummary: QosRunSummary): QosCompletionAssessment {
         }
     }
 
-    val timelinePassedCount = qosRunSummary.executionTimelineEvents.count { event ->
-        event.eventType == QosExecutionEventType.PASSED
-    }
-    val timelineFailedCount = qosRunSummary.executionTimelineEvents.count { event ->
-        event.eventType == QosExecutionEventType.FAILED
-    }
-    val passedCount = if (timelinePassedCount + timelineFailedCount > 0) {
-        timelinePassedCount
-    } else {
-        selectedResults.count { (_, result) ->
-            result?.status == QosFamilyExecutionStatus.PASSED
-        }
-    }
-    val failedCount = if (timelinePassedCount + timelineFailedCount > 0) {
-        timelineFailedCount
-    } else {
-        selectedResults.count { (_, result) ->
-            result?.status == QosFamilyExecutionStatus.FAILED
-        }
-    }
-    val completedCount = passedCount + failedCount
-    if (qosRunSummary.successCount != passedCount ||
-        qosRunSummary.failureCount != failedCount ||
-        qosRunSummary.iterationCount != completedCount
+    val counters = deriveQosPassFailCounters(qosRunSummary)
+    if (qosRunSummary.successCount != counters.successCount ||
+        qosRunSummary.failureCount != counters.failureCount ||
+        qosRunSummary.iterationCount != counters.iterationCount
     ) {
         issues += QosCompletionIssue.COUNTERS_INCONSISTENT
     }
@@ -150,7 +135,7 @@ fun computeQosFamilyRunCoverage(
         .sortedWith(
             compareBy<QosExecutionTimelineEvent> { event -> event.repetitionIndex }
                 .thenBy { event -> event.occurredAtEpochMillis }
-        .thenBy { event -> event.eventType.name }
+                .thenBy { event -> qosExecutionEventSortOrder(event.eventType) }
         )
 
     val legacyStatus = qosRunSummary.familyExecutionResults.firstOrNull { result ->
@@ -177,6 +162,8 @@ fun computeQosFamilyRunCoverage(
     events.forEach { event ->
         when (event.eventType) {
             QosExecutionEventType.STARTED -> startedRepetitionIndexes += event.repetitionIndex
+            QosExecutionEventType.PAUSED -> Unit
+            QosExecutionEventType.RESUMED -> Unit
             QosExecutionEventType.PASSED -> {
                 terminalRepetitionIndexes += event.repetitionIndex
                 passedCount += 1
@@ -236,10 +223,39 @@ fun assessQosFamilyPreflight(
     }
 
     val coverage = computeQosFamilyRunCoverage(qosRunSummary, family)
+    val activeRun = deriveQosExecutionSnapshot(
+        qosRunSummary = qosRunSummary,
+        preconditionsReady = preconditionsReady
+    )
     when (action) {
         QosRunnerAction.START -> {
             if (coverage.activeRepetitionIndex != null) {
                 issues += QosPreflightIssue.REPETITION_ALREADY_STARTED
+            }
+            if (coverage.passFailTerminalCount >= coverage.requiredRepetitions) {
+                issues += QosPreflightIssue.REPETITION_ALREADY_COMPLETED
+            }
+            if (
+                activeRun.activeFamily != null &&
+                activeRun.activeRepetitionIndex != null &&
+                activeRun.activeFamily != family
+            ) {
+                issues += QosPreflightIssue.ANOTHER_REPETITION_ACTIVE
+            }
+        }
+        QosRunnerAction.PAUSE -> {
+            if (coverage.activeRepetitionIndex == null) {
+                issues += QosPreflightIssue.REPETITION_NOT_STARTED
+            }
+        }
+        QosRunnerAction.RESUME -> {
+            val hasPausedRun = computeQosRunPlan(qosRunSummary)
+                .any { run ->
+                    run.family == family &&
+                        run.status == QosRunPlanItemStatus.PAUSED
+                }
+            if (!hasPausedRun) {
+                issues += QosPreflightIssue.REPETITION_NOT_PAUSED
             }
         }
         QosRunnerAction.MARK_PASSED -> {

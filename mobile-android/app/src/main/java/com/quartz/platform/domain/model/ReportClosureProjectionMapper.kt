@@ -58,6 +58,10 @@ fun PerformanceSession.toReportClosureProjection(): ReportClosureProjection {
         }
 
         PerformanceWorkflowType.QOS_SCRIPT -> {
+            val snapshot = deriveQosExecutionSnapshot(
+                qosRunSummary = qosRunSummary,
+                preconditionsReady = preconditionsReady
+            )
             QosReportClosureProjection(
                 sessionId = id,
                 siteId = siteId,
@@ -73,6 +77,9 @@ fun PerformanceSession.toReportClosureProjection(): ReportClosureProjection {
                 testFamilies = qosRunSummary.selectedTestFamilies,
                 familyExecutionResults = qosRunSummary.familyExecutionResults,
                 executionTimelineEvents = qosRunSummary.executionTimelineEvents,
+                executionEngineState = snapshot.engineState,
+                activeFamily = snapshot.activeFamily,
+                activeRepetitionIndex = snapshot.activeRepetitionIndex,
                 targetTechnology = qosRunSummary.targetTechnology,
                 iterationCount = qosRunSummary.iterationCount,
                 successCount = qosRunSummary.successCount,

@@ -28,6 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
 import com.quartz.platform.data.remote.simulation.SyncSimulationMode
 import com.quartz.platform.domain.model.QosExecutionEventType
+import com.quartz.platform.domain.model.QosExecutionEngineState
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosReportClosureProjection
 import com.quartz.platform.domain.model.QosTestFamily
@@ -615,6 +616,31 @@ private fun QosClosureProjectionContent(
         ),
         style = MaterialTheme.typography.bodySmall
     )
+    Text(
+        text = stringResource(
+            R.string.report_closure_performance_qos_engine_state,
+            stringResource(qosEngineStateLabelRes(projection.executionEngineState))
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    projection.activeFamily?.let { activeFamily ->
+        Text(
+            text = stringResource(
+                R.string.report_closure_performance_qos_active_run,
+                stringResource(qosTestFamilyLabelRes(activeFamily)),
+                projection.activeRepetitionIndex ?: 1
+            ),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    Text(
+        text = stringResource(
+            R.string.report_closure_performance_qos_plan_progress,
+            projection.plannedRunCount,
+            projection.pendingRunCount
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
     if (projection.executionTimelineEvents.isNotEmpty()) {
         Text(
             text = stringResource(R.string.report_closure_performance_qos_timeline_header),
@@ -909,9 +935,24 @@ private fun qosFamilyExecutionStatusLabelRes(status: QosFamilyExecutionStatus): 
 private fun qosExecutionEventTypeLabelRes(eventType: QosExecutionEventType): Int {
     return when (eventType) {
         QosExecutionEventType.STARTED -> R.string.performance_qos_event_started
+        QosExecutionEventType.PAUSED -> R.string.performance_qos_event_paused
+        QosExecutionEventType.RESUMED -> R.string.performance_qos_event_resumed
         QosExecutionEventType.PASSED -> R.string.performance_qos_family_status_passed
         QosExecutionEventType.FAILED -> R.string.performance_qos_family_status_failed
         QosExecutionEventType.BLOCKED -> R.string.performance_qos_family_status_blocked
+    }
+}
+
+private fun qosEngineStateLabelRes(state: QosExecutionEngineState): Int {
+    return when (state) {
+        QosExecutionEngineState.READY -> R.string.performance_qos_engine_state_ready
+        QosExecutionEngineState.PREFLIGHT_BLOCKED -> R.string.performance_qos_engine_state_preflight_blocked
+        QosExecutionEngineState.RUNNING -> R.string.performance_qos_engine_state_running
+        QosExecutionEngineState.PAUSED -> R.string.performance_qos_engine_state_paused
+        QosExecutionEngineState.RESUMED -> R.string.performance_qos_engine_state_resumed
+        QosExecutionEngineState.COMPLETED -> R.string.performance_qos_engine_state_completed
+        QosExecutionEngineState.FAILED -> R.string.performance_qos_engine_state_failed
+        QosExecutionEngineState.BLOCKED -> R.string.performance_qos_engine_state_blocked
     }
 }
 
