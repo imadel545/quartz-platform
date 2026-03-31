@@ -42,6 +42,18 @@ class UpsertQosScriptUseCaseTest {
             testFamilies = emptySet()
         )
     }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `upsert rejects empty technology set when families are selected`() = runTest {
+        val useCase = UpsertQosScriptUseCase(FakeQosScriptRepository())
+        useCase(
+            id = null,
+            name = "Script QoS",
+            repeatCount = 1,
+            targetTechnologies = emptySet(),
+            testFamilies = setOf(QosTestFamily.SMS)
+        )
+    }
 }
 
 private class FakeQosScriptRepository : QosScriptRepository {
@@ -58,4 +70,3 @@ private class FakeQosScriptRepository : QosScriptRepository {
 
     override suspend fun archive(scriptId: String) = Unit
 }
-

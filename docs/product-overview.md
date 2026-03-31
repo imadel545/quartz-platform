@@ -76,9 +76,16 @@ The mobile application must support structured field sessions with:
 Current validated guided-session coverage includes XFeeder and RET shells with local persistence/resume, completion guards, and report-draft continuity. XFeeder proximity handling is altitude-aware with explicit local reference-altitude provenance (technical default vs operator override vs unavailable), while remaining intentionally bounded (no full telecom automation claims).
 Current validated performance coverage also includes a bounded local-first Débit/QoS foundation (site-level guided sessions, prerequisites, structured result capture, and local session history) without claiming final telecom automation.
 The QoS shell now includes typed test families aligned with the manual (`THROUGHPUT_LATENCY`, `VIDEO_STREAMING`, `SMS`, `VOLTE_CALL`, `CSFB_CALL`, `EMERGENCY_CALL`, `STANDARD_CALL`) and a local script definition layer (create/edit/configure/select) persisted in Room.
+QoS session execution now captures bounded per-family evidence with explicit status (`NOT_RUN`, `PASSED`, `FAILED`, `BLOCKED`) and keeps aggregate execution counters coherent with that family-level evidence at completion time.
+QoS session closure now enforces bounded family-specific execution rules for reviewer trust:
+- failed family requires explicit failure reason,
+- selected call/SMS families require target phone number,
+- target technology must align with configured script technologies when present.
+QoS script launch context is persisted as a local snapshot (configured technologies + snapshot timestamp) for deterministic review of what was actually executed.
 Current validated local reporting now includes bounded Débit/QoS closure review projection:
 - ReportDraft shows typed performance closure signals (workflow type, execution state, required-step progress, prerequisites, and implemented metrics/results).
-- ReportList may expose a concise performance triage summary for non-guided drafts when a local performance closure exists.
+- ReportDraft includes concise per-family QoS execution review for supervisor/operator readability.
+- ReportList exposes a concise performance triage summary for non-guided drafts, including family coverage/failure signal for QoS sessions.
 - Performance sessions can now open-or-create a linked local report draft with explicit `PERFORMANCE` provenance for continuity and supervisor review.
 
 ### 4. Throughput and QoS testing

@@ -30,6 +30,9 @@ The roadmap prioritizes:
   - bounded Débit/QoS closure projection into local report flows (review in draft + triage signal in list)
   - Débit/QoS report-draft continuity from session context (open existing linked draft or create with `PERFORMANCE` provenance)
   - typed QoS test-family model aligned with Quartz manual and persisted local QoS script shell (create/edit/configure/select)
+  - QoS Phase 2 hardening: per-family execution evidence persisted per session + completion guard coherence rules
+  - QoS finalization cycle 2 hardening: script snapshot integrity (configured technologies + snapshot timestamp) and family-specific closure constraints (failure reason, phone target, technology alignment)
+  - QoS report review hardening: per-family review details in draft and stronger family coverage/failure triage in list
   - shared workflow/session core reused by multiple guided flows
   - local report-draft continuity with typed provenance
   - workflow-typed closure projection in report draft flow for XFeeder/RET local review

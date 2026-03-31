@@ -12,6 +12,8 @@ import com.quartz.platform.domain.model.PerformanceStepStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
 import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.model.QosRunSummary
+import com.quartz.platform.domain.model.QosFamilyExecutionResult
+import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ThroughputMetrics
 import com.quartz.platform.domain.usecase.CreateSitePerformanceSessionUseCase
@@ -240,21 +242,33 @@ class PerformanceSessionViewModel @Inject constructor(
     fun onQosScriptSelected(scriptId: String, scriptName: String) {
         val script = mutableState.value.availableQosScripts.firstOrNull { it.id == scriptId }
         mutableState.update { state ->
-            state.copy(
+            val selectedFamilies = script?.testFamilies.orEmpty()
+            val defaultStatuses = selectedFamilies.associateWith { family ->
+                state.qosFamilyStatusByType[family] ?: QosFamilyExecutionStatus.NOT_RUN
+            }
+            val defaultReasons = selectedFamilies.associateWith { family ->
+                state.qosFamilyFailureReasonByType[family].orEmpty()
+            }
+            deriveQosExecutionAggregate(
+                state.copy(
                 qosSelectedScriptId = scriptId,
                 qosSelectedScriptName = scriptName,
-                qosSelectedTestFamilies = script?.testFamilies.orEmpty(),
+                qosSelectedTestFamilies = selectedFamilies,
                 qosConfiguredRepeatInput = script?.repeatCount?.toString().orEmpty(),
+                qosConfiguredTechnologies = script?.targetTechnologies.orEmpty(),
+                qosScriptSnapshotUpdatedAtEpochMillis = script?.updatedAtEpochMillis,
                 qosScriptEditorNameInput = script?.name.orEmpty(),
                 qosScriptEditorRepeatInput = script?.repeatCount?.toString() ?: state.qosScriptEditorRepeatInput,
                 qosScriptEditorTechnologiesInput = script?.targetTechnologies?.joinToString(", ").orEmpty(),
                 qosScriptEditorSelectedFamilies = script?.testFamilies.orEmpty(),
+                qosFamilyStatusByType = defaultStatuses,
+                qosFamilyFailureReasonByType = defaultReasons,
                 qosTargetTechnologyInput = script?.targetTechnologies?.firstOrNull().orEmpty(),
-                qosIterationCountInput = script?.repeatCount?.toString() ?: state.qosIterationCountInput,
                 hasUnsavedChanges = true,
                 completionGuardMessage = null,
                 errorMessage = null,
                 infoMessage = null
+                )
             )
         }
     }
@@ -318,15 +332,27 @@ class PerformanceSessionViewModel @Inject constructor(
                 }
             }.onSuccess { script ->
                 mutableState.update { state ->
-                    state.copy(
+                    val nextStatuses = script.testFamilies.associateWith { family ->
+                        state.qosFamilyStatusByType[family] ?: QosFamilyExecutionStatus.NOT_RUN
+                    }
+                    val nextReasons = script.testFamilies.associateWith { family ->
+                        state.qosFamilyFailureReasonByType[family].orEmpty()
+                    }
+                    deriveQosExecutionAggregate(
+                        state.copy(
                         isSavingQosScript = false,
                         qosSelectedScriptId = script.id,
                         qosSelectedScriptName = script.name,
                         qosSelectedTestFamilies = script.testFamilies,
                         qosConfiguredRepeatInput = script.repeatCount.toString(),
+                        qosConfiguredTechnologies = script.targetTechnologies,
+                        qosScriptSnapshotUpdatedAtEpochMillis = script.updatedAtEpochMillis,
+                        qosFamilyStatusByType = nextStatuses,
+                        qosFamilyFailureReasonByType = nextReasons,
                         qosTargetTechnologyInput = script.targetTechnologies.firstOrNull().orEmpty(),
                         infoMessage = uiStrings.get(R.string.info_performance_saved_qos_script),
                         errorMessage = null
+                        )
                     )
                 }
             }
@@ -338,6 +364,30 @@ class PerformanceSessionViewModel @Inject constructor(
     fun onQosIterationCountChanged(value: String) = updateField { copy(qosIterationCountInput = sanitizeInteger(value)) }
     fun onQosSuccessCountChanged(value: String) = updateField { copy(qosSuccessCountInput = sanitizeInteger(value)) }
     fun onQosFailureCountChanged(value: String) = updateField { copy(qosFailureCountInput = sanitizeInteger(value)) }
+    fun onQosFamilyStatusSelected(family: QosTestFamily, status: QosFamilyExecutionStatus) {
+        updateField {
+            val nextStatusMap = qosFamilyStatusByType + (family to status)
+            val nextReasonMap = if (status == QosFamilyExecutionStatus.PASSED || status == QosFamilyExecutionStatus.NOT_RUN) {
+                qosFamilyFailureReasonByType - family
+            } else {
+                qosFamilyFailureReasonByType
+            }
+            deriveQosExecutionAggregate(
+                copy(
+                    qosFamilyStatusByType = nextStatusMap,
+                    qosFamilyFailureReasonByType = nextReasonMap
+                )
+            )
+        }
+    }
+
+    fun onQosFamilyFailureReasonChanged(family: QosTestFamily, value: String) {
+        updateField {
+            copy(
+                qosFamilyFailureReasonByType = qosFamilyFailureReasonByType + (family to value)
+            )
+        }
+    }
     fun onNotesChanged(value: String) = updateField { copy(notesInput = value) }
     fun onResultSummaryChanged(value: String) = updateField { copy(resultSummaryInput = value) }
 
@@ -370,13 +420,58 @@ class PerformanceSessionViewModel @Inject constructor(
                 }
 
                 PerformanceWorkflowType.QOS_SCRIPT -> {
+                    val selectedFamilyResults = qosSummary.familyExecutionResults
+                        .filter { result -> result.family in qosSummary.selectedTestFamilies }
+                    val missingCompletedFamily = selectedFamilyResults.any { result ->
+                        result.status != QosFamilyExecutionStatus.PASSED &&
+                            result.status != QosFamilyExecutionStatus.FAILED
+                    }
+                    val missingFailedReason = selectedFamilyResults.any { result ->
+                        result.status == QosFamilyExecutionStatus.FAILED &&
+                            result.failureReason.isNullOrBlank()
+                    }
+                    val requiresPhoneTarget = qosSummary.selectedTestFamilies.any { family ->
+                        family in PHONE_REQUIRED_QOS_FAMILIES
+                    }
+                    val hasInvalidTargetTechnology = qosSummary.configuredTechnologies.isNotEmpty() &&
+                        (qosSummary.targetTechnology == null ||
+                            qosSummary.targetTechnology !in qosSummary.configuredTechnologies)
                     if (
                         qosSummary.scriptId.isNullOrBlank() ||
                         qosSummary.scriptName.isNullOrBlank() ||
-                        qosSummary.selectedTestFamilies.isEmpty()
+                        qosSummary.selectedTestFamilies.isEmpty() ||
+                        missingCompletedFamily
                     ) {
                         mutableState.update { state ->
                             state.copy(errorMessage = uiStrings.get(R.string.error_performance_qos_script_required))
+                        }
+                        return
+                    }
+                    if (missingFailedReason) {
+                        mutableState.update { state ->
+                            state.copy(errorMessage = uiStrings.get(R.string.error_performance_qos_failed_reason_required))
+                        }
+                        return
+                    }
+                    if (requiresPhoneTarget && qosSummary.targetPhoneNumber.isNullOrBlank()) {
+                        mutableState.update { state ->
+                            state.copy(errorMessage = uiStrings.get(R.string.error_performance_qos_phone_required))
+                        }
+                        return
+                    }
+                    if (hasInvalidTargetTechnology) {
+                        mutableState.update { state ->
+                            state.copy(errorMessage = uiStrings.get(R.string.error_performance_qos_target_technology_required))
+                        }
+                        return
+                    }
+                    if (
+                        qosSummary.iterationCount != selectedFamilyResults.size ||
+                        qosSummary.successCount != selectedFamilyResults.count { it.status == QosFamilyExecutionStatus.PASSED } ||
+                        qosSummary.failureCount != selectedFamilyResults.count { it.status == QosFamilyExecutionStatus.FAILED }
+                    ) {
+                        mutableState.update { state ->
+                            state.copy(errorMessage = uiStrings.get(R.string.error_performance_qos_result_inconsistent))
                         }
                         return
                     }
@@ -572,10 +667,14 @@ class PerformanceSessionViewModel @Inject constructor(
                 qosSelectedScriptName = null,
                 qosSelectedTestFamilies = emptySet(),
                 qosConfiguredRepeatInput = "",
+                qosConfiguredTechnologies = emptySet(),
+                qosScriptSnapshotUpdatedAtEpochMillis = null,
                 qosScriptEditorNameInput = "",
                 qosScriptEditorRepeatInput = "1",
                 qosScriptEditorTechnologiesInput = "",
                 qosScriptEditorSelectedFamilies = emptySet(),
+                qosFamilyStatusByType = emptyMap(),
+                qosFamilyFailureReasonByType = emptyMap(),
                 qosTargetTechnologyInput = "",
                 qosTargetPhoneInput = "",
                 qosIterationCountInput = "",
@@ -605,10 +704,17 @@ class PerformanceSessionViewModel @Inject constructor(
             qosSelectedScriptName = session.qosRunSummary.scriptName,
             qosSelectedTestFamilies = session.qosRunSummary.selectedTestFamilies,
             qosConfiguredRepeatInput = session.qosRunSummary.configuredRepeatCount?.toString().orEmpty(),
+            qosConfiguredTechnologies = session.qosRunSummary.configuredTechnologies,
+            qosScriptSnapshotUpdatedAtEpochMillis = session.qosRunSummary.scriptSnapshotUpdatedAtEpochMillis,
             qosScriptEditorNameInput = session.qosRunSummary.scriptName.orEmpty(),
             qosScriptEditorRepeatInput = session.qosRunSummary.configuredRepeatCount?.toString() ?: "1",
-            qosScriptEditorTechnologiesInput = session.qosRunSummary.targetTechnology.orEmpty(),
+            qosScriptEditorTechnologiesInput = session.qosRunSummary.configuredTechnologies
+                .joinToString(", "),
             qosScriptEditorSelectedFamilies = session.qosRunSummary.selectedTestFamilies,
+            qosFamilyStatusByType = session.qosRunSummary.familyExecutionResults
+                .associate { result -> result.family to result.status },
+            qosFamilyFailureReasonByType = session.qosRunSummary.familyExecutionResults
+                .associate { result -> result.family to (result.failureReason.orEmpty()) },
             qosTargetTechnologyInput = session.qosRunSummary.targetTechnology.orEmpty(),
             qosTargetPhoneInput = session.qosRunSummary.targetPhoneNumber.orEmpty(),
             qosIterationCountInput = session.qosRunSummary.iterationCount.toString(),
@@ -669,33 +775,38 @@ class PerformanceSessionViewModel @Inject constructor(
     }
 
     private fun parseQosRunSummary(state: PerformanceSessionUiState): QosRunSummary? {
-        val iterations = parseOptionalInt(
-            value = state.qosIterationCountInput,
-            errorRes = R.string.error_performance_invalid_integer
-        ) ?: return null
-        val success = parseOptionalInt(
-            value = state.qosSuccessCountInput,
-            errorRes = R.string.error_performance_invalid_integer
-        ) ?: return null
-        val failure = parseOptionalInt(
-            value = state.qosFailureCountInput,
-            errorRes = R.string.error_performance_invalid_integer
-        ) ?: return null
         val configuredRepeat = parseOptionalInt(
             value = state.qosConfiguredRepeatInput,
             errorRes = R.string.error_performance_invalid_integer
         )
 
+        val snapshotFamilies = state.qosSelectedTestFamilies
+        val familyResults = snapshotFamilies.map { family ->
+            QosFamilyExecutionResult(
+                family = family,
+                status = state.qosFamilyStatusByType[family] ?: QosFamilyExecutionStatus.NOT_RUN,
+                failureReason = state.qosFamilyFailureReasonByType[family]
+                    ?.trim()
+                    ?.takeIf { value -> value.isNotBlank() }
+            )
+        }.sortedBy { result -> result.family.name }
+        val passedCount = familyResults.count { result -> result.status == QosFamilyExecutionStatus.PASSED }
+        val failedCount = familyResults.count { result -> result.status == QosFamilyExecutionStatus.FAILED }
+        val completedCount = passedCount + failedCount
+
         return QosRunSummary(
             scriptId = state.qosSelectedScriptId,
             scriptName = state.qosSelectedScriptName,
-            configuredRepeatCount = (configuredRepeat ?: iterations ?: 1).coerceAtLeast(1),
-            selectedTestFamilies = state.qosSelectedTestFamilies,
+            configuredRepeatCount = (configuredRepeat ?: 1).coerceAtLeast(1),
+            configuredTechnologies = state.qosConfiguredTechnologies,
+            scriptSnapshotUpdatedAtEpochMillis = state.qosScriptSnapshotUpdatedAtEpochMillis,
+            selectedTestFamilies = snapshotFamilies,
+            familyExecutionResults = familyResults,
             targetTechnology = state.qosTargetTechnologyInput.trim().ifBlank { null },
             targetPhoneNumber = state.qosTargetPhoneInput.trim().ifBlank { null },
-            iterationCount = iterations ?: 0,
-            successCount = success ?: 0,
-            failureCount = failure ?: 0
+            iterationCount = completedCount,
+            successCount = passedCount,
+            failureCount = failedCount
         )
     }
 
@@ -741,9 +852,33 @@ class PerformanceSessionViewModel @Inject constructor(
     }
 }
 
+private fun deriveQosExecutionAggregate(state: PerformanceSessionUiState): PerformanceSessionUiState {
+    val selectedFamilies = state.qosSelectedTestFamilies
+    val passedCount = selectedFamilies.count { family ->
+        state.qosFamilyStatusByType[family] == QosFamilyExecutionStatus.PASSED
+    }
+    val failedCount = selectedFamilies.count { family ->
+        state.qosFamilyStatusByType[family] == QosFamilyExecutionStatus.FAILED
+    }
+    val completedCount = passedCount + failedCount
+    return state.copy(
+        qosIterationCountInput = completedCount.toString(),
+        qosSuccessCountInput = passedCount.toString(),
+        qosFailureCountInput = failedCount.toString()
+    )
+}
+
 private fun <T> Set<T>.toggle(item: T): Set<T> {
     return if (contains(item)) this - item else this + item
 }
+
+private val PHONE_REQUIRED_QOS_FAMILIES: Set<QosTestFamily> = setOf(
+    QosTestFamily.SMS,
+    QosTestFamily.VOLTE_CALL,
+    QosTestFamily.CSFB_CALL,
+    QosTestFamily.EMERGENCY_CALL,
+    QosTestFamily.STANDARD_CALL
+)
 
 sealed interface PerformanceSessionEvent {
     data class OpenDraft(val draftId: String) : PerformanceSessionEvent

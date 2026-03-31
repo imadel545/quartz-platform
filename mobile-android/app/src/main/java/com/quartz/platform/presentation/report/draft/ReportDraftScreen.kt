@@ -27,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
 import com.quartz.platform.data.remote.simulation.SyncSimulationMode
+import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosReportClosureProjection
 import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ReportClosureProjection
@@ -536,6 +537,24 @@ private fun QosClosureProjectionContent(
             style = MaterialTheme.typography.bodySmall
         )
     }
+    if (projection.configuredTechnologies.isNotEmpty()) {
+        Text(
+            text = stringResource(
+                R.string.report_closure_performance_qos_configured_technologies,
+                projection.configuredTechnologies.sorted().joinToString(", ")
+            ),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    projection.scriptSnapshotUpdatedAtEpochMillis?.let { snapshotAt ->
+        Text(
+            text = stringResource(
+                R.string.report_closure_performance_qos_script_snapshot_at,
+                formatEpoch(snapshotAt)
+            ),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
     if (projection.testFamilies.isNotEmpty()) {
         val familyLabels = buildList {
             for (family in projection.testFamilies) {
@@ -555,6 +574,34 @@ private fun QosClosureProjectionContent(
             text = stringResource(R.string.report_closure_performance_qos_target_technology, technology),
             style = MaterialTheme.typography.bodySmall
         )
+        if (projection.configuredTechnologies.isNotEmpty() && technology !in projection.configuredTechnologies) {
+            Text(
+                text = stringResource(R.string.report_closure_performance_qos_target_technology_mismatch),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+    }
+    if (projection.familyExecutionResults.isNotEmpty()) {
+        Text(
+            text = stringResource(R.string.report_closure_performance_qos_family_results_header),
+            style = MaterialTheme.typography.bodySmall
+        )
+        projection.familyExecutionResults
+            .sortedBy { result -> result.family.name }
+            .forEach { result ->
+                val line = stringResource(
+                    R.string.report_closure_performance_qos_family_result_line,
+                    stringResource(qosTestFamilyLabelRes(result.family)),
+                    stringResource(qosFamilyExecutionStatusLabelRes(result.status))
+                )
+                Text(
+                    text = result.failureReason?.takeIf { it.isNotBlank() }?.let { reason ->
+                        "$line (${stringResource(R.string.label_failure_reason, reason)})"
+                    } ?: line,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
     }
     Text(
         text = stringResource(
@@ -792,6 +839,15 @@ private fun qosTestFamilyLabelRes(family: QosTestFamily): Int {
         QosTestFamily.CSFB_CALL -> R.string.qos_test_family_csfb_call
         QosTestFamily.EMERGENCY_CALL -> R.string.qos_test_family_emergency_call
         QosTestFamily.STANDARD_CALL -> R.string.qos_test_family_standard_call
+    }
+}
+
+private fun qosFamilyExecutionStatusLabelRes(status: QosFamilyExecutionStatus): Int {
+    return when (status) {
+        QosFamilyExecutionStatus.NOT_RUN -> R.string.performance_qos_family_status_not_run
+        QosFamilyExecutionStatus.PASSED -> R.string.performance_qos_family_status_passed
+        QosFamilyExecutionStatus.FAILED -> R.string.performance_qos_family_status_failed
+        QosFamilyExecutionStatus.BLOCKED -> R.string.performance_qos_family_status_blocked
     }
 }
 

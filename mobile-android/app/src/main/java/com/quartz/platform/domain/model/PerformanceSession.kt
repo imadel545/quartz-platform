@@ -22,6 +22,25 @@ enum class QosTestFamily {
     STANDARD_CALL
 }
 
+enum class QosFamilyExecutionStatus {
+    NOT_RUN,
+    PASSED,
+    FAILED,
+    BLOCKED
+}
+
+data class QosFamilyExecutionResult(
+    val family: QosTestFamily,
+    val status: QosFamilyExecutionStatus,
+    val failureReason: String? = null,
+    val observedLatencyMs: Int? = null,
+    val observedDownloadMbps: Double? = null,
+    val observedUploadMbps: Double? = null
+) {
+    val isCompleted: Boolean
+        get() = status == QosFamilyExecutionStatus.PASSED || status == QosFamilyExecutionStatus.FAILED
+}
+
 typealias PerformanceSessionStatus = WorkflowSessionStatus
 typealias PerformanceStepStatus = WorkflowStepStatus
 typealias PerformanceGuidedStep = WorkflowStepState<PerformanceStepCode>
@@ -49,7 +68,10 @@ data class QosRunSummary(
     val scriptId: String? = null,
     val scriptName: String? = null,
     val configuredRepeatCount: Int? = null,
+    val configuredTechnologies: Set<String> = emptySet(),
+    val scriptSnapshotUpdatedAtEpochMillis: Long? = null,
     val selectedTestFamilies: Set<QosTestFamily> = emptySet(),
+    val familyExecutionResults: List<QosFamilyExecutionResult> = emptyList(),
     val targetTechnology: String? = null,
     val targetPhoneNumber: String? = null,
     val iterationCount: Int = 0,

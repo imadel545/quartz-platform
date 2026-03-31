@@ -74,7 +74,10 @@ data class QosReportClosureProjection(
     val completedRequiredStepCount: Int,
     val scriptName: String?,
     val configuredRepeatCount: Int? = null,
+    val configuredTechnologies: Set<String> = emptySet(),
+    val scriptSnapshotUpdatedAtEpochMillis: Long? = null,
     val testFamilies: Set<QosTestFamily> = emptySet(),
+    val familyExecutionResults: List<QosFamilyExecutionResult> = emptyList(),
     val targetTechnology: String?,
     val iterationCount: Int,
     val successCount: Int,
@@ -85,4 +88,13 @@ data class QosReportClosureProjection(
     override val sectorId: String? = null
     override val sectorCode: String? = null
     override val workflowType: ReportDraftOriginWorkflowType = ReportDraftOriginWorkflowType.PERFORMANCE
+
+    val selectedFamilyCount: Int
+        get() = testFamilies.size
+
+    val completedFamilyCount: Int
+        get() = familyExecutionResults.count { result -> result.isCompleted }
+
+    val failedFamilyCount: Int
+        get() = familyExecutionResults.count { result -> result.status == QosFamilyExecutionStatus.FAILED }
 }

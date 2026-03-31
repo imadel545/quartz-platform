@@ -118,6 +118,9 @@ class ObserveSiteReportListUseCase @Inject constructor(
                     }
 
                     is QosReportClosureProjection -> {
+                        val targetTechnologyAligned = matched.targetTechnology.isNullOrBlank() ||
+                            matched.configuredTechnologies.isEmpty() ||
+                            matched.targetTechnology in matched.configuredTechnologies
                         ReportListClosureSummary.Qos(
                             sessionStatus = matched.sessionStatus,
                             preconditionsReady = matched.preconditionsReady,
@@ -125,7 +128,12 @@ class ObserveSiteReportListUseCase @Inject constructor(
                             completedRequiredStepCount = matched.completedRequiredStepCount,
                             scriptName = matched.scriptName,
                             configuredRepeatCount = matched.configuredRepeatCount,
-                            testFamilyCount = matched.testFamilies.size,
+                            targetTechnology = matched.targetTechnology,
+                            configuredTechnologyCount = matched.configuredTechnologies.size,
+                            targetTechnologyAligned = targetTechnologyAligned,
+                            testFamilyCount = matched.selectedFamilyCount,
+                            completedFamilyCount = matched.completedFamilyCount,
+                            failedFamilyCount = matched.failedFamilyCount,
                             iterationCount = matched.iterationCount,
                             successCount = matched.successCount,
                             failureCount = matched.failureCount
@@ -162,6 +170,9 @@ class ObserveSiteReportListUseCase @Inject constructor(
             }
 
             is QosReportClosureProjection -> {
+                val targetTechnologyAligned = latestPerformanceProjection.targetTechnology.isNullOrBlank() ||
+                    latestPerformanceProjection.configuredTechnologies.isEmpty() ||
+                    latestPerformanceProjection.targetTechnology in latestPerformanceProjection.configuredTechnologies
                 ReportListClosureSummary.Qos(
                     sessionStatus = latestPerformanceProjection.sessionStatus,
                     preconditionsReady = latestPerformanceProjection.preconditionsReady,
@@ -169,7 +180,12 @@ class ObserveSiteReportListUseCase @Inject constructor(
                     completedRequiredStepCount = latestPerformanceProjection.completedRequiredStepCount,
                     scriptName = latestPerformanceProjection.scriptName,
                     configuredRepeatCount = latestPerformanceProjection.configuredRepeatCount,
-                    testFamilyCount = latestPerformanceProjection.testFamilies.size,
+                    targetTechnology = latestPerformanceProjection.targetTechnology,
+                    configuredTechnologyCount = latestPerformanceProjection.configuredTechnologies.size,
+                    targetTechnologyAligned = targetTechnologyAligned,
+                    testFamilyCount = latestPerformanceProjection.selectedFamilyCount,
+                    completedFamilyCount = latestPerformanceProjection.completedFamilyCount,
+                    failedFamilyCount = latestPerformanceProjection.failedFamilyCount,
                     iterationCount = latestPerformanceProjection.iterationCount,
                     successCount = latestPerformanceProjection.successCount,
                     failureCount = latestPerformanceProjection.failureCount

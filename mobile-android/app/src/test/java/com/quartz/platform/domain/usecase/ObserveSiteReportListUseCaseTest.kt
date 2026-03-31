@@ -6,7 +6,10 @@ import com.quartz.platform.domain.model.PerformanceSessionStatus
 import com.quartz.platform.domain.model.PerformanceStepCode
 import com.quartz.platform.domain.model.PerformanceStepStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
+import com.quartz.platform.domain.model.QosFamilyExecutionResult
+import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosRunSummary
+import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ReportDraft
 import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.model.RetClosureProjection
@@ -308,8 +311,25 @@ class ObserveSiteReportListUseCaseTest {
                             qosRunSummary = QosRunSummary(
                                 scriptId = "qos-1",
                                 scriptName = "Latence + Débit",
-                                iterationCount = 10,
-                                successCount = 9,
+                                configuredTechnologies = setOf("4G", "5G"),
+                                selectedTestFamilies = setOf(
+                                    QosTestFamily.SMS,
+                                    QosTestFamily.VOLTE_CALL
+                                ),
+                                familyExecutionResults = listOf(
+                                    QosFamilyExecutionResult(
+                                        family = QosTestFamily.SMS,
+                                        status = QosFamilyExecutionStatus.PASSED
+                                    ),
+                                    QosFamilyExecutionResult(
+                                        family = QosTestFamily.VOLTE_CALL,
+                                        status = QosFamilyExecutionStatus.FAILED,
+                                        failureReason = "No ack"
+                                    )
+                                ),
+                                targetTechnology = "4G",
+                                iterationCount = 2,
+                                successCount = 1,
                                 failureCount = 1
                             ),
                             notes = "",
@@ -339,6 +359,13 @@ class ObserveSiteReportListUseCaseTest {
         assertThat(items).hasSize(1)
         assertThat(items.first().closureSummary)
             .isInstanceOf(com.quartz.platform.domain.model.ReportListClosureSummary.Qos::class.java)
+        val qosSummary = items.first().closureSummary as com.quartz.platform.domain.model.ReportListClosureSummary.Qos
+        assertThat(qosSummary.testFamilyCount).isEqualTo(2)
+        assertThat(qosSummary.completedFamilyCount).isEqualTo(2)
+        assertThat(qosSummary.failedFamilyCount).isEqualTo(1)
+        assertThat(qosSummary.targetTechnology).isEqualTo("4G")
+        assertThat(qosSummary.configuredTechnologyCount).isEqualTo(2)
+        assertThat(qosSummary.targetTechnologyAligned).isTrue()
     }
 
     private class FakeReportDraftRepository(

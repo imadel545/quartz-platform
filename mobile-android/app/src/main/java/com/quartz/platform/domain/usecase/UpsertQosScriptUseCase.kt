@@ -25,6 +25,7 @@ class UpsertQosScriptUseCase @Inject constructor(
             .map { value -> value.trim() }
             .filter { value -> value.isNotBlank() }
             .toSet()
+        require(sanitizedTechnologies.isNotEmpty()) { "Sélectionnez au moins une technologie cible pour le script QoS." }
 
         val now = System.currentTimeMillis()
         val existing = id?.let { scriptId -> repository.getById(scriptId) }
@@ -41,4 +42,3 @@ class UpsertQosScriptUseCase @Inject constructor(
         return repository.upsert(next)
     }
 }
-

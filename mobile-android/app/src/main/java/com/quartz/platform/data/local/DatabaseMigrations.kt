@@ -747,4 +747,57 @@ object DatabaseMigrations {
             )
         }
     }
+
+    val MIGRATION_17_18: Migration = object : Migration(17, 18) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS performance_qos_family_results (
+                    sessionId TEXT NOT NULL,
+                    family TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    failureReason TEXT,
+                    observedLatencyMs INTEGER,
+                    observedDownloadMbps REAL,
+                    observedUploadMbps REAL,
+                    updatedAtEpochMillis INTEGER NOT NULL,
+                    PRIMARY KEY(sessionId, family),
+                    FOREIGN KEY(sessionId) REFERENCES performance_sessions(id) ON DELETE CASCADE
+                )
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_performance_qos_family_results_sessionId
+                ON performance_qos_family_results(sessionId)
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_performance_qos_family_results_sessionId_updatedAtEpochMillis
+                ON performance_qos_family_results(sessionId, updatedAtEpochMillis)
+                """.trimIndent()
+            )
+        }
+    }
+
+    val MIGRATION_18_19: Migration = object : Migration(18, 19) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                ALTER TABLE performance_sessions
+                ADD COLUMN qosConfiguredTechnologiesCsv TEXT NOT NULL DEFAULT ''
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                ALTER TABLE performance_sessions
+                ADD COLUMN qosScriptSnapshotUpdatedAtEpochMillis INTEGER
+                """.trimIndent()
+            )
+        }
+    }
 }

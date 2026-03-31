@@ -1,7 +1,10 @@
 package com.quartz.platform.data.local.mapper
 
+import com.quartz.platform.data.local.entity.PerformanceQosFamilyResultEntity
 import com.quartz.platform.data.local.entity.PerformanceSessionEntity
 import com.quartz.platform.data.local.entity.PerformanceStepEntity
+import com.quartz.platform.domain.model.QosFamilyExecutionResult
+import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.PerformanceGuidedStep
 import com.quartz.platform.domain.model.PerformanceSession
 import com.quartz.platform.domain.model.PerformanceSessionStatus
@@ -12,7 +15,10 @@ import com.quartz.platform.domain.model.QosRunSummary
 import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ThroughputMetrics
 
-fun PerformanceSessionEntity.toDomain(steps: List<PerformanceStepEntity>): PerformanceSession {
+fun PerformanceSessionEntity.toDomain(
+    steps: List<PerformanceStepEntity>,
+    familyResults: List<PerformanceQosFamilyResultEntity>
+): PerformanceSession {
     return PerformanceSession(
         id = id,
         siteId = siteId,
@@ -40,11 +46,31 @@ fun PerformanceSessionEntity.toDomain(steps: List<PerformanceStepEntity>): Perfo
             scriptId = qosScriptId,
             scriptName = qosScriptName,
             configuredRepeatCount = qosConfiguredRepeatCount,
+            configuredTechnologies = qosConfiguredTechnologiesCsv.split(',')
+                .map { value -> value.trim() }
+                .filter { value -> value.isNotBlank() }
+                .sorted()
+                .toCollection(linkedSetOf()),
+            scriptSnapshotUpdatedAtEpochMillis = qosScriptSnapshotUpdatedAtEpochMillis,
             selectedTestFamilies = qosTestFamiliesCsv.split(',')
                 .map { value -> value.trim() }
                 .filter { value -> value.isNotBlank() }
                 .mapNotNull { raw -> runCatching { QosTestFamily.valueOf(raw) }.getOrNull() }
-                .toSet(),
+                .sortedBy { family -> family.name }
+                .toCollection(linkedSetOf()),
+            familyExecutionResults = familyResults.mapNotNull { result ->
+                val family = runCatching { QosTestFamily.valueOf(result.family) }.getOrNull()
+                    ?: return@mapNotNull null
+                QosFamilyExecutionResult(
+                    family = family,
+                    status = runCatching { QosFamilyExecutionStatus.valueOf(result.status) }
+                        .getOrDefault(QosFamilyExecutionStatus.NOT_RUN),
+                    failureReason = result.failureReason,
+                    observedLatencyMs = result.observedLatencyMs,
+                    observedDownloadMbps = result.observedDownloadMbps,
+                    observedUploadMbps = result.observedUploadMbps
+                )
+            }.sortedBy { result -> result.family.name },
             targetTechnology = qosTargetTechnology,
             targetPhoneNumber = qosTargetPhoneNumber,
             iterationCount = qosIterationCount,
@@ -65,6 +91,22 @@ fun PerformanceSessionEntity.toDomain(steps: List<PerformanceStepEntity>): Perfo
                 }.getOrDefault(PerformanceStepStatus.TODO)
             )
         }
+    )
+}
+
+fun QosFamilyExecutionResult.toEntity(
+    sessionId: String,
+    updatedAtEpochMillis: Long
+): PerformanceQosFamilyResultEntity {
+    return PerformanceQosFamilyResultEntity(
+        sessionId = sessionId,
+        family = family.name,
+        status = status.name,
+        failureReason = failureReason?.trim()?.takeIf { value -> value.isNotBlank() },
+        observedLatencyMs = observedLatencyMs,
+        observedDownloadMbps = observedDownloadMbps,
+        observedUploadMbps = observedUploadMbps,
+        updatedAtEpochMillis = updatedAtEpochMillis
     )
 }
 
@@ -89,6 +131,12 @@ fun PerformanceSession.toEntity(): PerformanceSessionEntity {
         qosScriptId = qosRunSummary.scriptId,
         qosScriptName = qosRunSummary.scriptName,
         qosConfiguredRepeatCount = qosRunSummary.configuredRepeatCount,
+        qosConfiguredTechnologiesCsv = qosRunSummary.configuredTechnologies
+            .map { technology -> technology.trim() }
+            .filter { technology -> technology.isNotBlank() }
+            .toSortedSet()
+            .joinToString(","),
+        qosScriptSnapshotUpdatedAtEpochMillis = qosRunSummary.scriptSnapshotUpdatedAtEpochMillis,
         qosTestFamiliesCsv = qosRunSummary.selectedTestFamilies
             .map { family -> family.name }
             .sorted()

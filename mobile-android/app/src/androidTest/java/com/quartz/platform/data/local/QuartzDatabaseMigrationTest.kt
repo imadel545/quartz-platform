@@ -501,6 +501,167 @@ class QuartzDatabaseMigrationTest {
 
         migrated.close()
     }
+
+    @Test
+    fun migration_17_18_adds_qos_family_results_table_with_indexes() {
+        val dbName = "quartz-migration-17-18-test"
+
+        migrationTestHelper.createDatabase(dbName, 17).apply {
+            insertPerformanceSessionV17(
+                id = "perf-qos-1",
+                siteId = "site-1",
+                workflowType = "QOS_SCRIPT"
+            )
+            close()
+        }
+
+        val migrated = migrationTestHelper.runMigrationsAndValidate(
+            dbName,
+            18,
+            true,
+            DatabaseMigrations.MIGRATION_17_18
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM sqlite_master
+                WHERE type = 'table'
+                  AND name = 'performance_qos_family_results'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM sqlite_master
+                WHERE type = 'index'
+                  AND name = 'index_performance_qos_family_results_sessionId'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM sqlite_master
+                WHERE type = 'index'
+                  AND name = 'index_performance_qos_family_results_sessionId_updatedAtEpochMillis'
+                """.trimIndent()
+            )
+        )
+
+        migrated.execSQL(
+            """
+            INSERT INTO performance_qos_family_results(
+                sessionId,
+                family,
+                status,
+                failureReason,
+                observedLatencyMs,
+                observedDownloadMbps,
+                observedUploadMbps,
+                updatedAtEpochMillis
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+            arrayOf("perf-qos-1", "SMS", "PASSED", null, 120, 20.5, 10.2, 200L)
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM performance_qos_family_results
+                WHERE sessionId = 'perf-qos-1' AND family = 'SMS' AND status = 'PASSED'
+                """.trimIndent()
+            )
+        )
+
+        val duplicateInsert = runCatching {
+            migrated.execSQL(
+                """
+                INSERT INTO performance_qos_family_results(
+                    sessionId,
+                    family,
+                    status,
+                    failureReason,
+                    observedLatencyMs,
+                    observedDownloadMbps,
+                    observedUploadMbps,
+                    updatedAtEpochMillis
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """.trimIndent(),
+                arrayOf("perf-qos-1", "SMS", "FAILED", "duplicate", null, null, null, 300L)
+            )
+        }
+        assertNotNull(duplicateInsert.exceptionOrNull())
+
+        migrated.close()
+    }
+
+    @Test
+    fun migration_18_19_adds_qos_script_snapshot_columns() {
+        val dbName = "quartz-migration-18-19-test"
+
+        migrationTestHelper.createDatabase(dbName, 18).apply {
+            insertPerformanceSessionV17(
+                id = "perf-qos-18",
+                siteId = "site-1",
+                workflowType = "QOS_SCRIPT"
+            )
+            close()
+        }
+
+        val migrated = migrationTestHelper.runMigrationsAndValidate(
+            dbName,
+            19,
+            true,
+            DatabaseMigrations.MIGRATION_18_19
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM pragma_table_info('performance_sessions')
+                WHERE name = 'qosConfiguredTechnologiesCsv'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM pragma_table_info('performance_sessions')
+                WHERE name = 'qosScriptSnapshotUpdatedAtEpochMillis'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            "",
+            migrated.stringQuery(
+                """
+                SELECT qosConfiguredTechnologiesCsv
+                FROM performance_sessions
+                WHERE id = 'perf-qos-18'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM performance_sessions
+                WHERE id = 'perf-qos-18'
+                  AND qosScriptSnapshotUpdatedAtEpochMillis IS NULL
+                """.trimIndent()
+            )
+        )
+
+        migrated.close()
+    }
 }
 
 private fun SupportSQLiteDatabase.insertDraft(
@@ -750,6 +911,81 @@ private fun SupportSQLiteDatabase.insertRetSession(
             "S0",
             "CREATED",
             "NOT_RUN",
+            "",
+            "",
+            100L,
+            100L,
+            null
+        )
+    )
+}
+
+private fun SupportSQLiteDatabase.insertPerformanceSessionV17(
+    id: String,
+    siteId: String,
+    workflowType: String
+) {
+    execSQL(
+        """
+        INSERT INTO performance_sessions(
+            id,
+            siteId,
+            siteCode,
+            workflowType,
+            operatorName,
+            technology,
+            status,
+            prerequisiteNetworkReady,
+            prerequisiteBatterySufficient,
+            prerequisiteLocationReady,
+            throughputDownloadMbps,
+            throughputUploadMbps,
+            throughputLatencyMs,
+            throughputMinDownloadMbps,
+            throughputMinUploadMbps,
+            throughputMaxLatencyMs,
+            qosScriptId,
+            qosScriptName,
+            qosConfiguredRepeatCount,
+            qosTestFamiliesCsv,
+            qosTargetTechnology,
+            qosTargetPhoneNumber,
+            qosIterationCount,
+            qosSuccessCount,
+            qosFailureCount,
+            notes,
+            resultSummary,
+            createdAtEpochMillis,
+            updatedAtEpochMillis,
+            completedAtEpochMillis
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """.trimIndent(),
+        arrayOf(
+            id,
+            siteId,
+            "SITE-1",
+            workflowType,
+            null,
+            null,
+            "IN_PROGRESS",
+            1,
+            1,
+            1,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            "qos-script-latency-throughput",
+            "Latence + Débit",
+            1,
+            "THROUGHPUT_LATENCY",
+            "4G",
+            null,
+            0,
+            0,
+            0,
             "",
             "",
             100L,

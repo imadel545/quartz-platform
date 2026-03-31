@@ -25,10 +25,23 @@ class ReportClosureProjectionMapperPerformanceTest {
                 scriptId = "script-1",
                 scriptName = "QoS Voice",
                 configuredRepeatCount = 3,
+                configuredTechnologies = setOf("4G", "5G"),
+                scriptSnapshotUpdatedAtEpochMillis = 1234L,
                 selectedTestFamilies = setOf(QosTestFamily.SMS, QosTestFamily.VOLTE_CALL),
+                familyExecutionResults = listOf(
+                    QosFamilyExecutionResult(
+                        family = QosTestFamily.SMS,
+                        status = QosFamilyExecutionStatus.PASSED
+                    ),
+                    QosFamilyExecutionResult(
+                        family = QosTestFamily.VOLTE_CALL,
+                        status = QosFamilyExecutionStatus.FAILED,
+                        failureReason = "No carrier"
+                    )
+                ),
                 targetTechnology = "4G",
-                iterationCount = 3,
-                successCount = 2,
+                iterationCount = 2,
+                successCount = 1,
                 failureCount = 1
             ),
             notes = "",
@@ -50,7 +63,11 @@ class ReportClosureProjectionMapperPerformanceTest {
         assertThat(projection).isInstanceOf(QosReportClosureProjection::class.java)
         val qos = projection as QosReportClosureProjection
         assertThat(qos.configuredRepeatCount).isEqualTo(3)
+        assertThat(qos.configuredTechnologies).containsExactly("4G", "5G")
+        assertThat(qos.scriptSnapshotUpdatedAtEpochMillis).isEqualTo(1234L)
         assertThat(qos.testFamilies).containsExactly(QosTestFamily.SMS, QosTestFamily.VOLTE_CALL)
+        assertThat(qos.completedFamilyCount).isEqualTo(2)
+        assertThat(qos.failedFamilyCount).isEqualTo(1)
+        assertThat(qos.familyExecutionResults).hasSize(2)
     }
 }
-

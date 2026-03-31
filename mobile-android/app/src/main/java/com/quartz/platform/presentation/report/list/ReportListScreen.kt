@@ -400,7 +400,16 @@ private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
                 },
                 summary.scriptName ?: stringResource(R.string.value_not_available),
                 summary.configuredRepeatCount?.toString() ?: "-",
+                summary.targetTechnology ?: stringResource(R.string.value_not_available),
+                summary.configuredTechnologyCount,
+                if (summary.targetTechnologyAligned) {
+                    stringResource(R.string.value_yes)
+                } else {
+                    stringResource(R.string.value_no)
+                },
                 summary.testFamilyCount,
+                summary.completedFamilyCount,
+                summary.failedFamilyCount,
                 summary.iterationCount,
                 summary.successCount,
                 summary.failureCount

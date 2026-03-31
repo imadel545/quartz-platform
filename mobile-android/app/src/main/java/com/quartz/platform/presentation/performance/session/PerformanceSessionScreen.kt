@@ -16,6 +16,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -37,6 +38,7 @@ import com.quartz.platform.domain.model.PerformanceStepCode
 import com.quartz.platform.domain.model.PerformanceStepStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
 import com.quartz.platform.domain.model.QosScriptDefinition
+import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosTestFamily
 import java.time.Instant
 import java.time.ZoneId
@@ -83,6 +85,8 @@ fun PerformanceSessionRoute(
         onQosScriptEditorTechnologiesChanged = viewModel::onQosScriptEditorTechnologiesChanged,
         onQosScriptEditorFamilyToggled = viewModel::onQosScriptEditorFamilyToggled,
         onSaveQosScriptClicked = viewModel::onSaveQosScriptClicked,
+        onQosFamilyStatusSelected = viewModel::onQosFamilyStatusSelected,
+        onQosFamilyFailureReasonChanged = viewModel::onQosFamilyFailureReasonChanged,
         onQosTargetTechnologyChanged = viewModel::onQosTargetTechnologyChanged,
         onQosTargetPhoneChanged = viewModel::onQosTargetPhoneChanged,
         onQosIterationCountChanged = viewModel::onQosIterationCountChanged,
@@ -123,6 +127,8 @@ fun PerformanceSessionScreen(
     onQosScriptEditorTechnologiesChanged: (String) -> Unit,
     onQosScriptEditorFamilyToggled: (QosTestFamily) -> Unit,
     onSaveQosScriptClicked: () -> Unit,
+    onQosFamilyStatusSelected: (QosTestFamily, QosFamilyExecutionStatus) -> Unit,
+    onQosFamilyFailureReasonChanged: (QosTestFamily, String) -> Unit,
     onQosTargetTechnologyChanged: (String) -> Unit,
     onQosTargetPhoneChanged: (String) -> Unit,
     onQosIterationCountChanged: (String) -> Unit,
@@ -274,12 +280,16 @@ fun PerformanceSessionScreen(
                                 selectedScriptName = state.qosSelectedScriptName,
                                 selectedTestFamilies = state.qosSelectedTestFamilies,
                                 configuredRepeat = state.qosConfiguredRepeatInput,
+                                configuredTechnologies = state.qosConfiguredTechnologies,
+                                scriptSnapshotUpdatedAtEpochMillis = state.qosScriptSnapshotUpdatedAtEpochMillis,
                                 availableScripts = state.availableQosScripts,
                                 scriptEditorName = state.qosScriptEditorNameInput,
                                 scriptEditorRepeat = state.qosScriptEditorRepeatInput,
                                 scriptEditorTechnologies = state.qosScriptEditorTechnologiesInput,
                                 scriptEditorSelectedFamilies = state.qosScriptEditorSelectedFamilies,
                                 isSavingScript = state.isSavingQosScript,
+                                familyStatusByType = state.qosFamilyStatusByType,
+                                familyFailureReasonByType = state.qosFamilyFailureReasonByType,
                                 targetTechnology = state.qosTargetTechnologyInput,
                                 targetPhone = state.qosTargetPhoneInput,
                                 iterationCount = state.qosIterationCountInput,
@@ -292,6 +302,8 @@ fun PerformanceSessionScreen(
                                 onQosScriptEditorTechnologiesChanged = onQosScriptEditorTechnologiesChanged,
                                 onQosScriptEditorFamilyToggled = onQosScriptEditorFamilyToggled,
                                 onSaveQosScriptClicked = onSaveQosScriptClicked,
+                                onQosFamilyStatusSelected = onQosFamilyStatusSelected,
+                                onQosFamilyFailureReasonChanged = onQosFamilyFailureReasonChanged,
                                 onQosTargetTechnologyChanged = onQosTargetTechnologyChanged,
                                 onQosTargetPhoneChanged = onQosTargetPhoneChanged,
                                 onQosIterationCountChanged = onQosIterationCountChanged,
@@ -706,12 +718,16 @@ private fun QosPanel(
     selectedScriptName: String?,
     selectedTestFamilies: Set<QosTestFamily>,
     configuredRepeat: String,
+    configuredTechnologies: Set<String>,
+    scriptSnapshotUpdatedAtEpochMillis: Long?,
     availableScripts: List<QosScriptDefinition>,
     scriptEditorName: String,
     scriptEditorRepeat: String,
     scriptEditorTechnologies: String,
     scriptEditorSelectedFamilies: Set<QosTestFamily>,
     isSavingScript: Boolean,
+    familyStatusByType: Map<QosTestFamily, QosFamilyExecutionStatus>,
+    familyFailureReasonByType: Map<QosTestFamily, String>,
     targetTechnology: String,
     targetPhone: String,
     iterationCount: String,
@@ -724,6 +740,8 @@ private fun QosPanel(
     onQosScriptEditorTechnologiesChanged: (String) -> Unit,
     onQosScriptEditorFamilyToggled: (QosTestFamily) -> Unit,
     onSaveQosScriptClicked: () -> Unit,
+    onQosFamilyStatusSelected: (QosTestFamily, QosFamilyExecutionStatus) -> Unit,
+    onQosFamilyFailureReasonChanged: (QosTestFamily, String) -> Unit,
     onQosTargetTechnologyChanged: (String) -> Unit,
     onQosTargetPhoneChanged: (String) -> Unit,
     onQosIterationCountChanged: (String) -> Unit,
@@ -766,13 +784,68 @@ private fun QosPanel(
                 text = stringResource(
                     R.string.performance_label_qos_selected_test_families,
                     buildList {
-                        for (family in selectedTestFamilies) {
+                        for (family in selectedTestFamilies.sortedBy { it.name }) {
                             add(stringResource(qosTestFamilyLabelRes(family)))
                         }
                     }.joinToString(", ").ifBlank { stringResource(R.string.value_not_available) }
                 ),
                 style = MaterialTheme.typography.bodySmall
             )
+            if (configuredTechnologies.isNotEmpty()) {
+                Text(
+                    text = stringResource(
+                        R.string.performance_label_qos_configured_technologies,
+                        configuredTechnologies.sorted().joinToString(", ")
+                    ),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            scriptSnapshotUpdatedAtEpochMillis?.let { snapshotAt ->
+                Text(
+                    text = stringResource(
+                        R.string.performance_label_qos_script_snapshot_at,
+                        formatEpoch(snapshotAt)
+                    ),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Text(
+                text = stringResource(R.string.performance_header_qos_family_execution),
+                style = MaterialTheme.typography.titleSmall
+            )
+            selectedTestFamilies.sortedBy { family -> family.name }.forEach { family ->
+                val familyStatus = familyStatusByType[family] ?: QosFamilyExecutionStatus.NOT_RUN
+                Text(
+                    text = stringResource(
+                        R.string.performance_label_qos_family_status,
+                        stringResource(qosTestFamilyLabelRes(family)),
+                        stringResource(qosFamilyExecutionStatusLabelRes(familyStatus))
+                    ),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    QosFamilyExecutionStatus.entries.forEach { status ->
+                        OutlinedButton(
+                            modifier = Modifier.weight(1f),
+                            enabled = status != familyStatus,
+                            onClick = { onQosFamilyStatusSelected(family, status) }
+                        ) {
+                            Text(stringResource(qosFamilyExecutionStatusLabelRes(status)))
+                        }
+                    }
+                }
+                if (familyStatus == QosFamilyExecutionStatus.FAILED || familyStatus == QosFamilyExecutionStatus.BLOCKED) {
+                    OutlinedTextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = familyFailureReasonByType[family].orEmpty(),
+                        onValueChange = { value -> onQosFamilyFailureReasonChanged(family, value) },
+                        label = { Text(stringResource(R.string.performance_input_qos_family_failure_reason)) }
+                    )
+                }
+            }
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
                 value = configuredRepeat,
@@ -829,6 +902,17 @@ private fun QosPanel(
                 onValueChange = onQosTargetTechnologyChanged,
                 label = { Text(stringResource(R.string.performance_input_qos_target_technology)) }
             )
+            if (
+                configuredTechnologies.isNotEmpty() &&
+                targetTechnology.isNotBlank() &&
+                targetTechnology !in configuredTechnologies
+            ) {
+                Text(
+                    text = stringResource(R.string.performance_error_qos_target_technology_mismatch_inline),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
                 value = targetPhone,
@@ -841,21 +925,24 @@ private fun QosPanel(
                 value = iterationCount,
                 onValueChange = onQosIterationCountChanged,
                 label = { Text(stringResource(R.string.performance_input_qos_iteration_count)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                readOnly = true
             )
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
                 value = successCount,
                 onValueChange = onQosSuccessCountChanged,
                 label = { Text(stringResource(R.string.performance_input_qos_success_count)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                readOnly = true
             )
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
                 value = failureCount,
                 onValueChange = onQosFailureCountChanged,
                 label = { Text(stringResource(R.string.performance_input_qos_failure_count)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                readOnly = true
             )
         }
     }
@@ -877,5 +964,14 @@ private fun qosTestFamilyLabelRes(family: QosTestFamily): Int {
         QosTestFamily.CSFB_CALL -> R.string.qos_test_family_csfb_call
         QosTestFamily.EMERGENCY_CALL -> R.string.qos_test_family_emergency_call
         QosTestFamily.STANDARD_CALL -> R.string.qos_test_family_standard_call
+    }
+}
+
+private fun qosFamilyExecutionStatusLabelRes(status: QosFamilyExecutionStatus): Int {
+    return when (status) {
+        QosFamilyExecutionStatus.NOT_RUN -> R.string.performance_qos_family_status_not_run
+        QosFamilyExecutionStatus.PASSED -> R.string.performance_qos_family_status_passed
+        QosFamilyExecutionStatus.FAILED -> R.string.performance_qos_family_status_failed
+        QosFamilyExecutionStatus.BLOCKED -> R.string.performance_qos_family_status_blocked
     }
 }

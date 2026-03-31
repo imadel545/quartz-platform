@@ -40,6 +40,8 @@ data class PerformanceSessionEntity(
     val qosScriptId: String?,
     val qosScriptName: String?,
     val qosConfiguredRepeatCount: Int?,
+    val qosConfiguredTechnologiesCsv: String,
+    val qosScriptSnapshotUpdatedAtEpochMillis: Long?,
     val qosTestFamiliesCsv: String,
     val qosTargetTechnology: String?,
     val qosTargetPhoneNumber: String?,
