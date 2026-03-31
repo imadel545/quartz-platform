@@ -84,6 +84,7 @@ QoS session closure now enforces bounded family-specific execution rules for rev
 QoS script launch context is persisted as a local snapshot (configured technologies + snapshot timestamp) for deterministic review of what was actually executed.
 QoS execution now keeps a bounded local timeline per selected family (`STARTED`, `PAUSED`, `RESUMED`, `PASSED`, `FAILED`, `BLOCKED`) so operator/supervisor review can inspect execution progression without exposing raw internal session state.
 Timeline persistence is transactional (immutable event identity + ordered checkpoints), which keeps interruption/recovery evidence trustworthy when the same event type happens multiple times.
+QoS failed/blocked execution now carries typed issue taxonomy codes (bounded to what the app really knows) across runtime state, timeline, and family evidence so operators and supervisors get consistent triage semantics.
 QoS execution engine behavior is now explicit and deterministic for runtime/operator clarity:
 - engine state projection (`READY`, `PREFLIGHT_BLOCKED`, `RUNNING`, `PAUSED`, `RESUMED`, `COMPLETED`, `FAILED`, `BLOCKED`),
 - active family/repetition visibility,
@@ -94,7 +95,7 @@ Current validated local reporting now includes bounded Débit/QoS closure review
 - ReportDraft shows typed performance closure signals (workflow type, execution state, required-step progress, prerequisites, and implemented metrics/results).
 - ReportDraft includes concise per-family QoS execution review for supervisor/operator readability.
 - ReportDraft includes a bounded QoS timeline section for closure auditability.
-- ReportList exposes a concise performance triage summary for non-guided drafts, including family coverage/failure plus blocked/timeline and engine/run-plan signals for QoS sessions.
+- ReportList exposes a concise performance triage summary for non-guided drafts, including family coverage/failure plus blocked/timeline, dominant issue code, and engine/run-plan signals for QoS sessions.
 - Performance sessions can now open-or-create a linked local report draft with explicit `PERFORMANCE` provenance for continuity and supervisor review.
 
 ### 4. Throughput and QoS testing

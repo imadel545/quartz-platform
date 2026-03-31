@@ -28,6 +28,7 @@ data class PerformanceQosTimelineEventEntity(
     val family: String,
     val repetitionIndex: Int,
     val eventType: String,
+    val reasonCode: String?,
     val reason: String?,
     val occurredAtEpochMillis: Long,
     val checkpointSequence: Int

@@ -200,7 +200,9 @@ For bounded site-level performance workflows (Débit/QoS foundation), local sess
 - workflow type (`THROUGHPUT`, `QOS_SCRIPT`)
 - QoS test families (`THROUGHPUT_LATENCY`, `VIDEO_STREAMING`, `SMS`, `VOLTE_CALL`, `CSFB_CALL`, `EMERGENCY_CALL`, `STANDARD_CALL`)
 - QoS family execution evidence per selected family with explicit status (`NOT_RUN`, `PASSED`, `FAILED`, `BLOCKED`)
+- QoS family evidence includes typed failure taxonomy (`PREREQUISITE_NOT_READY`, `TARGET_TECHNOLOGY_MISMATCH`, `PHONE_TARGET_MISSING`, `NETWORK_UNAVAILABLE`, `THRESHOLD_NOT_MET`, `OPERATOR_ABORTED`, `UNKNOWN`) with optional detail text for bounded context
 - QoS timeline evidence per selected family with typed events (`STARTED`, `PAUSED`, `RESUMED`, `PASSED`, `FAILED`, `BLOCKED`) and timestamped occurrence
+- QoS timeline terminal events also carry typed issue codes for deterministic blocked/failed traceability
 - QoS timeline events are persisted transactionally with immutable event identity and sequential checkpoints to preserve repeated event types for audit/recovery
 - QoS execution-engine projection derived deterministically from timeline/family evidence:
   - explicit runtime state (`READY`, `PREFLIGHT_BLOCKED`, `RUNNING`, `PAUSED`, `RESUMED`, `COMPLETED`, `FAILED`, `BLOCKED`)
@@ -225,7 +227,7 @@ For bounded site-level performance workflows (Débit/QoS foundation), local sess
   - aggregate counters coherent with family evidence
 - bounded closure projection for local report review:
   - detailed projection in ReportDraft
-  - concise triage projection in ReportList (including QoS family coverage/failure/blocked/timeline signals)
+  - concise triage projection in ReportList (including QoS family coverage/failure/blocked/timeline signals + dominant issue code)
 - linked report-draft continuity with explicit provenance (`originWorkflowType = PERFORMANCE`, `originSessionId`).
 - local QoS script definitions persisted in Room (`qos_scripts`) with name, repeat count, technologies, and selected test families.
 

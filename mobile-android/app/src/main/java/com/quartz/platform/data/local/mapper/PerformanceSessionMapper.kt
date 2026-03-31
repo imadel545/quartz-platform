@@ -8,6 +8,7 @@ import com.quartz.platform.domain.model.QosFamilyExecutionResult
 import com.quartz.platform.domain.model.QosExecutionEventType
 import com.quartz.platform.domain.model.QosExecutionTimelineEvent
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
+import com.quartz.platform.domain.model.QosExecutionIssueCode
 import com.quartz.platform.domain.model.PerformanceGuidedStep
 import com.quartz.platform.domain.model.PerformanceSession
 import com.quartz.platform.domain.model.PerformanceSessionStatus
@@ -70,6 +71,9 @@ fun PerformanceSessionEntity.toDomain(
                     family = family,
                     status = runCatching { QosFamilyExecutionStatus.valueOf(result.status) }
                         .getOrDefault(QosFamilyExecutionStatus.NOT_RUN),
+                    failureReasonCode = result.failureReasonCode?.let { raw ->
+                        runCatching { QosExecutionIssueCode.valueOf(raw) }.getOrNull()
+                    },
                     failureReason = result.failureReason,
                     observedLatencyMs = result.observedLatencyMs,
                     observedDownloadMbps = result.observedDownloadMbps,
@@ -85,6 +89,9 @@ fun PerformanceSessionEntity.toDomain(
                     eventType = runCatching {
                         QosExecutionEventType.valueOf(event.eventType)
                     }.getOrDefault(QosExecutionEventType.STARTED),
+                    reasonCode = event.reasonCode?.let { raw ->
+                        runCatching { QosExecutionIssueCode.valueOf(raw) }.getOrNull()
+                    },
                     reason = event.reason,
                     occurredAtEpochMillis = event.occurredAtEpochMillis,
                     checkpointSequence = event.checkpointSequence
@@ -133,6 +140,7 @@ fun QosFamilyExecutionResult.toEntity(
         sessionId = sessionId,
         family = family.name,
         status = status.name,
+        failureReasonCode = failureReasonCode?.name,
         failureReason = failureReason?.trim()?.takeIf { value -> value.isNotBlank() },
         observedLatencyMs = observedLatencyMs,
         observedDownloadMbps = observedDownloadMbps,
@@ -149,6 +157,7 @@ fun QosExecutionTimelineEvent.toEntity(
         family = family.name,
         repetitionIndex = repetitionIndex.coerceAtLeast(1),
         eventType = eventType.name,
+        reasonCode = reasonCode?.name,
         reason = reason?.trim()?.takeIf { value -> value.isNotBlank() },
         occurredAtEpochMillis = occurredAtEpochMillis,
         checkpointSequence = checkpointSequence.coerceAtLeast(1)

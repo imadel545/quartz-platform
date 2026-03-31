@@ -5,7 +5,7 @@ enum class QosCompletionIssue {
     TEST_FAMILIES_MISSING,
     FAMILY_RESULT_INCOMPLETE,
     REPETITION_COVERAGE_INCOMPLETE,
-    FAILED_REASON_MISSING,
+    FAILURE_REASON_CODE_MISSING,
     PHONE_TARGET_MISSING,
     TARGET_TECHNOLOGY_INVALID,
     COUNTERS_INCONSISTENT
@@ -22,7 +22,7 @@ enum class QosPreflightIssue {
     ANOTHER_REPETITION_ACTIVE,
     REPETITION_NOT_STARTED,
     REPETITION_NOT_PAUSED,
-    FAILURE_REASON_REQUIRED
+    FAILURE_REASON_CODE_REQUIRED
 }
 
 enum class QosRunnerAction {
@@ -88,10 +88,20 @@ fun assessQosCompletion(qosRunSummary: QosRunSummary): QosCompletionAssessment {
     }
 
     if (selectedResults.any { (_, result) ->
-            result?.status == QosFamilyExecutionStatus.FAILED && result.failureReason.isNullOrBlank()
+            (result?.status == QosFamilyExecutionStatus.FAILED || result?.status == QosFamilyExecutionStatus.BLOCKED) &&
+                result.failureReasonCode == null
         }
     ) {
-        issues += QosCompletionIssue.FAILED_REASON_MISSING
+        issues += QosCompletionIssue.FAILURE_REASON_CODE_MISSING
+    }
+
+    if (selectedResults.any { (_, result) ->
+            (result?.status == QosFamilyExecutionStatus.FAILED || result?.status == QosFamilyExecutionStatus.BLOCKED) &&
+                result.failureReasonCode == QosExecutionIssueCode.UNKNOWN &&
+                result.failureReason.isNullOrBlank()
+        }
+    ) {
+        issues += QosCompletionIssue.FAILURE_REASON_CODE_MISSING
     }
 
     val timelineCoverageIncomplete = qosRunSummary.selectedTestFamilies.any { family ->
@@ -206,6 +216,7 @@ fun assessQosFamilyPreflight(
     family: QosTestFamily,
     action: QosRunnerAction,
     preconditionsReady: Boolean,
+    reasonCode: QosExecutionIssueCode?,
     failureReason: String?
 ): Set<QosPreflightIssue> {
     val issues = linkedSetOf<QosPreflightIssue>()
@@ -274,8 +285,11 @@ fun assessQosFamilyPreflight(
             if (coverage.activeRepetitionIndex == null) {
                 issues += QosPreflightIssue.REPETITION_NOT_STARTED
             }
-            if (failureReason.isNullOrBlank()) {
-                issues += QosPreflightIssue.FAILURE_REASON_REQUIRED
+            if (reasonCode == null) {
+                issues += QosPreflightIssue.FAILURE_REASON_CODE_REQUIRED
+            }
+            if (reasonCode == QosExecutionIssueCode.UNKNOWN && failureReason.isNullOrBlank()) {
+                issues += QosPreflightIssue.FAILURE_REASON_CODE_REQUIRED
             }
         }
     }

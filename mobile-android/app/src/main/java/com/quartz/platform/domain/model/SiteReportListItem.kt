@@ -52,6 +52,7 @@ sealed interface ReportListClosureSummary {
         val completedFamilyCount: Int = 0,
         val failedFamilyCount: Int = 0,
         val blockedFamilyCount: Int = 0,
+        val dominantIssueCode: QosExecutionIssueCode? = null,
         val timelineEventCount: Int = 0,
         val timelineFamilyCoverageCount: Int = 0,
         val requiredRepeatCount: Int = 1,

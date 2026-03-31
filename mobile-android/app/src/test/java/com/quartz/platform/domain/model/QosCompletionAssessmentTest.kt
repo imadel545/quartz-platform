@@ -20,6 +20,7 @@ class QosCompletionAssessmentTest {
                 QosFamilyExecutionResult(
                     family = QosTestFamily.VOLTE_CALL,
                     status = QosFamilyExecutionStatus.FAILED,
+                    failureReasonCode = QosExecutionIssueCode.NETWORK_UNAVAILABLE,
                     failureReason = "No ack"
                 )
             ),
@@ -46,6 +47,7 @@ class QosCompletionAssessmentTest {
                     family = QosTestFamily.VOLTE_CALL,
                     repetitionIndex = 1,
                     eventType = QosExecutionEventType.FAILED,
+                    reasonCode = QosExecutionIssueCode.NETWORK_UNAVAILABLE,
                     reason = "No ack",
                     occurredAtEpochMillis = 1300L
                 )
@@ -169,9 +171,44 @@ class QosCompletionAssessmentTest {
             family = QosTestFamily.THROUGHPUT_LATENCY,
             action = QosRunnerAction.MARK_PASSED,
             preconditionsReady = true,
+            reasonCode = null,
             failureReason = null
         )
 
         assertThat(issues).contains(QosPreflightIssue.REPETITION_NOT_STARTED)
+    }
+
+    @Test
+    fun `assessment reports missing failure taxonomy for failed family`() {
+        val summary = QosRunSummary(
+            scriptId = "qos-script-1",
+            scriptName = "QoS",
+            selectedTestFamilies = setOf(QosTestFamily.SMS),
+            familyExecutionResults = listOf(
+                QosFamilyExecutionResult(
+                    family = QosTestFamily.SMS,
+                    status = QosFamilyExecutionStatus.FAILED,
+                    failureReasonCode = null,
+                    failureReason = "legacy message"
+                )
+            ),
+            executionTimelineEvents = listOf(
+                QosExecutionTimelineEvent(
+                    family = QosTestFamily.SMS,
+                    repetitionIndex = 1,
+                    eventType = QosExecutionEventType.FAILED,
+                    reason = "legacy message",
+                    occurredAtEpochMillis = 2000L
+                )
+            ),
+            targetPhoneNumber = "+212600000001",
+            iterationCount = 0,
+            successCount = 0,
+            failureCount = 1
+        )
+
+        val assessment = assessQosCompletion(summary)
+
+        assertThat(assessment.issues).contains(QosCompletionIssue.FAILURE_REASON_CODE_MISSING)
     }
 }

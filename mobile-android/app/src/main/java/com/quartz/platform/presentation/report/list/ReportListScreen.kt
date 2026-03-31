@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
 import com.quartz.platform.domain.model.QosExecutionEngineState
 import com.quartz.platform.domain.model.QosRecoveryState
+import com.quartz.platform.domain.model.QosExecutionIssueCode
 import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ReportListClosureSummary
 import com.quartz.platform.domain.model.ReportSyncState
@@ -392,7 +393,7 @@ private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
         }
 
         is ReportListClosureSummary.Qos -> {
-            stringResource(
+            val baseSignal = stringResource(
                 R.string.report_list_closure_signal_performance_qos,
                 summary.completedRequiredStepCount,
                 summary.requiredStepCount,
@@ -437,6 +438,14 @@ private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
                 summary.successCount,
                 summary.failureCount
             )
+            summary.dominantIssueCode?.let { code ->
+                "$baseSignal · ${
+                    stringResource(
+                        R.string.report_list_closure_signal_performance_qos_reason,
+                        stringResource(qosIssueCodeLabelRes(code))
+                    )
+                }"
+            } ?: baseSignal
         }
     }
 
@@ -546,5 +555,17 @@ private fun qosRecoveryStateLabelRes(state: QosRecoveryState): Int {
         QosRecoveryState.NONE -> R.string.performance_qos_recovery_state_none
         QosRecoveryState.RESUME_AVAILABLE -> R.string.performance_qos_recovery_state_resume_available
         QosRecoveryState.INVARIANT_BROKEN -> R.string.performance_qos_recovery_state_invariant_broken
+    }
+}
+
+private fun qosIssueCodeLabelRes(code: QosExecutionIssueCode): Int {
+    return when (code) {
+        QosExecutionIssueCode.PREREQUISITE_NOT_READY -> R.string.qos_issue_code_prerequisite_not_ready
+        QosExecutionIssueCode.TARGET_TECHNOLOGY_MISMATCH -> R.string.qos_issue_code_target_technology_mismatch
+        QosExecutionIssueCode.PHONE_TARGET_MISSING -> R.string.qos_issue_code_phone_target_missing
+        QosExecutionIssueCode.NETWORK_UNAVAILABLE -> R.string.qos_issue_code_network_unavailable
+        QosExecutionIssueCode.THRESHOLD_NOT_MET -> R.string.qos_issue_code_threshold_not_met
+        QosExecutionIssueCode.OPERATOR_ABORTED -> R.string.qos_issue_code_operator_aborted
+        QosExecutionIssueCode.UNKNOWN -> R.string.qos_issue_code_unknown
     }
 }

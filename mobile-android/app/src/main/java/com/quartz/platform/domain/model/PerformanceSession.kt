@@ -29,6 +29,16 @@ enum class QosFamilyExecutionStatus {
     BLOCKED
 }
 
+enum class QosExecutionIssueCode {
+    PREREQUISITE_NOT_READY,
+    TARGET_TECHNOLOGY_MISMATCH,
+    PHONE_TARGET_MISSING,
+    NETWORK_UNAVAILABLE,
+    THRESHOLD_NOT_MET,
+    OPERATOR_ABORTED,
+    UNKNOWN
+}
+
 enum class QosExecutionEventType {
     STARTED,
     PAUSED,
@@ -42,6 +52,7 @@ data class QosExecutionTimelineEvent(
     val family: QosTestFamily,
     val repetitionIndex: Int,
     val eventType: QosExecutionEventType,
+    val reasonCode: QosExecutionIssueCode? = null,
     val reason: String? = null,
     val occurredAtEpochMillis: Long,
     val checkpointSequence: Int = 0
@@ -50,6 +61,7 @@ data class QosExecutionTimelineEvent(
 data class QosFamilyExecutionResult(
     val family: QosTestFamily,
     val status: QosFamilyExecutionStatus,
+    val failureReasonCode: QosExecutionIssueCode? = null,
     val failureReason: String? = null,
     val observedLatencyMs: Int? = null,
     val observedDownloadMbps: Double? = null,

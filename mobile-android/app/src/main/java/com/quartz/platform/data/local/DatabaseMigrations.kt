@@ -961,4 +961,22 @@ object DatabaseMigrations {
             )
         }
     }
+
+    val MIGRATION_21_22: Migration = object : Migration(21, 22) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                ALTER TABLE performance_qos_family_results
+                ADD COLUMN failureReasonCode TEXT
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                ALTER TABLE performance_qos_timeline_events
+                ADD COLUMN reasonCode TEXT
+                """.trimIndent()
+            )
+        }
+    }
 }

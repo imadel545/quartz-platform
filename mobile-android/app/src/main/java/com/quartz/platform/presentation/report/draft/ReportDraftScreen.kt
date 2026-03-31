@@ -29,6 +29,7 @@ import com.quartz.platform.R
 import com.quartz.platform.data.remote.simulation.SyncSimulationMode
 import com.quartz.platform.domain.model.QosExecutionEventType
 import com.quartz.platform.domain.model.QosExecutionEngineState
+import com.quartz.platform.domain.model.QosExecutionIssueCode
 import com.quartz.platform.domain.model.QosRecoveryState
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosReportClosureProjection
@@ -599,10 +600,26 @@ private fun QosClosureProjectionContent(
                     stringResource(qosTestFamilyLabelRes(result.family)),
                     stringResource(qosFamilyExecutionStatusLabelRes(result.status))
                 )
+                val classifiedReason = result.failureReasonCode?.let { code ->
+                    stringResource(
+                        R.string.report_closure_performance_qos_reason_code,
+                        stringResource(qosIssueCodeLabelRes(code))
+                    )
+                }
                 Text(
-                    text = result.failureReason?.takeIf { it.isNotBlank() }?.let { reason ->
-                        "$line (${stringResource(R.string.label_failure_reason, reason)})"
-                    } ?: line,
+                    text = buildString {
+                        append(line)
+                        if (!classifiedReason.isNullOrBlank()) {
+                            append(" (")
+                            append(classifiedReason)
+                            append(")")
+                        }
+                        result.failureReason?.takeIf { it.isNotBlank() }?.let { reason ->
+                            append(" (")
+                            append(stringResource(R.string.label_failure_reason, reason))
+                            append(")")
+                        }
+                    },
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -696,10 +713,26 @@ private fun QosClosureProjectionContent(
                 event.repetitionIndex,
                 stringResource(qosExecutionEventTypeLabelRes(event.eventType))
             )
+            val classifiedReason = event.reasonCode?.let { code ->
+                stringResource(
+                    R.string.report_closure_performance_qos_reason_code,
+                    stringResource(qosIssueCodeLabelRes(code))
+                )
+            }
             Text(
-                text = event.reason?.takeIf { it.isNotBlank() }?.let { reason ->
-                    "$line (${stringResource(R.string.label_failure_reason, reason)})"
-                } ?: line,
+                text = buildString {
+                    append(line)
+                    if (!classifiedReason.isNullOrBlank()) {
+                        append(" (")
+                        append(classifiedReason)
+                        append(")")
+                    }
+                    event.reason?.takeIf { it.isNotBlank() }?.let { reason ->
+                        append(" (")
+                        append(stringResource(R.string.label_failure_reason, reason))
+                        append(")")
+                    }
+                },
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -991,6 +1024,18 @@ private fun qosRecoveryStateLabelRes(state: QosRecoveryState): Int {
         QosRecoveryState.NONE -> R.string.performance_qos_recovery_state_none
         QosRecoveryState.RESUME_AVAILABLE -> R.string.performance_qos_recovery_state_resume_available
         QosRecoveryState.INVARIANT_BROKEN -> R.string.performance_qos_recovery_state_invariant_broken
+    }
+}
+
+private fun qosIssueCodeLabelRes(code: QosExecutionIssueCode): Int {
+    return when (code) {
+        QosExecutionIssueCode.PREREQUISITE_NOT_READY -> R.string.qos_issue_code_prerequisite_not_ready
+        QosExecutionIssueCode.TARGET_TECHNOLOGY_MISMATCH -> R.string.qos_issue_code_target_technology_mismatch
+        QosExecutionIssueCode.PHONE_TARGET_MISSING -> R.string.qos_issue_code_phone_target_missing
+        QosExecutionIssueCode.NETWORK_UNAVAILABLE -> R.string.qos_issue_code_network_unavailable
+        QosExecutionIssueCode.THRESHOLD_NOT_MET -> R.string.qos_issue_code_threshold_not_met
+        QosExecutionIssueCode.OPERATOR_ABORTED -> R.string.qos_issue_code_operator_aborted
+        QosExecutionIssueCode.UNKNOWN -> R.string.qos_issue_code_unknown
     }
 }
 

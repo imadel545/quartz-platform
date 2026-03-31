@@ -12,6 +12,7 @@ import com.quartz.platform.domain.model.PerformanceStepStatus
 import com.quartz.platform.domain.model.PerformanceWorkflowType
 import com.quartz.platform.domain.model.QosCompletionIssue
 import com.quartz.platform.domain.model.QosExecutionEventType
+import com.quartz.platform.domain.model.QosExecutionIssueCode
 import com.quartz.platform.domain.model.QosExecutionTimelineEvent
 import com.quartz.platform.domain.model.QosExecutionSnapshot
 import com.quartz.platform.domain.model.QosPreflightIssue
@@ -238,6 +239,9 @@ class PerformanceSessionViewModel @Inject constructor(
             val defaultStatuses = selectedFamilies.associateWith { family ->
                 state.qosFamilyStatusByType[family] ?: QosFamilyExecutionStatus.NOT_RUN
             }
+            val defaultReasonCodes = selectedFamilies.associateWith { family ->
+                state.qosFamilyReasonCodeByType[family]
+            }
             val defaultReasons = selectedFamilies.associateWith { family ->
                 state.qosFamilyFailureReasonByType[family].orEmpty()
             }
@@ -254,6 +258,7 @@ class PerformanceSessionViewModel @Inject constructor(
                 qosScriptEditorTechnologiesInput = script?.targetTechnologies?.joinToString(", ").orEmpty(),
                 qosScriptEditorSelectedFamilies = script?.testFamilies.orEmpty(),
                 qosFamilyStatusByType = defaultStatuses,
+                qosFamilyReasonCodeByType = defaultReasonCodes,
                 qosFamilyFailureReasonByType = defaultReasons,
                 qosTargetTechnologyInput = script?.targetTechnologies?.firstOrNull().orEmpty(),
                 hasUnsavedChanges = true,
@@ -327,6 +332,9 @@ class PerformanceSessionViewModel @Inject constructor(
                     val nextStatuses = script.testFamilies.associateWith { family ->
                         state.qosFamilyStatusByType[family] ?: QosFamilyExecutionStatus.NOT_RUN
                     }
+                    val nextReasonCodes = script.testFamilies.associateWith { family ->
+                        state.qosFamilyReasonCodeByType[family]
+                    }
                     val nextReasons = script.testFamilies.associateWith { family ->
                         state.qosFamilyFailureReasonByType[family].orEmpty()
                     }
@@ -340,6 +348,7 @@ class PerformanceSessionViewModel @Inject constructor(
                         qosConfiguredTechnologies = script.targetTechnologies,
                         qosScriptSnapshotUpdatedAtEpochMillis = script.updatedAtEpochMillis,
                         qosFamilyStatusByType = nextStatuses,
+                        qosFamilyReasonCodeByType = nextReasonCodes,
                         qosFamilyFailureReasonByType = nextReasons,
                         qosTargetTechnologyInput = script.targetTechnologies.firstOrNull().orEmpty(),
                         infoMessage = uiStrings.get(R.string.info_performance_saved_qos_script),
@@ -412,6 +421,14 @@ class PerformanceSessionViewModel @Inject constructor(
         }
     }
 
+    fun onQosFamilyReasonCodeChanged(family: QosTestFamily, value: QosExecutionIssueCode?) {
+        updateField {
+            copy(
+                qosFamilyReasonCodeByType = qosFamilyReasonCodeByType + (family to value)
+            )
+        }
+    }
+
     private fun applyQosRunnerAction(
         family: QosTestFamily,
         action: QosRunnerAction,
@@ -427,13 +444,27 @@ class PerformanceSessionViewModel @Inject constructor(
             preconditionsReady = state.prerequisiteNetworkReady &&
                 state.prerequisiteBatterySufficient &&
                 state.prerequisiteLocationReady,
+            reasonCode = state.qosFamilyReasonCodeByType[family],
             failureReason = state.qosFamilyFailureReasonByType[family]
         )
         if (preflightIssues.isNotEmpty()) {
             mutableState.update { current ->
+                val suggestedReasonCode = if (
+                    (action == QosRunnerAction.MARK_FAILED || action == QosRunnerAction.MARK_BLOCKED) &&
+                    current.qosFamilyReasonCodeByType[family] == null
+                ) {
+                    qosPreflightIssueToReasonCode(preflightIssues.first())
+                } else {
+                    null
+                }
                 deriveQosUiState(
                     current.copy(
                         qosPreflightIssuesByFamily = current.qosPreflightIssuesByFamily + (family to preflightIssues),
+                        qosFamilyReasonCodeByType = if (suggestedReasonCode != null) {
+                            current.qosFamilyReasonCodeByType + (family to suggestedReasonCode)
+                        } else {
+                            current.qosFamilyReasonCodeByType
+                        },
                         errorMessage = uiStrings.get(qosPreflightIssueToErrorRes(preflightIssues.first())),
                         infoMessage = null
                     )
@@ -494,6 +525,7 @@ class PerformanceSessionViewModel @Inject constructor(
                     family = family,
                     repetitionIndex = activeRepetitionIndex,
                     eventType = terminalEventType,
+                    reasonCode = state.qosFamilyReasonCodeByType[family],
                     reason = state.qosFamilyFailureReasonByType[family]
                         ?.trim()
                         ?.takeIf { it.isNotBlank() },
@@ -523,6 +555,14 @@ class PerformanceSessionViewModel @Inject constructor(
                 QosExecutionEventType.FAILED,
                 QosExecutionEventType.BLOCKED -> current.qosFamilyFailureReasonByType
             }
+            val nextReasonCodes = when (terminalEventType) {
+                QosExecutionEventType.PASSED,
+                QosExecutionEventType.STARTED -> current.qosFamilyReasonCodeByType - family
+                QosExecutionEventType.PAUSED,
+                QosExecutionEventType.RESUMED -> current.qosFamilyReasonCodeByType
+                QosExecutionEventType.FAILED,
+                QosExecutionEventType.BLOCKED -> current.qosFamilyReasonCodeByType
+            }
             val nextUiState = deriveQosUiState(
                 current.copy(
                     selectedStatus = if (current.selectedStatus == PerformanceSessionStatus.COMPLETED) {
@@ -543,8 +583,9 @@ class PerformanceSessionViewModel @Inject constructor(
                             }.thenBy { event ->
                                 qosExecutionEventSortOrder(event.eventType)
                             }
-                        ),
+                    ),
                     qosFamilyStatusByType = current.qosFamilyStatusByType + (family to nextStatus),
+                    qosFamilyReasonCodeByType = nextReasonCodes,
                     qosFamilyFailureReasonByType = nextReasons,
                     qosPreflightIssuesByFamily = current.qosPreflightIssuesByFamily + (family to emptySet()),
                     hasUnsavedChanges = true
@@ -803,6 +844,7 @@ class PerformanceSessionViewModel @Inject constructor(
                 qosScriptEditorTechnologiesInput = "",
                 qosScriptEditorSelectedFamilies = emptySet(),
                 qosFamilyStatusByType = emptyMap(),
+                qosFamilyReasonCodeByType = emptyMap(),
                 qosFamilyFailureReasonByType = emptyMap(),
                 qosFamilyRunCoverageByType = emptyMap(),
                 qosRunPlan = emptyList(),
@@ -848,6 +890,8 @@ class PerformanceSessionViewModel @Inject constructor(
             qosScriptEditorSelectedFamilies = session.qosRunSummary.selectedTestFamilies,
             qosFamilyStatusByType = session.qosRunSummary.familyExecutionResults
                 .associate { result -> result.family to result.status },
+            qosFamilyReasonCodeByType = session.qosRunSummary.familyExecutionResults
+                .associate { result -> result.family to result.failureReasonCode },
             qosFamilyFailureReasonByType = session.qosRunSummary.familyExecutionResults
                 .associate { result -> result.family to (result.failureReason.orEmpty()) },
             qosFamilyRunCoverageByType = emptyMap(),
@@ -967,6 +1011,7 @@ class PerformanceSessionViewModel @Inject constructor(
             QosFamilyExecutionResult(
                 family = family,
                 status = derivedStatus ?: state.qosFamilyStatusByType[family] ?: QosFamilyExecutionStatus.NOT_RUN,
+                failureReasonCode = state.qosFamilyReasonCodeByType[family],
                 failureReason = state.qosFamilyFailureReasonByType[family]
                     ?.trim()
                     ?.takeIf { value -> value.isNotBlank() }
@@ -1081,6 +1126,7 @@ private fun deriveQosUiState(state: PerformanceSessionUiState): PerformanceSessi
             preconditionsReady = aggregated.prerequisiteNetworkReady &&
                 aggregated.prerequisiteBatterySufficient &&
                 aggregated.prerequisiteLocationReady,
+            reasonCode = aggregated.qosFamilyReasonCodeByType[family],
             failureReason = aggregated.qosFamilyFailureReasonByType[family]
         )
     }
@@ -1103,6 +1149,7 @@ private fun qosSummaryForAssessment(state: PerformanceSessionUiState): QosRunSum
         QosFamilyExecutionResult(
             family = family,
             status = derivedStatus ?: state.qosFamilyStatusByType[family] ?: QosFamilyExecutionStatus.NOT_RUN,
+            failureReasonCode = state.qosFamilyReasonCodeByType[family],
             failureReason = state.qosFamilyFailureReasonByType[family]
                 ?.trim()
                 ?.takeIf { value -> value.isNotBlank() }
@@ -1138,7 +1185,7 @@ private fun qosCompletionIssueToErrorRes(issue: QosCompletionIssue): Int {
         QosCompletionIssue.TEST_FAMILIES_MISSING,
         QosCompletionIssue.FAMILY_RESULT_INCOMPLETE -> R.string.error_performance_qos_script_required
         QosCompletionIssue.REPETITION_COVERAGE_INCOMPLETE -> R.string.error_performance_qos_repetition_coverage_required
-        QosCompletionIssue.FAILED_REASON_MISSING -> R.string.error_performance_qos_failed_reason_required
+        QosCompletionIssue.FAILURE_REASON_CODE_MISSING -> R.string.error_performance_qos_failed_reason_required
         QosCompletionIssue.PHONE_TARGET_MISSING -> R.string.error_performance_qos_phone_required
         QosCompletionIssue.TARGET_TECHNOLOGY_INVALID -> R.string.error_performance_qos_target_technology_required
         QosCompletionIssue.COUNTERS_INCONSISTENT -> R.string.error_performance_qos_result_inconsistent
@@ -1157,7 +1204,23 @@ private fun qosPreflightIssueToErrorRes(issue: QosPreflightIssue): Int {
         QosPreflightIssue.ANOTHER_REPETITION_ACTIVE -> R.string.error_performance_qos_another_repetition_active
         QosPreflightIssue.REPETITION_NOT_STARTED -> R.string.error_performance_qos_repetition_not_started
         QosPreflightIssue.REPETITION_NOT_PAUSED -> R.string.error_performance_qos_repetition_not_paused
-        QosPreflightIssue.FAILURE_REASON_REQUIRED -> R.string.error_performance_qos_failed_reason_required
+        QosPreflightIssue.FAILURE_REASON_CODE_REQUIRED -> R.string.error_performance_qos_failed_reason_required
+    }
+}
+
+private fun qosPreflightIssueToReasonCode(issue: QosPreflightIssue): QosExecutionIssueCode? {
+    return when (issue) {
+        QosPreflightIssue.PREREQUISITES_NOT_READY -> QosExecutionIssueCode.PREREQUISITE_NOT_READY
+        QosPreflightIssue.PHONE_TARGET_MISSING -> QosExecutionIssueCode.PHONE_TARGET_MISSING
+        QosPreflightIssue.TARGET_TECHNOLOGY_INVALID -> QosExecutionIssueCode.TARGET_TECHNOLOGY_MISMATCH
+        QosPreflightIssue.REPETITION_ALREADY_STARTED,
+        QosPreflightIssue.REPETITION_ALREADY_COMPLETED,
+        QosPreflightIssue.ANOTHER_REPETITION_ACTIVE,
+        QosPreflightIssue.REPETITION_NOT_STARTED,
+        QosPreflightIssue.REPETITION_NOT_PAUSED -> QosExecutionIssueCode.OPERATOR_ABORTED
+        QosPreflightIssue.SCRIPT_REFERENCE_MISSING,
+        QosPreflightIssue.FAMILY_NOT_SELECTED,
+        QosPreflightIssue.FAILURE_REASON_CODE_REQUIRED -> null
     }
 }
 

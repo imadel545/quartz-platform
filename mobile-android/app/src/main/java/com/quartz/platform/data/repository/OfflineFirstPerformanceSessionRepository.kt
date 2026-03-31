@@ -392,6 +392,7 @@ private fun sanitizeTimelineEventsForPersistence(
                         family = family,
                         repetitionIndex = 1,
                         eventType = terminalType,
+                        reasonCode = result?.failureReasonCode,
                         reason = result?.failureReason,
                         occurredAtEpochMillis = fallbackOccurredAtEpochMillis
                     )
@@ -417,8 +418,8 @@ internal fun validateQosCompletionConsistency(qosRunSummary: QosRunSummary) {
             "All selected QoS families must be marked PASSED or FAILED before completion."
         QosCompletionIssue.REPETITION_COVERAGE_INCOMPLETE ->
             "Each selected QoS family must cover the configured repeat count with PASS/FAIL results."
-        QosCompletionIssue.FAILED_REASON_MISSING ->
-            "Failed QoS families must provide a failure reason before completion."
+        QosCompletionIssue.FAILURE_REASON_CODE_MISSING ->
+            "Failed or blocked QoS families must provide a typed failure reason before completion."
         QosCompletionIssue.PHONE_TARGET_MISSING ->
             "A target phone number is required for selected QoS call/SMS families."
         QosCompletionIssue.TARGET_TECHNOLOGY_INVALID ->

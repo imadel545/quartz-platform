@@ -52,7 +52,7 @@ import com.quartz.platform.data.local.entity.XfeederStepEntity
         SyncJobEntity::class,
         ReportDraftEntity::class
     ],
-    version = 21,
+    version = 22,
     exportSchema = true
 )
 @TypeConverters(QuartzTypeConverters::class)

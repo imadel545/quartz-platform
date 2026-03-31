@@ -51,8 +51,10 @@ Current Android implementation covers a bounded local-first workflow baseline:
   - deterministic projection of configured QoS context into report closures
 - bounded QoS family execution evidence persisted per performance session (`performance_qos_family_results`) with explicit status:
   - `NOT_RUN`, `PASSED`, `FAILED`, `BLOCKED`
+  - typed failure reason taxonomy (`failureReasonCode`) for deterministic operator/reviewer triage
 - bounded QoS timeline evidence persisted per performance session (`performance_qos_timeline_events`) with typed events:
   - `STARTED`, `PAUSED`, `RESUMED`, `PASSED`, `FAILED`, `BLOCKED`
+  - typed terminal reason taxonomy (`reasonCode`) aligned with family evidence
   - transactional event persistence with immutable event identity and sequential checkpoint ordering for deterministic replay/recovery
 - bounded QoS execution engine projection derived from session evidence:
   - explicit engine state (`READY`, `PREFLIGHT_BLOCKED`, `RUNNING`, `PAUSED`, `RESUMED`, `COMPLETED`, `FAILED`, `BLOCKED`)
@@ -71,8 +73,9 @@ Current Android implementation covers a bounded local-first workflow baseline:
   - script snapshot timestamp (`updatedAtEpochMillis` at selection/save time)
 - report-side performance projection is strengthened but still bounded:
   - ReportDraft includes per-family QoS closure details and timeline review
+  - ReportDraft includes typed QoS issue taxonomy visibility (code + optional detail) for failed/blocked outcomes
   - ReportDraft includes QoS execution-engine context (state, active run, plan progress)
-  - ReportList includes concise QoS triage for failed/blocked/coverage signals plus engine-state/run-plan signal
+  - ReportList includes concise QoS triage for failed/blocked/coverage signals plus engine-state/run-plan signal and dominant issue code
 
 For XFeeder proximity, implementation is intentionally explicit and bounded:
 - `UNAVAILABLE`: location/altitude data cannot be trusted for eligibility

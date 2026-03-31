@@ -44,6 +44,7 @@ import com.quartz.platform.domain.model.QosExecutionSnapshot
 import com.quartz.platform.domain.model.QosFamilyRunCoverage
 import com.quartz.platform.domain.model.QosPreflightIssue
 import com.quartz.platform.domain.model.QosExecutionEventType
+import com.quartz.platform.domain.model.QosExecutionIssueCode
 import com.quartz.platform.domain.model.QosExecutionTimelineEvent
 import com.quartz.platform.domain.model.QosRunPlanItem
 import com.quartz.platform.domain.model.QosRunPlanItemStatus
@@ -102,6 +103,7 @@ fun PerformanceSessionRoute(
         onQosRunnerPassClicked = viewModel::onQosRunnerPassClicked,
         onQosRunnerFailClicked = viewModel::onQosRunnerFailClicked,
         onQosRunnerBlockClicked = viewModel::onQosRunnerBlockClicked,
+        onQosFamilyReasonCodeChanged = viewModel::onQosFamilyReasonCodeChanged,
         onQosFamilyFailureReasonChanged = viewModel::onQosFamilyFailureReasonChanged,
         onQosTargetTechnologyChanged = viewModel::onQosTargetTechnologyChanged,
         onQosTargetPhoneChanged = viewModel::onQosTargetPhoneChanged,
@@ -149,6 +151,7 @@ fun PerformanceSessionScreen(
     onQosRunnerPassClicked: (QosTestFamily) -> Unit,
     onQosRunnerFailClicked: (QosTestFamily) -> Unit,
     onQosRunnerBlockClicked: (QosTestFamily) -> Unit,
+    onQosFamilyReasonCodeChanged: (QosTestFamily, QosExecutionIssueCode?) -> Unit,
     onQosFamilyFailureReasonChanged: (QosTestFamily, String) -> Unit,
     onQosTargetTechnologyChanged: (String) -> Unit,
     onQosTargetPhoneChanged: (String) -> Unit,
@@ -310,6 +313,7 @@ fun PerformanceSessionScreen(
                                 scriptEditorSelectedFamilies = state.qosScriptEditorSelectedFamilies,
                                 isSavingScript = state.isSavingQosScript,
                                 familyStatusByType = state.qosFamilyStatusByType,
+                                familyReasonCodeByType = state.qosFamilyReasonCodeByType,
                                 familyFailureReasonByType = state.qosFamilyFailureReasonByType,
                                 runCoverageByType = state.qosFamilyRunCoverageByType,
                                 runPlan = state.qosRunPlan,
@@ -336,6 +340,7 @@ fun PerformanceSessionScreen(
                                 onQosRunnerPassClicked = onQosRunnerPassClicked,
                                 onQosRunnerFailClicked = onQosRunnerFailClicked,
                                 onQosRunnerBlockClicked = onQosRunnerBlockClicked,
+                                onQosFamilyReasonCodeChanged = onQosFamilyReasonCodeChanged,
                                 onQosFamilyFailureReasonChanged = onQosFamilyFailureReasonChanged,
                                 onQosTargetTechnologyChanged = onQosTargetTechnologyChanged,
                                 onQosTargetPhoneChanged = onQosTargetPhoneChanged,
@@ -760,6 +765,7 @@ private fun QosPanel(
     scriptEditorSelectedFamilies: Set<QosTestFamily>,
     isSavingScript: Boolean,
     familyStatusByType: Map<QosTestFamily, QosFamilyExecutionStatus>,
+    familyReasonCodeByType: Map<QosTestFamily, QosExecutionIssueCode?>,
     familyFailureReasonByType: Map<QosTestFamily, String>,
     runCoverageByType: Map<QosTestFamily, QosFamilyRunCoverage>,
     runPlan: List<QosRunPlanItem>,
@@ -786,6 +792,7 @@ private fun QosPanel(
     onQosRunnerPassClicked: (QosTestFamily) -> Unit,
     onQosRunnerFailClicked: (QosTestFamily) -> Unit,
     onQosRunnerBlockClicked: (QosTestFamily) -> Unit,
+    onQosFamilyReasonCodeChanged: (QosTestFamily, QosExecutionIssueCode?) -> Unit,
     onQosFamilyFailureReasonChanged: (QosTestFamily, String) -> Unit,
     onQosTargetTechnologyChanged: (String) -> Unit,
     onQosTargetPhoneChanged: (String) -> Unit,
@@ -1036,6 +1043,37 @@ private fun QosPanel(
                     }
                 }
                 if (familyStatus == QosFamilyExecutionStatus.FAILED || familyStatus == QosFamilyExecutionStatus.BLOCKED) {
+                    Text(
+                        text = stringResource(
+                            R.string.performance_label_qos_family_reason_code,
+                            familyReasonCodeByType[family]?.let { code ->
+                                stringResource(qosIssueCodeLabelRes(code))
+                            } ?: stringResource(R.string.value_not_available)
+                        ),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    qosReasonOptionsForFamily(family).forEach { code ->
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { onQosFamilyReasonCodeChanged(family, code) }
+                        ) {
+                            Text(
+                                stringResource(
+                                    R.string.performance_action_qos_reason_code_select,
+                                    stringResource(qosIssueCodeLabelRes(code))
+                                )
+                            )
+                        }
+                    }
+                    familyReasonCodeByType[family]?.let { code ->
+                        Text(
+                            text = stringResource(
+                                R.string.performance_label_qos_family_reason_action,
+                                stringResource(qosIssueCodeActionRes(code))
+                            ),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     OutlinedTextField(
                         modifier = Modifier.fillMaxWidth(),
                         value = familyFailureReasonByType[family].orEmpty(),
@@ -1226,13 +1264,60 @@ private fun qosExecutionEventTypeLabelRes(eventType: QosExecutionEventType): Int
     }
 }
 
+private fun qosIssueCodeLabelRes(code: QosExecutionIssueCode): Int {
+    return when (code) {
+        QosExecutionIssueCode.PREREQUISITE_NOT_READY -> R.string.qos_issue_code_prerequisite_not_ready
+        QosExecutionIssueCode.TARGET_TECHNOLOGY_MISMATCH -> R.string.qos_issue_code_target_technology_mismatch
+        QosExecutionIssueCode.PHONE_TARGET_MISSING -> R.string.qos_issue_code_phone_target_missing
+        QosExecutionIssueCode.NETWORK_UNAVAILABLE -> R.string.qos_issue_code_network_unavailable
+        QosExecutionIssueCode.THRESHOLD_NOT_MET -> R.string.qos_issue_code_threshold_not_met
+        QosExecutionIssueCode.OPERATOR_ABORTED -> R.string.qos_issue_code_operator_aborted
+        QosExecutionIssueCode.UNKNOWN -> R.string.qos_issue_code_unknown
+    }
+}
+
+private fun qosIssueCodeActionRes(code: QosExecutionIssueCode): Int {
+    return when (code) {
+        QosExecutionIssueCode.PREREQUISITE_NOT_READY -> R.string.qos_issue_action_prerequisite_not_ready
+        QosExecutionIssueCode.TARGET_TECHNOLOGY_MISMATCH -> R.string.qos_issue_action_target_technology_mismatch
+        QosExecutionIssueCode.PHONE_TARGET_MISSING -> R.string.qos_issue_action_phone_target_missing
+        QosExecutionIssueCode.NETWORK_UNAVAILABLE -> R.string.qos_issue_action_network_unavailable
+        QosExecutionIssueCode.THRESHOLD_NOT_MET -> R.string.qos_issue_action_threshold_not_met
+        QosExecutionIssueCode.OPERATOR_ABORTED -> R.string.qos_issue_action_operator_aborted
+        QosExecutionIssueCode.UNKNOWN -> R.string.qos_issue_action_unknown
+    }
+}
+
+private fun qosReasonOptionsForFamily(family: QosTestFamily): List<QosExecutionIssueCode> {
+    return when (family) {
+        QosTestFamily.THROUGHPUT_LATENCY,
+        QosTestFamily.VIDEO_STREAMING -> listOf(
+            QosExecutionIssueCode.NETWORK_UNAVAILABLE,
+            QosExecutionIssueCode.THRESHOLD_NOT_MET,
+            QosExecutionIssueCode.OPERATOR_ABORTED,
+            QosExecutionIssueCode.UNKNOWN
+        )
+
+        QosTestFamily.SMS,
+        QosTestFamily.VOLTE_CALL,
+        QosTestFamily.CSFB_CALL,
+        QosTestFamily.EMERGENCY_CALL,
+        QosTestFamily.STANDARD_CALL -> listOf(
+            QosExecutionIssueCode.PHONE_TARGET_MISSING,
+            QosExecutionIssueCode.NETWORK_UNAVAILABLE,
+            QosExecutionIssueCode.OPERATOR_ABORTED,
+            QosExecutionIssueCode.UNKNOWN
+        )
+    }
+}
+
 private fun qosCompletionIssueLabelRes(issue: QosCompletionIssue): Int {
     return when (issue) {
         QosCompletionIssue.SCRIPT_REFERENCE_MISSING -> R.string.error_performance_qos_issue_script_reference_missing
         QosCompletionIssue.TEST_FAMILIES_MISSING -> R.string.error_performance_qos_issue_test_families_missing
         QosCompletionIssue.FAMILY_RESULT_INCOMPLETE -> R.string.error_performance_qos_issue_family_result_incomplete
         QosCompletionIssue.REPETITION_COVERAGE_INCOMPLETE -> R.string.error_performance_qos_issue_repetition_coverage_incomplete
-        QosCompletionIssue.FAILED_REASON_MISSING -> R.string.error_performance_qos_issue_failure_reason_missing
+        QosCompletionIssue.FAILURE_REASON_CODE_MISSING -> R.string.error_performance_qos_issue_failure_reason_missing
         QosCompletionIssue.PHONE_TARGET_MISSING -> R.string.error_performance_qos_issue_phone_target_missing
         QosCompletionIssue.TARGET_TECHNOLOGY_INVALID -> R.string.error_performance_qos_issue_target_technology_invalid
         QosCompletionIssue.COUNTERS_INCONSISTENT -> R.string.error_performance_qos_issue_counters_inconsistent
@@ -1251,7 +1336,7 @@ private fun qosPreflightIssueLabelRes(issue: QosPreflightIssue): Int {
         QosPreflightIssue.ANOTHER_REPETITION_ACTIVE -> R.string.error_performance_qos_issue_another_repetition_active
         QosPreflightIssue.REPETITION_NOT_STARTED -> R.string.error_performance_qos_issue_repetition_not_started
         QosPreflightIssue.REPETITION_NOT_PAUSED -> R.string.error_performance_qos_issue_repetition_not_paused
-        QosPreflightIssue.FAILURE_REASON_REQUIRED -> R.string.error_performance_qos_issue_failure_reason_missing
+        QosPreflightIssue.FAILURE_REASON_CODE_REQUIRED -> R.string.error_performance_qos_issue_failure_reason_missing
     }
 }
 

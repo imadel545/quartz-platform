@@ -109,6 +109,24 @@ data class QosReportClosureProjection(
     val blockedFamilyCount: Int
         get() = familyExecutionResults.count { result -> result.status == QosFamilyExecutionStatus.BLOCKED }
 
+    val dominantIssueCode: QosExecutionIssueCode?
+        get() = familyExecutionResults
+            .asSequence()
+            .filter { result ->
+                result.status == QosFamilyExecutionStatus.FAILED ||
+                    result.status == QosFamilyExecutionStatus.BLOCKED
+            }
+            .mapNotNull { result -> result.failureReasonCode }
+            .groupingBy { code -> code }
+            .eachCount()
+            .entries
+            .sortedWith(
+                compareByDescending<Map.Entry<QosExecutionIssueCode, Int>> { entry -> entry.value }
+                    .thenBy { entry -> entry.key.name }
+            )
+            .firstOrNull()
+            ?.key
+
     val timelineFamilyCoverageCount: Int
         get() = executionTimelineEvents.map { event -> event.family }.toSet().size
 

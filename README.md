@@ -38,10 +38,13 @@ quartz-platform/
   - QoS execution projection now includes bounded recovery signals (`NONE`, `RESUME_AVAILABLE`, `INVARIANT_BROKEN`) plus next planned run and checkpoint count for interruption/restart transparency
   - QoS runner now tracks a structured local run plan per family/repetition and persists runner progress updates during execution to strengthen interruption/recovery behavior
   - QoS completion assessment is centralized in shared domain logic (single rule source reused by repository + ViewModel)
+  - QoS failure/block handling now uses typed issue codes (`PREREQUISITE_NOT_READY`, `TARGET_TECHNOLOGY_MISMATCH`, `PHONE_TARGET_MISSING`, `NETWORK_UNAVAILABLE`, `THRESHOLD_NOT_MET`, `OPERATOR_ABORTED`, `UNKNOWN`) persisted in family evidence and timeline events
+  - QoS execution screen now exposes actionable operator guidance from typed issue codes for failed/blocked families
   - Débit/QoS closure projection in local reports:
     - ReportDraft reviewer panel now includes typed performance closure data (throughput and QoS script sessions)
     - ReportDraft now includes a bounded QoS execution timeline review block
-    - ReportList triage exposes concise performance health for non-guided drafts, including family coverage/failure signal plus blocked/timeline coverage signal for QoS sessions
+    - ReportDraft now includes typed QoS issue-code visibility on family outcomes and timeline terminal events
+    - ReportList triage exposes concise performance health for non-guided drafts, including family coverage/failure signal, blocked/timeline coverage signal, and dominant QoS issue code
   - Local report draft continuity with typed workflow provenance (`XFEEDER`, `RET`)
   - Workflow-typed local closure projection in report draft view (XFeeder + RET review fields)
   - Workflow-typed closure triage summary in report list rows (concise operator/supervisor signal)

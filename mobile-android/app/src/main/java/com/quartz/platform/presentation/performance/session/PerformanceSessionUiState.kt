@@ -14,6 +14,7 @@ import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosRunSummary
 import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.ThroughputMetrics
+import com.quartz.platform.domain.model.QosExecutionIssueCode
 
 data class PerformanceSessionUiState(
     val isLoading: Boolean = true,
@@ -50,6 +51,7 @@ data class PerformanceSessionUiState(
     val qosScriptEditorSelectedFamilies: Set<QosTestFamily> = emptySet(),
     val isSavingQosScript: Boolean = false,
     val qosFamilyStatusByType: Map<QosTestFamily, QosFamilyExecutionStatus> = emptyMap(),
+    val qosFamilyReasonCodeByType: Map<QosTestFamily, QosExecutionIssueCode?> = emptyMap(),
     val qosFamilyFailureReasonByType: Map<QosTestFamily, String> = emptyMap(),
     val qosFamilyRunCoverageByType: Map<QosTestFamily, QosFamilyRunCoverage> = emptyMap(),
     val qosRunPlan: List<QosRunPlanItem> = emptyList(),

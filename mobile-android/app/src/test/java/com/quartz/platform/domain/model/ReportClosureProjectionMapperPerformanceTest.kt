@@ -36,6 +36,7 @@ class ReportClosureProjectionMapperPerformanceTest {
                     QosFamilyExecutionResult(
                         family = QosTestFamily.VOLTE_CALL,
                         status = QosFamilyExecutionStatus.FAILED,
+                        failureReasonCode = QosExecutionIssueCode.NETWORK_UNAVAILABLE,
                         failureReason = "No carrier"
                     )
                 ),
@@ -56,6 +57,7 @@ class ReportClosureProjectionMapperPerformanceTest {
                         family = QosTestFamily.VOLTE_CALL,
                         repetitionIndex = 1,
                         eventType = QosExecutionEventType.FAILED,
+                        reasonCode = QosExecutionIssueCode.NETWORK_UNAVAILABLE,
                         reason = "No carrier",
                         occurredAtEpochMillis = 2200L
                     )
@@ -89,6 +91,7 @@ class ReportClosureProjectionMapperPerformanceTest {
         assertThat(qos.testFamilies).containsExactly(QosTestFamily.SMS, QosTestFamily.VOLTE_CALL)
         assertThat(qos.completedFamilyCount).isEqualTo(2)
         assertThat(qos.failedFamilyCount).isEqualTo(1)
+        assertThat(qos.dominantIssueCode).isEqualTo(QosExecutionIssueCode.NETWORK_UNAVAILABLE)
         assertThat(qos.timelineFamilyCoverageCount).isEqualTo(2)
         assertThat(qos.requiredRepeatCount).isEqualTo(3)
         assertThat(qos.passFailRunCount).isEqualTo(2)

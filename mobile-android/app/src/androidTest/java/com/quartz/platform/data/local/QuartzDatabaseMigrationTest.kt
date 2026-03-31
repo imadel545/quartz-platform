@@ -866,6 +866,114 @@ class QuartzDatabaseMigrationTest {
 
         migrated.close()
     }
+
+    @Test
+    fun migration_21_22_adds_qos_reason_code_columns() {
+        val dbName = "quartz-migration-21-22-test"
+
+        migrationTestHelper.createDatabase(dbName, 21).apply {
+            insertPerformanceSessionV19(
+                id = "perf-qos-21",
+                siteId = "site-1",
+                workflowType = "QOS_SCRIPT"
+            )
+            execSQL(
+                """
+                INSERT INTO performance_qos_family_results(
+                    sessionId,
+                    family,
+                    status,
+                    failureReason,
+                    observedLatencyMs,
+                    observedDownloadMbps,
+                    observedUploadMbps,
+                    updatedAtEpochMillis
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """.trimIndent(),
+                arrayOf("perf-qos-21", "SMS", "FAILED", "legacy reason", null, null, null, 500L)
+            )
+            execSQL(
+                """
+                INSERT INTO performance_qos_timeline_events(
+                    sessionId,
+                    family,
+                    repetitionIndex,
+                    eventType,
+                    reason,
+                    occurredAtEpochMillis,
+                    checkpointSequence
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """.trimIndent(),
+                arrayOf("perf-qos-21", "SMS", 1, "FAILED", "legacy reason", 500L, 1)
+            )
+            close()
+        }
+
+        val migrated = migrationTestHelper.runMigrationsAndValidate(
+            dbName,
+            22,
+            true,
+            DatabaseMigrations.MIGRATION_21_22
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM pragma_table_info('performance_qos_family_results')
+                WHERE name = 'failureReasonCode'
+                """.trimIndent()
+            )
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM pragma_table_info('performance_qos_timeline_events')
+                WHERE name = 'reasonCode'
+                """.trimIndent()
+            )
+        )
+
+        migrated.execSQL(
+            """
+            UPDATE performance_qos_family_results
+            SET failureReasonCode = 'NETWORK_UNAVAILABLE'
+            WHERE sessionId = 'perf-qos-21' AND family = 'SMS'
+            """.trimIndent()
+        )
+        migrated.execSQL(
+            """
+            UPDATE performance_qos_timeline_events
+            SET reasonCode = 'NETWORK_UNAVAILABLE'
+            WHERE sessionId = 'perf-qos-21' AND family = 'SMS' AND repetitionIndex = 1
+            """.trimIndent()
+        )
+
+        assertEquals(
+            "NETWORK_UNAVAILABLE",
+            migrated.stringQuery(
+                """
+                SELECT failureReasonCode
+                FROM performance_qos_family_results
+                WHERE sessionId = 'perf-qos-21' AND family = 'SMS'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            "NETWORK_UNAVAILABLE",
+            migrated.stringQuery(
+                """
+                SELECT reasonCode
+                FROM performance_qos_timeline_events
+                WHERE sessionId = 'perf-qos-21' AND family = 'SMS' AND repetitionIndex = 1
+                """.trimIndent()
+            )
+        )
+
+        migrated.close()
+    }
 }
 
 private fun SupportSQLiteDatabase.insertDraft(

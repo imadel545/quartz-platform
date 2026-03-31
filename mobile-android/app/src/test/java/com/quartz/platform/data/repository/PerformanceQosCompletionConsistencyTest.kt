@@ -3,6 +3,7 @@ package com.quartz.platform.data.repository
 import com.google.common.truth.Truth.assertThat
 import com.quartz.platform.domain.model.QosFamilyExecutionResult
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
+import com.quartz.platform.domain.model.QosExecutionIssueCode
 import com.quartz.platform.domain.model.QosRunSummary
 import com.quartz.platform.domain.model.QosTestFamily
 import org.junit.Test
@@ -24,6 +25,7 @@ class PerformanceQosCompletionConsistencyTest {
                 QosFamilyExecutionResult(
                     family = QosTestFamily.VOLTE_CALL,
                     status = QosFamilyExecutionStatus.FAILED,
+                    failureReasonCode = QosExecutionIssueCode.NETWORK_UNAVAILABLE,
                     failureReason = "No response"
                 )
             ),
@@ -38,6 +40,7 @@ class PerformanceQosCompletionConsistencyTest {
                     family = QosTestFamily.VOLTE_CALL,
                     repetitionIndex = 1,
                     eventType = com.quartz.platform.domain.model.QosExecutionEventType.FAILED,
+                    reasonCode = QosExecutionIssueCode.NETWORK_UNAVAILABLE,
                     reason = "No response",
                     occurredAtEpochMillis = 1100L
                 )
@@ -69,6 +72,7 @@ class PerformanceQosCompletionConsistencyTest {
                 QosFamilyExecutionResult(
                     family = QosTestFamily.VOLTE_CALL,
                     status = QosFamilyExecutionStatus.FAILED,
+                    failureReasonCode = QosExecutionIssueCode.NETWORK_UNAVAILABLE,
                     failureReason = "No response"
                 )
             ),

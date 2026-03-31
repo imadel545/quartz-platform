@@ -36,6 +36,7 @@ The roadmap prioritizes:
   - QoS finalization cycle 3 hardening: persisted family timeline evidence, shared completion-assessment rule source, and stronger report triage signals (blocked/timeline coverage)
   - QoS finalization cycle 4 hardening: explicit execution-engine state projection, pause/resume timeline semantics, deterministic run-plan coverage, and persisted runner-progress updates for stronger interruption/recovery integrity
   - QoS finalization cycle 5 hardening: transactional timeline checkpoints (no event overwrite), deterministic recovery-state projection, and stronger run continuity visibility in performance/report surfaces
+  - QoS finalization cycle 6 hardening: typed failure/block reason taxonomy persisted in family evidence + timeline, actionable operator guidance on execution surfaces, and dominant-issue triage signal in report list
   - shared workflow/session core reused by multiple guided flows
   - local report-draft continuity with typed provenance
   - workflow-typed closure projection in report draft flow for XFeeder/RET local review

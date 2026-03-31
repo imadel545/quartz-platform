@@ -24,6 +24,7 @@ data class PerformanceQosFamilyResultEntity(
     val sessionId: String,
     val family: String,
     val status: String,
+    val failureReasonCode: String?,
     val failureReason: String?,
     val observedLatencyMs: Int?,
     val observedDownloadMbps: Double?,

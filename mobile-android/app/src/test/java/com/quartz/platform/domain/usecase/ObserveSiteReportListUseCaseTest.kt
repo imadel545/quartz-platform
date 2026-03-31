@@ -325,6 +325,7 @@ class ObserveSiteReportListUseCaseTest {
                                     QosFamilyExecutionResult(
                                         family = QosTestFamily.VOLTE_CALL,
                                         status = QosFamilyExecutionStatus.FAILED,
+                                        failureReasonCode = com.quartz.platform.domain.model.QosExecutionIssueCode.NETWORK_UNAVAILABLE,
                                         failureReason = "No ack"
                                     )
                                 ),
@@ -345,6 +346,7 @@ class ObserveSiteReportListUseCaseTest {
                                         family = QosTestFamily.VOLTE_CALL,
                                         repetitionIndex = 1,
                                         eventType = com.quartz.platform.domain.model.QosExecutionEventType.FAILED,
+                                        reasonCode = com.quartz.platform.domain.model.QosExecutionIssueCode.NETWORK_UNAVAILABLE,
                                         reason = "No ack",
                                         occurredAtEpochMillis = 1200L
                                     ),
@@ -352,6 +354,7 @@ class ObserveSiteReportListUseCaseTest {
                                         family = QosTestFamily.VOLTE_CALL,
                                         repetitionIndex = 2,
                                         eventType = com.quartz.platform.domain.model.QosExecutionEventType.BLOCKED,
+                                        reasonCode = com.quartz.platform.domain.model.QosExecutionIssueCode.NETWORK_UNAVAILABLE,
                                         reason = "No signal",
                                         occurredAtEpochMillis = 1300L
                                     )
@@ -399,6 +402,8 @@ class ObserveSiteReportListUseCaseTest {
         assertThat(qosSummary.familiesMeetingRequiredRepeatCount).isEqualTo(1)
         assertThat(qosSummary.passFailRunCount).isEqualTo(3)
         assertThat(qosSummary.blockedRunCount).isEqualTo(1)
+        assertThat(qosSummary.dominantIssueCode)
+            .isEqualTo(com.quartz.platform.domain.model.QosExecutionIssueCode.NETWORK_UNAVAILABLE)
         assertThat(qosSummary.targetTechnology).isEqualTo("4G")
         assertThat(qosSummary.configuredTechnologyCount).isEqualTo(2)
         assertThat(qosSummary.targetTechnologyAligned).isTrue()
