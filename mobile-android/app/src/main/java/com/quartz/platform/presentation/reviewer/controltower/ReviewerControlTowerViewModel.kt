@@ -33,11 +33,18 @@ class ReviewerControlTowerViewModel @Inject constructor(
     private val restoredGrouping = ReviewerControlTowerGrouping.fromPersistedNameOrDefault(
         savedStateHandle[STATE_CONTROL_TOWER_SELECTED_GROUPING]
     )
+    private val restoredPreset = ReviewerQueuePreset.fromPersistedNameOrDefault(
+        savedStateHandle[STATE_CONTROL_TOWER_SELECTED_PRESET]
+    )
+    private val restoredProgressedDraftIds = (savedStateHandle.get<List<String>>(STATE_CONTROL_TOWER_PROGRESS_DRAFT_IDS)
+        ?: emptyList()).toSet()
 
     private val _uiState = MutableStateFlow(
         ReviewerControlTowerUiState(
             selectedFilter = restoredFilter,
-            selectedGrouping = restoredGrouping
+            selectedGrouping = restoredGrouping,
+            selectedPreset = restoredPreset,
+            progressedDraftIds = restoredProgressedDraftIds
         )
     )
     val uiState: StateFlow<ReviewerControlTowerUiState> = _uiState.asStateFlow()
@@ -59,7 +66,11 @@ class ReviewerControlTowerViewModel @Inject constructor(
                 state
             } else {
                 savedStateHandle[STATE_CONTROL_TOWER_SELECTED_FILTER] = filter.name
-                state.copy(selectedFilter = filter)
+                savedStateHandle[STATE_CONTROL_TOWER_PROGRESS_DRAFT_IDS] = emptyList<String>()
+                state.copy(
+                    selectedFilter = filter,
+                    progressedDraftIds = emptySet()
+                )
             }
         }
     }
@@ -84,8 +95,35 @@ class ReviewerControlTowerViewModel @Inject constructor(
     }
 
     fun onOpenTopPriorityClicked() {
-        val draftId = _uiState.value.topPriorityDraftId ?: return
+        val draftId = _uiState.value.queueTopDraftId ?: return
+        markDraftAsProgressed(draftId)
         _events.tryEmit(ReviewerControlTowerEvent.OpenDraft(draftId))
+    }
+
+    fun onPresetSelected(preset: ReviewerQueuePreset) {
+        _uiState.update { state ->
+            if (state.selectedPreset == preset) {
+                state
+            } else {
+                savedStateHandle[STATE_CONTROL_TOWER_SELECTED_PRESET] = preset.name
+                savedStateHandle[STATE_CONTROL_TOWER_PROGRESS_DRAFT_IDS] = emptyList<String>()
+                state.copy(
+                    selectedPreset = preset,
+                    progressedDraftIds = emptySet()
+                )
+            }
+        }
+    }
+
+    fun onResetQueueProgressClicked() {
+        _uiState.update { state ->
+            if (state.progressedDraftIds.isEmpty()) {
+                state
+            } else {
+                savedStateHandle[STATE_CONTROL_TOWER_PROGRESS_DRAFT_IDS] = emptyList<String>()
+                state.copy(progressedDraftIds = emptySet())
+            }
+        }
     }
 
     fun onRetryDraftSyncClicked(draftId: String) {
@@ -126,7 +164,7 @@ class ReviewerControlTowerViewModel @Inject constructor(
     fun onRetryFailedVisibleSyncClicked() {
         val state = _uiState.value
         if (state.isBulkRetryInProgress) return
-        val draftIds = state.filteredItems
+        val draftIds = state.activeQueueItems
             .filter { item -> item.syncTrace.state == com.quartz.platform.domain.model.ReportSyncState.FAILED }
             .map { item -> item.draftId }
             .distinct()
@@ -176,15 +214,27 @@ class ReviewerControlTowerViewModel @Inject constructor(
                 }
                 .collect { snapshot ->
                     _uiState.update { state ->
+                        val snapshotDraftIds = snapshot.items.map { it.draftId }.toSet()
+                        val progressed = state.progressedDraftIds.intersect(snapshotDraftIds)
+                        savedStateHandle[STATE_CONTROL_TOWER_PROGRESS_DRAFT_IDS] = progressed.toList()
                         state.copy(
                             isLoading = false,
                             items = snapshot.items,
                             summary = snapshot.summary,
+                            progressedDraftIds = progressed,
                             retryingDraftIds = state.retryingDraftIds.intersect(snapshot.items.map { it.draftId }.toSet()),
                             errorMessage = null
                         )
                     }
                 }
+        }
+    }
+
+    private fun markDraftAsProgressed(draftId: String) {
+        _uiState.update { state ->
+            val progressed = state.progressedDraftIds + draftId
+            savedStateHandle[STATE_CONTROL_TOWER_PROGRESS_DRAFT_IDS] = progressed.toList()
+            state.copy(progressedDraftIds = progressed)
         }
     }
 }

@@ -110,6 +110,11 @@ Current validated supervisor visibility now also includes a mobile-first Reviewe
   - retry all visible failed sync rows in one action,
   - grouping by attention or workflow with restored grouping state after process death,
 - compact triage context showing dominant attention signal and stale draft age on each visible row.
+Control Tower queue intelligence is now strengthened with bounded mobile-first supervisor acceleration:
+- queue presets for common supervision intents (attention-now, sync-failures-first, qos-risk-first, stale-guided, guided-unresolved),
+- deterministic queue continuation (`open next`) with explicit local progression reset,
+- aggregated motifs (top site/workflow patterns) to identify recurring queue pressure quickly,
+- direct open-draft shortcuts from motif cards to reduce identify→open latency.
 
 ### 4. Throughput and QoS testing
 The system should support:

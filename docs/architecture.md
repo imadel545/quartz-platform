@@ -93,6 +93,11 @@ Current Android implementation covers a bounded local-first workflow baseline:
     - retry failed sync from row scope
     - retry failed sync in current visible filtered scope
   - row-level dominant attention signal + stale-age context for quicker supervisor decisions
+  - queue-intelligence layer (still bounded/local-first):
+    - deterministic queue presets over filtered drafts
+    - explicit queue progression state (`progressedDraftIds`) with reset
+    - queue-top action semantics for faster repeated supervisor review loops
+    - lightweight aggregated motifs by site/workflow for pattern-oriented triage
 
 For XFeeder proximity, implementation is intentionally explicit and bounded:
 - `UNAVAILABLE`: location/altitude data cannot be trusted for eligibility

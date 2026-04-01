@@ -61,6 +61,10 @@ quartz-platform/
       - retry failed syncs from the control tower (row-level and visible bulk scope)
       - grouping modes (`ATTENTION`, `WORKFLOW`) with saved-state restoration
       - dominant attention signal + stale-age visibility for faster supervisor triage
+    - queue-intelligence supervision acceleration:
+      - queue presets (`NEEDS_ATTENTION_NOW`, `SYNC_FAILURES_FIRST`, `QOS_RISK_FIRST`, `STALE_GUIDED_WORK`, `GUIDED_UNRESOLVED`)
+      - deterministic queue progression (`queueTopDraftId`, progressed items, reset action)
+      - aggregated motifs (top site/workflow queue patterns with direct draft open shortcuts)
   - Room migrations and schema snapshots kept explicit
 
 ## Explicitly out of scope at this stage

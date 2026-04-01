@@ -48,6 +48,10 @@ The roadmap prioritizes:
     - top-priority direct open action
     - sync retry actions from control tower (row scope + visible bulk scope)
     - dominant attention and stale-age signals surfaced for faster triage
+  - reviewer/supervisor control-tower queue-intelligence acceleration:
+    - deterministic queue presets for supervision intents
+    - queue continuation/reset semantics for repeated triage loops
+    - top motifs by site/workflow with direct open-draft shortcuts
   - shared workflow/session core reused by multiple guided flows
   - local report-draft continuity with typed provenance
   - workflow-typed closure projection in report draft flow for XFeeder/RET local review

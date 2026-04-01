@@ -83,6 +83,37 @@ class ReviewerControlTowerViewModelTest {
     }
 
     @Test
+    fun restores_preset_and_progressed_queue_from_saved_state_handle() = runTest {
+        val viewModel = buildViewModel(
+            savedStateHandle = SavedStateHandle(
+                mapOf(
+                    STATE_CONTROL_TOWER_SELECTED_PRESET to ReviewerQueuePreset.SYNC_FAILURES_FIRST.name,
+                    STATE_CONTROL_TOWER_PROGRESS_DRAFT_IDS to listOf("draft-1")
+                )
+            )
+        )
+
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.selectedPreset).isEqualTo(ReviewerQueuePreset.SYNC_FAILURES_FIRST)
+        assertThat(viewModel.uiState.value.progressedDraftIds).containsExactly("draft-1")
+    }
+
+    @Test
+    fun selecting_preset_persists_and_unknown_falls_back_to_attention_now() = runTest {
+        val savedStateHandle = SavedStateHandle(
+            mapOf(STATE_CONTROL_TOWER_SELECTED_PRESET to "INVALID_PRESET")
+        )
+        val viewModel = buildViewModel(savedStateHandle = savedStateHandle)
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.selectedPreset).isEqualTo(ReviewerQueuePreset.NEEDS_ATTENTION_NOW)
+
+        viewModel.onPresetSelected(ReviewerQueuePreset.QOS_RISK_FIRST)
+        advanceUntilIdle()
+        assertThat(savedStateHandle.get<String>(STATE_CONTROL_TOWER_SELECTED_PRESET))
+            .isEqualTo(ReviewerQueuePreset.QOS_RISK_FIRST.name)
+    }
+
+    @Test
     fun selecting_filter_persists_and_open_draft_emits_event() = runTest {
         val savedStateHandle = SavedStateHandle()
         val viewModel = buildViewModel(savedStateHandle = savedStateHandle)
@@ -120,6 +151,39 @@ class ReviewerControlTowerViewModelTest {
         assertThat(savedStateHandle.get<String>(STATE_CONTROL_TOWER_SELECTED_GROUPING))
             .isEqualTo(ReviewerControlTowerGrouping.WORKFLOW.name)
         assertThat(events).containsExactly(ReviewerControlTowerEvent.OpenDraft("draft-1"))
+        assertThat(savedStateHandle.get<List<String>>(STATE_CONTROL_TOWER_PROGRESS_DRAFT_IDS))
+            .containsExactly("draft-1")
+    }
+
+    @Test
+    fun reset_queue_progress_clears_progressed_ids() = runTest {
+        val savedStateHandle = SavedStateHandle()
+        val viewModel = buildViewModel(savedStateHandle = savedStateHandle)
+        advanceUntilIdle()
+
+        viewModel.onOpenTopPriorityClicked()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.progressedDraftIds).containsExactly("draft-1")
+
+        viewModel.onResetQueueProgressClicked()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.progressedDraftIds).isEmpty()
+        assertThat(savedStateHandle.get<List<String>>(STATE_CONTROL_TOWER_PROGRESS_DRAFT_IDS)).isEmpty()
+    }
+
+    @Test
+    fun selecting_preset_clears_existing_queue_progress() = runTest {
+        val savedStateHandle = SavedStateHandle()
+        val viewModel = buildViewModel(savedStateHandle = savedStateHandle)
+        advanceUntilIdle()
+
+        viewModel.onOpenTopPriorityClicked()
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.progressedDraftIds).containsExactly("draft-1")
+
+        viewModel.onPresetSelected(ReviewerQueuePreset.QOS_RISK_FIRST)
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.progressedDraftIds).isEmpty()
     }
 
     private fun buildViewModel(

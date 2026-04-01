@@ -259,6 +259,17 @@ For bounded supervisor triage workflows, a reviewer-focused projection layer tra
   - `QOS_RISK`
   - `GUIDED`
   - `NON_GUIDED`
+- deterministic queue preset state:
+  - `NEEDS_ATTENTION_NOW`
+  - `SYNC_FAILURES_FIRST`
+  - `QOS_RISK_FIRST`
+  - `STALE_GUIDED_WORK`
+  - `GUIDED_UNRESOLVED`
+- queue progression state:
+  - `progressedDraftIds` (bounded local progression memory for continue-queue action)
+- lightweight motif projections for faster supervisor pattern detection:
+  - `ReviewerQueueSiteMotif`
+  - `ReviewerQueueWorkflowMotif`
 
 Possible status values:
 - CREATED
