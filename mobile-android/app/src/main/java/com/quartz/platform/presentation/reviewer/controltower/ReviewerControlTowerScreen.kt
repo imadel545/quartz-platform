@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -22,6 +23,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -37,6 +42,8 @@ import com.quartz.platform.domain.model.ReviewerControlTowerItem
 import com.quartz.platform.domain.model.ReviewerDraftAgeBucket
 import com.quartz.platform.domain.model.ReviewerUrgencyClass
 import com.quartz.platform.domain.model.ReviewerUrgencyReason
+import com.quartz.platform.domain.model.SupervisorQueueActionType
+import com.quartz.platform.domain.model.SupervisorQueueStatus
 import com.quartz.platform.presentation.sync.syncStateLabelRes
 import java.time.Instant
 import java.time.ZoneId
@@ -65,14 +72,20 @@ fun ReviewerControlTowerRoute(
         state = state,
         onBack = onBack,
         onFilterSelected = viewModel::onFilterSelected,
+        onQueueStatusFilterSelected = viewModel::onQueueStatusFilterSelected,
         onGroupingSelected = viewModel::onGroupingSelected,
         onPresetSelected = viewModel::onPresetSelected,
         onOpenTopPriority = viewModel::onOpenTopPriorityClicked,
         onResetQueueProgress = viewModel::onResetQueueProgressClicked,
         onRetryFailedVisibleSync = viewModel::onRetryFailedVisibleSyncClicked,
+        onBulkMarkVisibleInReview = viewModel::onBulkMarkVisibleInReviewClicked,
         onOpenDraft = viewModel::onOpenDraftClicked,
         onOpenSite = viewModel::onOpenSiteClicked,
-        onRetryDraftSync = viewModel::onRetryDraftSyncClicked
+        onRetryDraftSync = viewModel::onRetryDraftSyncClicked,
+        onMarkDraftInReview = viewModel::onMarkDraftInReviewClicked,
+        onMarkDraftWaitingFeedback = viewModel::onMarkDraftWaitingFeedbackClicked,
+        onMarkDraftResolved = viewModel::onMarkDraftResolvedClicked,
+        onReopenDraft = viewModel::onReopenDraftClicked
     )
 }
 
@@ -82,14 +95,20 @@ fun ReviewerControlTowerScreen(
     state: ReviewerControlTowerUiState,
     onBack: () -> Unit,
     onFilterSelected: (ReviewerControlTowerFilter) -> Unit,
+    onQueueStatusFilterSelected: (ReviewerQueueStatusFilter) -> Unit,
     onGroupingSelected: (ReviewerControlTowerGrouping) -> Unit,
     onPresetSelected: (ReviewerQueuePreset) -> Unit,
     onOpenTopPriority: () -> Unit,
     onResetQueueProgress: () -> Unit,
     onRetryFailedVisibleSync: () -> Unit,
+    onBulkMarkVisibleInReview: () -> Unit,
     onOpenDraft: (String) -> Unit,
     onOpenSite: (String) -> Unit,
-    onRetryDraftSync: (String) -> Unit
+    onRetryDraftSync: (String) -> Unit,
+    onMarkDraftInReview: (String) -> Unit,
+    onMarkDraftWaitingFeedback: (String) -> Unit,
+    onMarkDraftResolved: (String) -> Unit,
+    onReopenDraft: (String) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -112,6 +131,7 @@ fun ReviewerControlTowerScreen(
             }
 
             else -> {
+                var showAdvancedControls by rememberSaveable { mutableStateOf(false) }
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -128,7 +148,8 @@ fun ReviewerControlTowerScreen(
                             state = state,
                             onOpenTopPriority = onOpenTopPriority,
                             onResetQueueProgress = onResetQueueProgress,
-                            onRetryFailedVisibleSync = onRetryFailedVisibleSync
+                            onRetryFailedVisibleSync = onRetryFailedVisibleSync,
+                            onBulkMarkVisibleInReview = onBulkMarkVisibleInReview
                         )
                     }
 
@@ -147,19 +168,44 @@ fun ReviewerControlTowerScreen(
                     }
 
                     item {
-                        ControlTowerGroupingRow(
-                            selectedGrouping = state.selectedGrouping,
-                            onGroupingSelected = onGroupingSelected
-                        )
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { showAdvancedControls = !showAdvancedControls }
+                        ) {
+                            Text(
+                                if (showAdvancedControls) {
+                                    stringResource(R.string.reviewer_control_tower_action_hide_advanced_controls)
+                                } else {
+                                    stringResource(R.string.reviewer_control_tower_action_show_advanced_controls)
+                                }
+                            )
+                        }
                     }
 
-                    item {
-                        ControlTowerMotifSection(
-                            siteMotifs = state.siteMotifs,
-                            workflowMotifs = state.workflowMotifs,
-                            urgencyMotifs = state.urgencyMotifs,
-                            onOpenDraft = onOpenDraft
-                        )
+                    if (showAdvancedControls) {
+                        item {
+                            ControlTowerQueueStatusFilterRow(
+                                selectedFilter = state.selectedQueueStatusFilter,
+                                onFilterSelected = onQueueStatusFilterSelected
+                            )
+                        }
+
+                        item {
+                            ControlTowerGroupingRow(
+                                selectedGrouping = state.selectedGrouping,
+                                onGroupingSelected = onGroupingSelected
+                            )
+                        }
+
+                        item {
+                            ControlTowerMotifSection(
+                                siteMotifs = state.siteMotifs,
+                                workflowMotifs = state.workflowMotifs,
+                                urgencyMotifs = state.urgencyMotifs,
+                                statusMotifs = state.statusMotifs,
+                                onOpenDraft = onOpenDraft
+                            )
+                        }
                     }
 
                     state.infoMessage?.let { info ->
@@ -204,7 +250,12 @@ fun ReviewerControlTowerScreen(
                                 onOpenDraft = onOpenDraft,
                                 onOpenSite = onOpenSite,
                                 onRetryDraftSync = onRetryDraftSync,
-                                retryingDraftIds = state.retryingDraftIds
+                                retryingDraftIds = state.retryingDraftIds,
+                                transitioningDraftIds = state.transitioningQueueDraftIds,
+                                onMarkDraftInReview = onMarkDraftInReview,
+                                onMarkDraftWaitingFeedback = onMarkDraftWaitingFeedback,
+                                onMarkDraftResolved = onMarkDraftResolved,
+                                onReopenDraft = onReopenDraft
                             )
                         }
                     }
@@ -262,6 +313,16 @@ private fun ControlTowerSummaryCard(state: ReviewerControlTowerUiState) {
                 ),
                 style = MaterialTheme.typography.bodySmall
             )
+            Text(
+                text = stringResource(
+                    R.string.reviewer_control_tower_summary_queue,
+                    state.summary.untriagedCount,
+                    state.summary.inReviewCount,
+                    state.summary.waitingFieldFeedbackCount,
+                    state.summary.resolvedCount
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 }
@@ -271,7 +332,8 @@ private fun ControlTowerActionRow(
     state: ReviewerControlTowerUiState,
     onOpenTopPriority: () -> Unit,
     onResetQueueProgress: () -> Unit,
-    onRetryFailedVisibleSync: () -> Unit
+    onRetryFailedVisibleSync: () -> Unit,
+    onBulkMarkVisibleInReview: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -309,10 +371,58 @@ private fun ControlTowerActionRow(
         }
         OutlinedButton(
             modifier = Modifier.fillMaxWidth(),
+            enabled = state.visibleUntriagedCount > 0 && !state.isBulkQueueTransitionInProgress,
+            onClick = onBulkMarkVisibleInReview
+        ) {
+            Text(
+                if (state.isBulkQueueTransitionInProgress) {
+                    stringResource(R.string.action_queue_status_update_loading)
+                } else {
+                    stringResource(
+                        R.string.reviewer_control_tower_action_mark_visible_in_review,
+                        state.visibleUntriagedCount
+                    )
+                }
+            )
+        }
+        OutlinedButton(
+            modifier = Modifier.fillMaxWidth(),
             enabled = state.progressedDraftIds.isNotEmpty(),
             onClick = onResetQueueProgress
         ) {
             Text(stringResource(R.string.reviewer_control_tower_action_reset_queue_progress))
+        }
+    }
+}
+
+@Composable
+private fun ControlTowerQueueStatusFilterRow(
+    selectedFilter: ReviewerQueueStatusFilter,
+    onFilterSelected: (ReviewerQueueStatusFilter) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.reviewer_control_tower_queue_filter_label),
+            style = MaterialTheme.typography.bodyMedium
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(ReviewerQueueStatusFilter.entries) { filter ->
+                FilterChip(
+                    selected = filter == selectedFilter,
+                    onClick = { onFilterSelected(filter) },
+                    label = {
+                        Text(
+                            text = when (filter) {
+                                ReviewerQueueStatusFilter.ALL -> stringResource(R.string.reviewer_control_tower_queue_filter_all)
+                                ReviewerQueueStatusFilter.UNTRIAGED -> stringResource(R.string.reviewer_control_tower_queue_status_untriaged)
+                                ReviewerQueueStatusFilter.IN_REVIEW -> stringResource(R.string.reviewer_control_tower_queue_status_in_review)
+                                ReviewerQueueStatusFilter.WAITING_FIELD_FEEDBACK -> stringResource(R.string.reviewer_control_tower_queue_status_waiting_feedback)
+                                ReviewerQueueStatusFilter.RESOLVED -> stringResource(R.string.reviewer_control_tower_queue_status_resolved)
+                            }
+                        )
+                    }
+                )
+            }
         }
     }
 }
@@ -388,9 +498,10 @@ private fun ControlTowerMotifSection(
     siteMotifs: List<ReviewerQueueSiteMotif>,
     workflowMotifs: List<ReviewerQueueWorkflowMotif>,
     urgencyMotifs: List<ReviewerQueueUrgencyMotif>,
+    statusMotifs: List<ReviewerQueueStatusMotif>,
     onOpenDraft: (String) -> Unit
 ) {
-    if (siteMotifs.isEmpty() && workflowMotifs.isEmpty() && urgencyMotifs.isEmpty()) return
+    if (siteMotifs.isEmpty() && workflowMotifs.isEmpty() && urgencyMotifs.isEmpty() && statusMotifs.isEmpty()) return
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -485,6 +596,27 @@ private fun ControlTowerMotifSection(
                     }
                 }
             }
+
+            if (statusMotifs.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.reviewer_control_tower_motif_by_queue_status),
+                    style = MaterialTheme.typography.labelMedium
+                )
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(statusMotifs) { motif ->
+                        MotifCard(
+                            title = "${stringResource(queueStatusLabelRes(motif.queueStatus))} (${motif.draftCount})",
+                            subtitle = motif.dominantActionType?.let { actionType ->
+                                stringResource(
+                                    R.string.reviewer_control_tower_motif_dominant_action,
+                                    stringResource(queueActionLabelRes(actionType))
+                                )
+                            },
+                            onOpen = motif.topDraftId?.let { draftId -> { onOpenDraft(draftId) } }
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -546,7 +678,12 @@ private fun ControlTowerGroupSection(
     onOpenDraft: (String) -> Unit,
     onOpenSite: (String) -> Unit,
     onRetryDraftSync: (String) -> Unit,
-    retryingDraftIds: Set<String>
+    retryingDraftIds: Set<String>,
+    transitioningDraftIds: Set<String>,
+    onMarkDraftInReview: (String) -> Unit,
+    onMarkDraftWaitingFeedback: (String) -> Unit,
+    onMarkDraftResolved: (String) -> Unit,
+    onReopenDraft: (String) -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -561,9 +698,14 @@ private fun ControlTowerGroupSection(
                 ReviewerControlTowerItemCard(
                     item = item,
                     isRetrying = item.draftId in retryingDraftIds,
+                    isQueueTransitioning = item.draftId in transitioningDraftIds,
                     onOpenDraft = onOpenDraft,
                     onOpenSite = onOpenSite,
-                    onRetryDraftSync = onRetryDraftSync
+                    onRetryDraftSync = onRetryDraftSync,
+                    onMarkDraftInReview = onMarkDraftInReview,
+                    onMarkDraftWaitingFeedback = onMarkDraftWaitingFeedback,
+                    onMarkDraftResolved = onMarkDraftResolved,
+                    onReopenDraft = onReopenDraft
                 )
             }
         }
@@ -574,9 +716,14 @@ private fun ControlTowerGroupSection(
 private fun ReviewerControlTowerItemCard(
     item: ReviewerControlTowerItem,
     isRetrying: Boolean,
+    isQueueTransitioning: Boolean,
     onOpenDraft: (String) -> Unit,
     onOpenSite: (String) -> Unit,
-    onRetryDraftSync: (String) -> Unit
+    onRetryDraftSync: (String) -> Unit,
+    onMarkDraftInReview: (String) -> Unit,
+    onMarkDraftWaitingFeedback: (String) -> Unit,
+    onMarkDraftResolved: (String) -> Unit,
+    onReopenDraft: (String) -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -618,20 +765,53 @@ private fun ReviewerControlTowerItemCard(
                 )
             }
 
-            item.originWorkflowType?.let { workflow ->
-                Text(
-                    text = stringResource(
-                        R.string.reviewer_control_tower_workflow,
-                        workflowLabel(workflow)
-                    ),
-                    style = MaterialTheme.typography.bodySmall
-                )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                item.originWorkflowType?.let { workflow ->
+                    item {
+                        AssistChip(
+                            onClick = {},
+                            label = {
+                                Text(
+                                    stringResource(
+                                        R.string.reviewer_control_tower_workflow_short,
+                                        workflowLabel(workflow)
+                                    )
+                                )
+                            }
+                        )
+                    }
+                }
+                item {
+                    AssistChip(
+                        onClick = {},
+                        label = {
+                            Text(
+                                stringResource(
+                                    R.string.reviewer_control_tower_queue_status_short,
+                                    stringResource(queueStatusLabelRes(item.queueStatus))
+                                )
+                            )
+                        }
+                    )
+                }
+                item {
+                    AssistChip(
+                        onClick = {},
+                        label = {
+                            Text(
+                                stringResource(
+                                    R.string.reviewer_control_tower_urgency_short,
+                                    stringResource(urgencyClassLabelRes(item.urgencyClass)),
+                                    stringResource(ageBucketLabelRes(item.ageBucket))
+                                )
+                            )
+                        }
+                    )
+                }
             }
             Text(
                 text = stringResource(
-                    R.string.reviewer_control_tower_urgency,
-                    stringResource(urgencyClassLabelRes(item.urgencyClass)),
-                    stringResource(ageBucketLabelRes(item.ageBucket)),
+                    R.string.reviewer_control_tower_urgency_reason_short,
                     stringResource(urgencyReasonLabelRes(item.urgencyReason))
                 ),
                 style = MaterialTheme.typography.bodySmall
@@ -678,6 +858,67 @@ private fun ReviewerControlTowerItemCard(
                             stringResource(R.string.action_retry_sync)
                         }
                     )
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                when (item.queueStatus) {
+                    SupervisorQueueStatus.UNTRIAGED -> {
+                        OutlinedButton(
+                            modifier = Modifier.weight(1f),
+                            enabled = !isQueueTransitioning,
+                            onClick = { onMarkDraftInReview(item.draftId) }
+                        ) {
+                            Text(stringResource(R.string.reviewer_control_tower_action_mark_in_review))
+                        }
+                        OutlinedButton(
+                            modifier = Modifier.weight(1f),
+                            enabled = !isQueueTransitioning,
+                            onClick = { onMarkDraftResolved(item.draftId) }
+                        ) {
+                            Text(stringResource(R.string.reviewer_control_tower_action_mark_resolved))
+                        }
+                    }
+                    SupervisorQueueStatus.IN_REVIEW -> {
+                        OutlinedButton(
+                            modifier = Modifier.weight(1f),
+                            enabled = !isQueueTransitioning,
+                            onClick = { onMarkDraftWaitingFeedback(item.draftId) }
+                        ) {
+                            Text(stringResource(R.string.reviewer_control_tower_action_mark_waiting_feedback))
+                        }
+                        OutlinedButton(
+                            modifier = Modifier.weight(1f),
+                            enabled = !isQueueTransitioning,
+                            onClick = { onMarkDraftResolved(item.draftId) }
+                        ) {
+                            Text(stringResource(R.string.reviewer_control_tower_action_mark_resolved))
+                        }
+                    }
+                    SupervisorQueueStatus.WAITING_FIELD_FEEDBACK -> {
+                        OutlinedButton(
+                            modifier = Modifier.weight(1f),
+                            enabled = !isQueueTransitioning,
+                            onClick = { onMarkDraftInReview(item.draftId) }
+                        ) {
+                            Text(stringResource(R.string.reviewer_control_tower_action_mark_in_review))
+                        }
+                        OutlinedButton(
+                            modifier = Modifier.weight(1f),
+                            enabled = !isQueueTransitioning,
+                            onClick = { onMarkDraftResolved(item.draftId) }
+                        ) {
+                            Text(stringResource(R.string.reviewer_control_tower_action_mark_resolved))
+                        }
+                    }
+                    SupervisorQueueStatus.RESOLVED -> {
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !isQueueTransitioning,
+                            onClick = { onReopenDraft(item.draftId) }
+                        ) {
+                            Text(stringResource(R.string.reviewer_control_tower_action_reopen))
+                        }
+                    }
                 }
             }
         }
@@ -746,6 +987,26 @@ private fun urgencyReasonLabelRes(reason: ReviewerUrgencyReason): Int {
         ReviewerUrgencyReason.STALE_GUIDED_WORK -> R.string.reviewer_control_tower_urgency_reason_stale_guided
         ReviewerUrgencyReason.STALE_PENDING_SYNC -> R.string.reviewer_control_tower_urgency_reason_stale_pending
         ReviewerUrgencyReason.NONE -> R.string.reviewer_control_tower_urgency_reason_none
+    }
+}
+
+private fun queueStatusLabelRes(status: SupervisorQueueStatus): Int {
+    return when (status) {
+        SupervisorQueueStatus.UNTRIAGED -> R.string.reviewer_control_tower_queue_status_untriaged
+        SupervisorQueueStatus.IN_REVIEW -> R.string.reviewer_control_tower_queue_status_in_review
+        SupervisorQueueStatus.WAITING_FIELD_FEEDBACK -> R.string.reviewer_control_tower_queue_status_waiting_feedback
+        SupervisorQueueStatus.RESOLVED -> R.string.reviewer_control_tower_queue_status_resolved
+    }
+}
+
+private fun queueActionLabelRes(actionType: SupervisorQueueActionType): Int {
+    return when (actionType) {
+        SupervisorQueueActionType.MARK_IN_REVIEW -> R.string.reviewer_control_tower_action_mark_in_review
+        SupervisorQueueActionType.BULK_MARK_IN_REVIEW -> R.string.reviewer_control_tower_action_bulk_mark_in_review
+        SupervisorQueueActionType.MARK_WAITING_FIELD_FEEDBACK -> R.string.reviewer_control_tower_action_mark_waiting_feedback
+        SupervisorQueueActionType.MARK_RESOLVED -> R.string.reviewer_control_tower_action_mark_resolved
+        SupervisorQueueActionType.REOPEN_TO_UNTRIAGED -> R.string.reviewer_control_tower_action_reopen
+        SupervisorQueueActionType.RETRY_SYNC -> R.string.action_retry_sync
     }
 }
 

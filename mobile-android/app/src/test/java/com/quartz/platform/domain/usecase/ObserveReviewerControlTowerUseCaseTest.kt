@@ -172,7 +172,10 @@ class ObserveReviewerControlTowerUseCaseTest {
         val useCase = ObserveReviewerControlTowerUseCase(
             reportDraftRepository = reportRepository,
             observeSiteReportListUseCase = observeSiteReportListUseCase,
-            observeSiteListUseCase = ObserveSiteListUseCase(siteRepository)
+            observeSiteListUseCase = ObserveSiteListUseCase(siteRepository),
+            observeSupervisorQueueStatesUseCase = ObserveSupervisorQueueStatesUseCase(
+                FakeSupervisorQueueRepository()
+            )
         )
 
         val snapshot = useCase().take(1).toList().first()
@@ -374,4 +377,39 @@ class ObserveReviewerControlTowerUseCaseTest {
             proximityReferenceAltitudeSource: com.quartz.platform.domain.model.RetReferenceAltitudeSourceState
         ) = Unit
     }
+}
+
+private class FakeSupervisorQueueRepository :
+    com.quartz.platform.domain.repository.SupervisorQueueRepository {
+    override fun observeQueueStates() =
+        flowOf(emptyList<com.quartz.platform.domain.model.SupervisorQueueState>())
+
+    override fun observeQueueActions() =
+        flowOf(emptyList<com.quartz.platform.domain.model.SupervisorQueueAction>())
+
+    override suspend fun transitionDraftStatus(
+        draftId: String,
+        toStatus: com.quartz.platform.domain.model.SupervisorQueueStatus,
+        actionType: com.quartz.platform.domain.model.SupervisorQueueActionType,
+        note: String?,
+        triggeredFromFilter: String?,
+        triggeredFromPreset: String?
+    ) = Unit
+
+    override suspend fun transitionDraftStatuses(
+        draftIds: List<String>,
+        toStatus: com.quartz.platform.domain.model.SupervisorQueueStatus,
+        actionType: com.quartz.platform.domain.model.SupervisorQueueActionType,
+        note: String?,
+        triggeredFromFilter: String?,
+        triggeredFromPreset: String?
+    ) = Unit
+
+    override suspend fun recordDraftAction(
+        draftId: String,
+        actionType: com.quartz.platform.domain.model.SupervisorQueueActionType,
+        note: String?,
+        triggeredFromFilter: String?,
+        triggeredFromPreset: String?
+    ) = Unit
 }

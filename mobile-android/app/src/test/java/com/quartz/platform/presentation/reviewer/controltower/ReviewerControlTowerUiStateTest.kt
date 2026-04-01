@@ -12,6 +12,7 @@ import com.quartz.platform.domain.model.ReviewerDraftAgeBucket
 import com.quartz.platform.domain.model.ReviewerUrgencyClass
 import com.quartz.platform.domain.model.ReviewerUrgencyReason
 import com.quartz.platform.domain.model.RetResultOutcome
+import com.quartz.platform.domain.model.SupervisorQueueStatus
 import org.junit.Test
 
 class ReviewerControlTowerUiStateTest {
@@ -180,7 +181,11 @@ class ReviewerControlTowerUiStateTest {
                 staleDraftCount = items.count { ReviewerAttentionSignal.STALE_DRAFT in it.attentionSignals },
                 attentionRequiredCount = items.count { it.attentionRank > 0 },
                 actNowCount = items.count { it.urgencyClass == ReviewerUrgencyClass.ACT_NOW },
-                overdueCount = items.count { it.ageBucket == ReviewerDraftAgeBucket.OVERDUE }
+                overdueCount = items.count { it.ageBucket == ReviewerDraftAgeBucket.OVERDUE },
+                untriagedCount = items.count { it.queueStatus == SupervisorQueueStatus.UNTRIAGED },
+                inReviewCount = items.count { it.queueStatus == SupervisorQueueStatus.IN_REVIEW },
+                waitingFieldFeedbackCount = items.count { it.queueStatus == SupervisorQueueStatus.WAITING_FIELD_FEEDBACK },
+                resolvedCount = items.count { it.queueStatus == SupervisorQueueStatus.RESOLVED }
             ),
             selectedPreset = selectedPreset,
             progressedDraftIds = progressedDraftIds
@@ -229,7 +234,10 @@ class ReviewerControlTowerUiStateTest {
                 ReviewerUrgencyClass.HIGH -> 60
                 ReviewerUrgencyClass.WATCH -> 30
                 ReviewerUrgencyClass.NORMAL -> 0
-            }
+            },
+            queueStatus = SupervisorQueueStatus.UNTRIAGED,
+            queueLastActionType = null,
+            queueLastActionAtEpochMillis = null
         )
     }
 }

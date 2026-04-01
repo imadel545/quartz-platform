@@ -56,6 +56,17 @@ The roadmap prioritizes:
     - deterministic age buckets + urgency classes for local deadline-risk triage
     - urgency-aware queue ordering and `act-now / overdue` preset
     - row-level urgency context and aggregate urgency motifs for faster supervision decisions
+  - reviewer/supervisor queue orchestration v3:
+    - persisted queue lifecycle status per draft (`UNTRIAGED`, `IN_REVIEW`, `WAITING_FIELD_FEEDBACK`, `RESOLVED`)
+    - direct row-level queue transitions and visible-bulk mark-in-review
+    - typed queue action journal for local auditability
+    - queue-status filters and status motifs for action-center steering speed
+  - mission-driven product/UX recovery on Android runtime surfaces:
+    - Home Map reframed as mission entrypoint with explicit primary vs secondary actions
+    - Site Detail split into mission-launch actions and collapsible technical details
+    - RET guided runtime refocused on mission status/progress and reduced control density
+    - ReportDraft debug tooling moved behind explicit developer disclosure
+    - Control Tower advanced controls made collapsible for mobile triage readability
   - shared workflow/session core reused by multiple guided flows
   - local report-draft continuity with typed provenance
   - workflow-typed closure projection in report draft flow for XFeeder/RET local review

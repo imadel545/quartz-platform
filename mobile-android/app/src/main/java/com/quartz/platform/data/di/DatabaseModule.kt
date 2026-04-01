@@ -17,6 +17,8 @@ import com.quartz.platform.data.local.dao.SiteAntennaDao
 import com.quartz.platform.data.local.dao.SiteCellDao
 import com.quartz.platform.data.local.dao.SiteDao
 import com.quartz.platform.data.local.dao.SiteSectorDao
+import com.quartz.platform.data.local.dao.SupervisorQueueActionDao
+import com.quartz.platform.data.local.dao.SupervisorQueueStateDao
 import com.quartz.platform.data.local.dao.SyncJobDao
 import com.quartz.platform.data.local.dao.XfeederSessionDao
 import com.quartz.platform.data.local.dao.XfeederStepDao
@@ -60,7 +62,8 @@ object DatabaseModule {
             DatabaseMigrations.MIGRATION_19_20,
             DatabaseMigrations.MIGRATION_20_21,
             DatabaseMigrations.MIGRATION_21_22,
-            DatabaseMigrations.MIGRATION_22_23
+            DatabaseMigrations.MIGRATION_22_23,
+            DatabaseMigrations.MIGRATION_23_24
         )
             .build()
     }
@@ -113,6 +116,14 @@ object DatabaseModule {
 
     @Provides
     fun provideReportDraftDao(database: QuartzDatabase): ReportDraftDao = database.reportDraftDao()
+
+    @Provides
+    fun provideSupervisorQueueStateDao(database: QuartzDatabase): SupervisorQueueStateDao =
+        database.supervisorQueueStateDao()
+
+    @Provides
+    fun provideSupervisorQueueActionDao(database: QuartzDatabase): SupervisorQueueActionDao =
+        database.supervisorQueueActionDao()
 
     @Provides
     @Singleton

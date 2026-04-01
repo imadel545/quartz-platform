@@ -16,6 +16,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -126,6 +127,12 @@ fun HomeMapScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            HomeMissionEntryCard(
+                state = state,
+                onOpenControlTower = onOpenControlTower,
+                onRecenter = onRecenter
+            )
+
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = onSearchQueryChanged,
@@ -134,65 +141,18 @@ fun HomeMapScreen(
                 singleLine = true
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    modifier = Modifier.weight(1f),
-                    enabled = !state.isRecenterInProgress,
-                    onClick = onRecenter
-                ) {
-                    Text(
-                        if (state.isRecenterInProgress) {
-                            stringResource(R.string.action_recenter_loading)
-                        } else {
-                            stringResource(R.string.action_recenter)
-                        }
-                    )
-                }
-
-                Button(
-                    modifier = Modifier.weight(1f),
-                    enabled = !state.isBootstrappingDemo,
-                    onClick = onLoadDemoSnapshot
-                ) {
-                    Text(
-                        if (state.isBootstrappingDemo) {
-                            stringResource(R.string.action_load_demo_snapshot_loading)
-                        } else {
-                            stringResource(R.string.action_load_demo_snapshot)
-                        }
-                    )
-                }
-            }
-
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onOpenControlTower
-            ) {
-                Text(stringResource(R.string.action_open_control_tower))
-            }
-
             state.errorMessage?.let { error ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = error,
-                        modifier = Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
+                RuntimeMessageCard(
+                    message = error,
+                    isError = true
+                )
             }
 
             state.infoMessage?.let { info ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = info,
-                        modifier = Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
+                RuntimeMessageCard(
+                    message = info,
+                    isError = false
+                )
             }
 
             if (state.isEmpty) {
@@ -203,10 +163,13 @@ fun HomeMapScreen(
                 return@Column
             }
 
-            Text(
-                text = stringResource(R.string.label_sites_found, state.filteredSites.size),
-                style = MaterialTheme.typography.bodySmall
-            )
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(R.string.label_sites_found, state.filteredSites.size),
+                    modifier = Modifier.padding(12.dp),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
 
             if (state.hasNoSearchResults) {
                 Card(modifier = Modifier.fillMaxWidth()) {
@@ -217,19 +180,40 @@ fun HomeMapScreen(
                     )
                 }
             } else {
-                QuartzHomeMapView(
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
-                    sites = state.filteredSites,
-                    selectedSiteId = state.selectedSiteId,
-                    userLocation = state.userLocation?.let {
-                        MapCoordinate(it.latitude, it.longitude)
-                    },
-                    cameraCenter = state.cameraCenter,
-                    cameraRequestVersion = state.cameraRequestVersion,
-                    onSiteSelected = onMapSiteSelected
-                )
+                        .weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.home_map_section_title),
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Text(
+                            text = stringResource(R.string.home_map_section_hint),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        QuartzHomeMapView(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            sites = state.filteredSites,
+                            selectedSiteId = state.selectedSiteId,
+                            userLocation = state.userLocation?.let {
+                                MapCoordinate(it.latitude, it.longitude)
+                            },
+                            cameraCenter = state.cameraCenter,
+                            cameraRequestVersion = state.cameraRequestVersion,
+                            onSiteSelected = onMapSiteSelected
+                        )
+                    }
+                }
             }
 
             state.selectedSite?.let { selected ->
@@ -254,10 +238,118 @@ fun HomeMapScreen(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = { onOpenSelectedSite(selected.id) }
                         ) {
-                            Text(stringResource(R.string.action_open_selected_site))
+                            Text(stringResource(R.string.home_action_open_site_intelligence))
                         }
                     }
                 }
+            }
+
+            HomeSecondaryActionsCard(
+                isBootstrappingDemo = state.isBootstrappingDemo,
+                onLoadDemoSnapshot = onLoadDemoSnapshot
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeMissionEntryCard(
+    state: HomeMapUiState,
+    onOpenControlTower: () -> Unit,
+    onRecenter: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.home_mission_title),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.home_mission_summary,
+                    state.sites.size,
+                    state.filteredSites.size
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = state.selectedSite?.let { selected ->
+                    stringResource(R.string.home_mission_selected_site, selected.name)
+                } ?: stringResource(R.string.home_mission_no_selected_site),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    modifier = Modifier.weight(1f),
+                    onClick = onOpenControlTower
+                ) {
+                    Text(stringResource(R.string.action_open_control_tower))
+                }
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    enabled = !state.isRecenterInProgress,
+                    onClick = onRecenter
+                ) {
+                    Text(
+                        if (state.isRecenterInProgress) {
+                            stringResource(R.string.action_recenter_loading)
+                        } else {
+                            stringResource(R.string.action_recenter)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RuntimeMessageCard(
+    message: String,
+    isError: Boolean
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(12.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun HomeSecondaryActionsCard(
+    isBootstrappingDemo: Boolean,
+    onLoadDemoSnapshot: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.home_section_secondary_actions),
+                style = MaterialTheme.typography.labelLarge
+            )
+            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isBootstrappingDemo,
+                onClick = onLoadDemoSnapshot
+            ) {
+                Text(
+                    if (isBootstrappingDemo) {
+                        stringResource(R.string.action_load_demo_snapshot_loading)
+                    } else {
+                        stringResource(R.string.action_load_demo_snapshot)
+                    }
+                )
             }
         }
     }

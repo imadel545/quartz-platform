@@ -70,6 +70,17 @@ quartz-platform/
       - explicit urgency taxonomy (`ACT_NOW`, `HIGH`, `WATCH`, `NORMAL`) with typed urgency reasons
       - urgency-aware ranking and preset (`ACT_NOW_OVERDUE`) for faster supervisor triage
       - urgency/aging visibility on each queue row plus aggregate urgency motifs
+    - supervisor queue orchestration v3 (bounded/local-first):
+      - persisted supervisor queue lifecycle per draft (`UNTRIAGED`, `IN_REVIEW`, `WAITING_FIELD_FEEDBACK`, `RESOLVED`)
+      - per-draft action log with typed actions (single + bulk transitions, retry traceability)
+      - queue-status filters and status motifs for faster triage/readability
+      - direct row actions (mark in review / waiting feedback / resolved / reopen) and bulk mark-in-review on visible queue
+    - product/UX architecture recovery (mission-driven runtime surfaces):
+      - Home Map reframed as mission entrypoint (`Mission terrain`) with primary actions (control tower + recenter) and secondary/demo actions demoted
+      - Site Detail split between mission actions and technical depth, with guided sector launch cards and collapsible technical details
+      - RET guided session refocused on mission status/progress, with history progressive disclosure and reduced action density (status/outcome/step chips)
+      - ReportDraft debug sync tools now hidden behind explicit developer disclosure toggle
+      - Control Tower advanced controls (queue-status filter/grouping/motifs) behind explicit disclosure to reduce runtime cognitive load
   - Room migrations and schema snapshots kept explicit
 
 ## Explicitly out of scope at this stage

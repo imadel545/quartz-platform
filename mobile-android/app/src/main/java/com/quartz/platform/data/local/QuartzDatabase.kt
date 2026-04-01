@@ -15,6 +15,8 @@ import com.quartz.platform.data.local.dao.SiteAntennaDao
 import com.quartz.platform.data.local.dao.SiteCellDao
 import com.quartz.platform.data.local.dao.SiteDao
 import com.quartz.platform.data.local.dao.SiteSectorDao
+import com.quartz.platform.data.local.dao.SupervisorQueueActionDao
+import com.quartz.platform.data.local.dao.SupervisorQueueStateDao
 import com.quartz.platform.data.local.dao.SyncJobDao
 import com.quartz.platform.data.local.dao.XfeederSessionDao
 import com.quartz.platform.data.local.dao.XfeederStepDao
@@ -30,6 +32,8 @@ import com.quartz.platform.data.local.entity.SiteAntennaEntity
 import com.quartz.platform.data.local.entity.SiteCellEntity
 import com.quartz.platform.data.local.entity.SiteEntity
 import com.quartz.platform.data.local.entity.SiteSectorEntity
+import com.quartz.platform.data.local.entity.SupervisorQueueActionEntity
+import com.quartz.platform.data.local.entity.SupervisorQueueStateEntity
 import com.quartz.platform.data.local.entity.SyncJobEntity
 import com.quartz.platform.data.local.entity.XfeederSessionEntity
 import com.quartz.platform.data.local.entity.XfeederStepEntity
@@ -50,9 +54,11 @@ import com.quartz.platform.data.local.entity.XfeederStepEntity
         RetSessionEntity::class,
         RetStepEntity::class,
         SyncJobEntity::class,
-        ReportDraftEntity::class
+        ReportDraftEntity::class,
+        SupervisorQueueStateEntity::class,
+        SupervisorQueueActionEntity::class
     ],
-    version = 23,
+    version = 24,
     exportSchema = true
 )
 @TypeConverters(QuartzTypeConverters::class)
@@ -72,4 +78,6 @@ abstract class QuartzDatabase : RoomDatabase() {
     abstract fun retStepDao(): RetStepDao
     abstract fun syncJobDao(): SyncJobDao
     abstract fun reportDraftDao(): ReportDraftDao
+    abstract fun supervisorQueueStateDao(): SupervisorQueueStateDao
+    abstract fun supervisorQueueActionDao(): SupervisorQueueActionDao
 }

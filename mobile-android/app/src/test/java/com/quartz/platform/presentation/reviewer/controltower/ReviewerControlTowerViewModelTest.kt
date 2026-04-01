@@ -16,11 +16,14 @@ import com.quartz.platform.domain.repository.SiteRepository
 import com.quartz.platform.domain.repository.SyncRepository
 import com.quartz.platform.domain.repository.XfeederGuidedSessionRepository
 import com.quartz.platform.domain.usecase.ObserveReviewerControlTowerUseCase
+import com.quartz.platform.domain.usecase.ObserveSupervisorQueueStatesUseCase
+import com.quartz.platform.domain.usecase.RecordSupervisorQueueActionUseCase
 import com.quartz.platform.domain.usecase.ObserveSiteListUseCase
 import com.quartz.platform.domain.usecase.ObserveSiteReportClosureProjectionsUseCase
 import com.quartz.platform.domain.usecase.ObserveSiteReportListUseCase
 import com.quartz.platform.domain.usecase.RetryControlTowerFailedSyncUseCase
 import com.quartz.platform.domain.usecase.RetryFailedReportDraftSyncUseCase
+import com.quartz.platform.domain.usecase.TransitionSupervisorQueueStatusUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -235,6 +238,9 @@ class ReviewerControlTowerViewModelTest {
                         )
                     )
                 )
+            ),
+            observeSupervisorQueueStatesUseCase = ObserveSupervisorQueueStatesUseCase(
+                FakeSupervisorQueueRepository()
             )
         )
         return ReviewerControlTowerViewModel(
@@ -242,6 +248,12 @@ class ReviewerControlTowerViewModelTest {
             observeReviewerControlTowerUseCase = observeReviewerControlTowerUseCase,
             retryControlTowerFailedSyncUseCase = RetryControlTowerFailedSyncUseCase(
                 RetryFailedReportDraftSyncUseCase(syncRepository)
+            ),
+            transitionSupervisorQueueStatusUseCase = TransitionSupervisorQueueStatusUseCase(
+                FakeSupervisorQueueRepository()
+            ),
+            recordSupervisorQueueActionUseCase = RecordSupervisorQueueActionUseCase(
+                FakeSupervisorQueueRepository()
             ),
             uiStrings = TestUiStrings()
         )
@@ -390,6 +402,41 @@ class ReviewerControlTowerViewModelTest {
             proximityModeEnabled: Boolean,
             proximityReferenceAltitudeMeters: Double?,
             proximityReferenceAltitudeSource: com.quartz.platform.domain.model.RetReferenceAltitudeSourceState
+        ) = Unit
+    }
+
+    private class FakeSupervisorQueueRepository :
+        com.quartz.platform.domain.repository.SupervisorQueueRepository {
+        override fun observeQueueStates() =
+            flowOf(emptyList<com.quartz.platform.domain.model.SupervisorQueueState>())
+
+        override fun observeQueueActions() =
+            flowOf(emptyList<com.quartz.platform.domain.model.SupervisorQueueAction>())
+
+        override suspend fun transitionDraftStatus(
+            draftId: String,
+            toStatus: com.quartz.platform.domain.model.SupervisorQueueStatus,
+            actionType: com.quartz.platform.domain.model.SupervisorQueueActionType,
+            note: String?,
+            triggeredFromFilter: String?,
+            triggeredFromPreset: String?
+        ) = Unit
+
+        override suspend fun transitionDraftStatuses(
+            draftIds: List<String>,
+            toStatus: com.quartz.platform.domain.model.SupervisorQueueStatus,
+            actionType: com.quartz.platform.domain.model.SupervisorQueueActionType,
+            note: String?,
+            triggeredFromFilter: String?,
+            triggeredFromPreset: String?
+        ) = Unit
+
+        override suspend fun recordDraftAction(
+            draftId: String,
+            actionType: com.quartz.platform.domain.model.SupervisorQueueActionType,
+            note: String?,
+            triggeredFromFilter: String?,
+            triggeredFromPreset: String?
         ) = Unit
     }
 }

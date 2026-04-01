@@ -120,6 +120,17 @@ Queue SLA intelligence is now added to improve urgency-based supervision:
 - bounded urgency classes (`ACT_NOW`, `HIGH`, `WATCH`, `NORMAL`) with explicit urgency reasons,
 - urgency-aware queue ordering and an `act-now / overdue` preset for faster time-risk triage,
 - per-row urgency context and urgency motifs for compact supervisor readability.
+Supervisor Queue Orchestration v3 now adds bounded queue lifecycle control for reviewer/supervisor execution:
+- persisted queue status per draft (`UNTRIAGED`, `IN_REVIEW`, `WAITING_FIELD_FEEDBACK`, `RESOLVED`),
+- row-level queue actions (mark in review / waiting feedback / resolved / reopen),
+- visible-bulk transition shortcut (mark visible untriaged rows as in-review),
+- queue-status filter and status motifs for faster queue steering without leaving mobile control-tower flow.
+Product/UX recovery now also reinforces mission-driven runtime execution clarity:
+- Home Map acts as mission entrypoint (primary actions first, secondary/demo actions clearly demoted),
+- Site Detail separates mission actions from technical structure with progressive disclosure,
+- RET guided execution exposes mission status/progress first and collapses full history by default,
+- ReportDraft keeps reviewer flow primary while debug sync tools require explicit developer disclosure,
+- Control Tower keeps high-value triage visible while advanced controls are intentionally collapsible.
 
 ### 4. Throughput and QoS testing
 The system should support:

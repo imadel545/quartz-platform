@@ -103,6 +103,16 @@ Current Android implementation covers a bounded local-first workflow baseline:
     - deterministic urgency classification (`ACT_NOW`, `HIGH`, `WATCH`, `NORMAL`) with typed urgency reason
     - urgency rank integrated into queue ordering (explainable, no opaque ML scoring)
     - urgency motifs and row-level urgency exposure for reviewer/supervisor action speed
+  - supervisor queue orchestration v3 layer (bounded/local-first):
+    - persisted supervisor queue-state per report draft (`UNTRIAGED`, `IN_REVIEW`, `WAITING_FIELD_FEEDBACK`, `RESOLVED`)
+    - deterministic queue-action journal (`supervisor_queue_actions`) for triage auditability
+    - action-center transitions wired through domain use cases/repository (no queue business logic in composables)
+    - queue-status filters/motifs and row-level/bulk transition actions for faster supervision loops
+  - mission-driven UI recovery guardrails (runtime, not debug-first):
+    - home/map and site detail surfaces prioritize mission entry/launch actions above technical depth
+    - guided RET runtime keeps progress/status primary and defers full-history/detail through progressive disclosure
+    - report draft runtime flow keeps reviewer actions primary while debug sync tooling is explicitly gated behind developer disclosure
+    - control-tower advanced controls are collapsible to keep first-screen triage density readable on mobile
 
 For XFeeder proximity, implementation is intentionally explicit and bounded:
 - `UNAVAILABLE`: location/altitude data cannot be trusted for eligibility

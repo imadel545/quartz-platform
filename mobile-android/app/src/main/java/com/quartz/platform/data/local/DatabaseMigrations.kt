@@ -1008,4 +1008,49 @@ object DatabaseMigrations {
             )
         }
     }
+
+    val MIGRATION_23_24: Migration = object : Migration(23, 24) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS supervisor_queue_states (
+                    draftId TEXT NOT NULL PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    lastActionType TEXT,
+                    lastActionAtEpochMillis INTEGER,
+                    lastActionNote TEXT,
+                    updatedAtEpochMillis INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS supervisor_queue_actions (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    draftId TEXT NOT NULL,
+                    actionType TEXT NOT NULL,
+                    fromStatus TEXT,
+                    toStatus TEXT,
+                    note TEXT,
+                    triggeredFromFilter TEXT,
+                    triggeredFromPreset TEXT,
+                    actedAtEpochMillis INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_supervisor_queue_actions_draftId
+                ON supervisor_queue_actions(draftId)
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE INDEX IF NOT EXISTS index_supervisor_queue_actions_actedAtEpochMillis
+                ON supervisor_queue_actions(actedAtEpochMillis)
+                """.trimIndent()
+            )
+        }
+    }
 }

@@ -1080,6 +1080,111 @@ class QuartzDatabaseMigrationTest {
 
         migrated.close()
     }
+
+    @Test
+    fun migration_23_24_creates_supervisor_queue_tables_and_indexes() {
+        val dbName = "quartz-migration-23-24-test"
+
+        migrationTestHelper.createDatabase(dbName, 23).apply {
+            insertDraftWithWorkflow(
+                id = "draft-supervisor-1",
+                siteId = "site-1",
+                originSessionId = null,
+                originSectorId = null,
+                originWorkflowType = null,
+                updatedAtEpochMillis = 100L,
+                createdAtEpochMillis = 100L
+            )
+            close()
+        }
+
+        val migrated = migrationTestHelper.runMigrationsAndValidate(
+            dbName,
+            24,
+            true,
+            DatabaseMigrations.MIGRATION_23_24
+        )
+
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM sqlite_master
+                WHERE type = 'table'
+                  AND name = 'supervisor_queue_states'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM sqlite_master
+                WHERE type = 'table'
+                  AND name = 'supervisor_queue_actions'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM sqlite_master
+                WHERE type = 'index'
+                  AND name = 'index_supervisor_queue_actions_draftId'
+                """.trimIndent()
+            )
+        )
+
+        migrated.execSQL(
+            """
+            INSERT INTO supervisor_queue_states(
+                draftId, status, lastActionType, lastActionAtEpochMillis, lastActionNote, updatedAtEpochMillis
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+            arrayOf("draft-supervisor-1", "IN_REVIEW", "MARK_IN_REVIEW", 110L, "triage", 110L)
+        )
+        migrated.execSQL(
+            """
+            INSERT INTO supervisor_queue_actions(
+                id, draftId, actionType, fromStatus, toStatus, note, triggeredFromFilter, triggeredFromPreset, actedAtEpochMillis
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent(),
+            arrayOf(
+                "action-1",
+                "draft-supervisor-1",
+                "MARK_IN_REVIEW",
+                "UNTRIAGED",
+                "IN_REVIEW",
+                "triage",
+                "NEEDS_ATTENTION",
+                "NEEDS_ATTENTION_NOW",
+                111L
+            )
+        )
+
+        assertEquals(
+            "IN_REVIEW",
+            migrated.stringQuery(
+                """
+                SELECT status
+                FROM supervisor_queue_states
+                WHERE draftId = 'draft-supervisor-1'
+                """.trimIndent()
+            )
+        )
+        assertEquals(
+            1L,
+            migrated.longQuery(
+                """
+                SELECT COUNT(*) FROM supervisor_queue_actions
+                WHERE draftId = 'draft-supervisor-1'
+                """.trimIndent()
+            )
+        )
+
+        migrated.close()
+    }
 }
 
 private fun SupportSQLiteDatabase.insertDraft(

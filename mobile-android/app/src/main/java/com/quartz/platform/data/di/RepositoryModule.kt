@@ -14,8 +14,10 @@ import com.quartz.platform.domain.repository.PerformanceSessionRepository
 import com.quartz.platform.domain.repository.RetGuidedSessionRepository
 import com.quartz.platform.domain.repository.SiteRepository
 import com.quartz.platform.domain.repository.SiteSnapshotBootstrapSource
+import com.quartz.platform.domain.repository.SupervisorQueueRepository
 import com.quartz.platform.domain.repository.SyncRepository
 import com.quartz.platform.domain.repository.XfeederGuidedSessionRepository
+import com.quartz.platform.data.repository.OfflineFirstSupervisorQueueRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -67,4 +69,10 @@ abstract class RepositoryModule {
     abstract fun bindRetSessionRepository(
         impl: OfflineFirstRetGuidedSessionRepository
     ): RetGuidedSessionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSupervisorQueueRepository(
+        impl: OfflineFirstSupervisorQueueRepository
+    ): SupervisorQueueRepository
 }

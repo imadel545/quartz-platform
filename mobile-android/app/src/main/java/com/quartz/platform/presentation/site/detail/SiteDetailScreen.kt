@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,11 +16,16 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -140,6 +146,8 @@ fun SiteDetailScreen(
             }
 
             else -> {
+                var showTechnicalDetails by rememberSaveable { mutableStateOf(false) }
+
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -152,10 +160,12 @@ fun SiteDetailScreen(
                     }
 
                     item {
-                        SiteTechnicalStructureCard(
-                            site = state.site,
-                            onOpenXfeederSession = onOpenXfeederSession,
-                            onOpenRetSession = onOpenRetSession
+                        SiteMissionActionsCard(
+                            siteId = state.site.id,
+                            isCreatingDraft = state.isCreatingDraft,
+                            onCreateDraftClicked = onCreateDraftClicked,
+                            onOpenReportList = onOpenReportList,
+                            onOpenPerformanceSession = onOpenPerformanceSession
                         )
                     }
 
@@ -172,36 +182,56 @@ fun SiteDetailScreen(
                     }
 
                     item {
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !state.isCreatingDraft,
-                            onClick = onCreateDraftClicked
-                        ) {
-                            Text(
-                                text = if (state.isCreatingDraft) {
-                                    stringResource(R.string.action_create_local_draft_loading)
-                                } else {
-                                    stringResource(R.string.action_create_local_draft)
-                                }
+                        Text(
+                            text = stringResource(R.string.site_detail_section_guided_workflows),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+
+                    if (state.site.sectors.isEmpty()) {
+                        item {
+                            Card(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = stringResource(R.string.empty_site_technical_structure),
+                                    modifier = Modifier.padding(16.dp),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    } else {
+                        items(state.site.sectors, key = { it.id }) { sector ->
+                            SectorMissionLaunchCard(
+                                siteId = state.site.id,
+                                sector = sector,
+                                onOpenXfeederSession = onOpenXfeederSession,
+                                onOpenRetSession = onOpenRetSession
                             )
                         }
                     }
 
                     item {
-                        Button(
+                        OutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
-                            onClick = { onOpenReportList(state.site.id) }
+                            onClick = { showTechnicalDetails = !showTechnicalDetails }
                         ) {
-                            Text(stringResource(R.string.action_open_site_local_reports))
+                            Text(
+                                if (showTechnicalDetails) {
+                                    stringResource(R.string.site_detail_action_hide_technical_details)
+                                } else {
+                                    stringResource(R.string.site_detail_action_show_technical_details)
+                                }
+                            )
                         }
                     }
 
-                    item {
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { onOpenPerformanceSession(state.site.id) }
-                        ) {
-                            Text(stringResource(R.string.action_open_performance_session))
+                    if (showTechnicalDetails) {
+                        item {
+                            SiteTechnicalStructureCard(
+                                site = state.site,
+                                onOpenXfeederSession = onOpenXfeederSession,
+                                onOpenRetSession = onOpenRetSession,
+                                showWorkflowActions = false
+                            )
                         }
                     }
 
@@ -214,10 +244,13 @@ fun SiteDetailScreen(
 
                     if (state.drafts.isEmpty()) {
                         item {
-                            Text(
-                                text = stringResource(R.string.empty_local_drafts_for_site),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                            Card(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = stringResource(R.string.empty_local_drafts_for_site),
+                                    modifier = Modifier.padding(16.dp),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
                         }
                     } else {
                         items(state.drafts, key = { it.id }) { draft ->
@@ -236,6 +269,110 @@ fun SiteDetailScreen(
                             Text(stringResource(R.string.action_back_to_list))
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SiteMissionActionsCard(
+    siteId: String,
+    isCreatingDraft: Boolean,
+    onCreateDraftClicked: () -> Unit,
+    onOpenReportList: (String) -> Unit,
+    onOpenPerformanceSession: (String) -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.site_detail_section_mission_actions),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { onOpenPerformanceSession(siteId) }
+            ) {
+                Text(stringResource(R.string.action_open_performance_session))
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    modifier = Modifier.weight(1f),
+                    enabled = !isCreatingDraft,
+                    onClick = onCreateDraftClicked
+                ) {
+                    Text(
+                        text = if (isCreatingDraft) {
+                            stringResource(R.string.action_create_local_draft_loading)
+                        } else {
+                            stringResource(R.string.action_create_local_draft)
+                        }
+                    )
+                }
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = { onOpenReportList(siteId) }
+                ) {
+                    Text(stringResource(R.string.action_open_site_local_reports))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectorMissionLaunchCard(
+    siteId: String,
+    sector: SiteSector,
+    onOpenXfeederSession: (siteId: String, sectorId: String) -> Unit,
+    onOpenRetSession: (siteId: String, sectorId: String) -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.label_sector_title, sector.code),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.site_detail_sector_mission_context,
+                    sector.cells.size,
+                    sector.antennas.size
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = if (sector.hasConnectedCell) {
+                    stringResource(R.string.label_sector_connected_cell_detected)
+                } else {
+                    stringResource(R.string.label_sector_connected_cell_none)
+                },
+                style = MaterialTheme.typography.bodySmall
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    modifier = Modifier.weight(1f),
+                    onClick = { onOpenXfeederSession(siteId, sector.id) }
+                ) {
+                    Text(stringResource(R.string.site_detail_action_launch_xfeeder_short))
+                }
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = { onOpenRetSession(siteId, sector.id) }
+                ) {
+                    Text(stringResource(R.string.site_detail_action_launch_ret_short))
                 }
             }
         }
@@ -294,7 +431,8 @@ private fun SiteTechnicalSnapshotCard(site: SiteDetail) {
 private fun SiteTechnicalStructureCard(
     site: SiteDetail,
     onOpenXfeederSession: (siteId: String, sectorId: String) -> Unit,
-    onOpenRetSession: (siteId: String, sectorId: String) -> Unit
+    onOpenRetSession: (siteId: String, sectorId: String) -> Unit,
+    showWorkflowActions: Boolean
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -302,7 +440,7 @@ private fun SiteTechnicalStructureCard(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = stringResource(R.string.header_site_technical_structure),
+                text = stringResource(R.string.site_detail_section_technical_details),
                 style = MaterialTheme.typography.titleMedium
             )
 
@@ -317,7 +455,8 @@ private fun SiteTechnicalStructureCard(
                         siteId = site.id,
                         sector = sector,
                         onOpenXfeederSession = onOpenXfeederSession,
-                        onOpenRetSession = onOpenRetSession
+                        onOpenRetSession = onOpenRetSession,
+                        showWorkflowActions = showWorkflowActions
                     )
                 }
             }
@@ -330,7 +469,8 @@ private fun SectorDetailBlock(
     siteId: String,
     sector: SiteSector,
     onOpenXfeederSession: (siteId: String, sectorId: String) -> Unit,
-    onOpenRetSession: (siteId: String, sectorId: String) -> Unit
+    onOpenRetSession: (siteId: String, sectorId: String) -> Unit,
+    showWorkflowActions: Boolean
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -391,18 +531,20 @@ private fun SectorDetailBlock(
                 }
             }
 
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { onOpenXfeederSession(siteId, sector.id) }
-            ) {
-                Text(stringResource(R.string.action_open_xfeeder_guided_session))
-            }
+            if (showWorkflowActions) {
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { onOpenXfeederSession(siteId, sector.id) }
+                ) {
+                    Text(stringResource(R.string.action_open_xfeeder_guided_session))
+                }
 
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { onOpenRetSession(siteId, sector.id) }
-            ) {
-                Text(stringResource(R.string.action_open_ret_guided_session))
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { onOpenRetSession(siteId, sector.id) }
+                ) {
+                    Text(stringResource(R.string.action_open_ret_guided_session))
+                }
             }
         }
     }

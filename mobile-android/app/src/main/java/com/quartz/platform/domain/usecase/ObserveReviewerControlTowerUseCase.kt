@@ -12,6 +12,8 @@ import com.quartz.platform.domain.model.ReviewerControlTowerSummary
 import com.quartz.platform.domain.model.ReviewerUrgencyClass
 import com.quartz.platform.domain.model.ReviewerUrgencyReason
 import com.quartz.platform.domain.model.SiteSummary
+import com.quartz.platform.domain.model.SupervisorQueueState
+import com.quartz.platform.domain.model.SupervisorQueueStatus
 import com.quartz.platform.domain.repository.ReportDraftRepository
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,7 +31,8 @@ private const val FRESH_CRITICAL_DRAFT_THRESHOLD_MILLIS: Long = 2L * 60L * 60L *
 class ObserveReviewerControlTowerUseCase @Inject constructor(
     private val reportDraftRepository: ReportDraftRepository,
     private val observeSiteReportListUseCase: ObserveSiteReportListUseCase,
-    private val observeSiteListUseCase: ObserveSiteListUseCase
+    private val observeSiteListUseCase: ObserveSiteListUseCase,
+    private val observeSupervisorQueueStatesUseCase: ObserveSupervisorQueueStatesUseCase
 ) {
     operator fun invoke(): Flow<ReviewerControlTowerSnapshot> {
         val allReportsFlow = reportDraftRepository.listAllDrafts()
@@ -46,15 +49,24 @@ class ObserveReviewerControlTowerUseCase @Inject constructor(
 
         return combine(
             allReportsFlow,
-            observeSiteListUseCase()
-        ) { reportRows, sites ->
+            observeSiteListUseCase(),
+            observeSupervisorQueueStatesUseCase()
+        ) { reportRows, sites, queueStates ->
             val now = System.currentTimeMillis()
             val siteIndex = sites.associateBy { site -> site.id }
+            val queueStateIndex = queueStates.associateBy { state -> state.draftId }
             val items = reportRows
-                .map { row -> row.toControlTowerItem(siteIndex = siteIndex, nowEpochMillis = now) }
+                .map { row ->
+                    row.toControlTowerItem(
+                        siteIndex = siteIndex,
+                        queueState = queueStateIndex[row.draftId],
+                        nowEpochMillis = now
+                    )
+                }
                 .sortedWith(
                     compareByDescending<ReviewerControlTowerItem> { item -> item.urgencyRank }
                         .thenByDescending { item -> item.attentionRank }
+                        .thenBy { item -> queueSortOrder(item.queueStatus) }
                         .thenBy { item -> item.updatedAtEpochMillis }
                         .thenBy { item -> item.siteCode }
                         .thenBy { item -> item.title.lowercase() }
@@ -70,6 +82,7 @@ class ObserveReviewerControlTowerUseCase @Inject constructor(
 
     private fun com.quartz.platform.domain.model.SiteReportListItem.toControlTowerItem(
         siteIndex: Map<String, SiteSummary>,
+        queueState: SupervisorQueueState?,
         nowEpochMillis: Long
     ): ReviewerControlTowerItem {
         val site = siteIndex[siteId]
@@ -111,7 +124,10 @@ class ObserveReviewerControlTowerUseCase @Inject constructor(
             ageBucket = ageBucket,
             urgencyClass = urgency.urgencyClass,
             urgencyReason = urgency.reason,
-            urgencyRank = urgency.rank
+            urgencyRank = urgency.rank,
+            queueStatus = queueState?.status ?: SupervisorQueueStatus.UNTRIAGED,
+            queueLastActionType = queueState?.lastActionType,
+            queueLastActionAtEpochMillis = queueState?.lastActionAtEpochMillis
         )
     }
 
@@ -231,8 +247,21 @@ class ObserveReviewerControlTowerUseCase @Inject constructor(
             staleDraftCount = items.count { item -> ReviewerAttentionSignal.STALE_DRAFT in item.attentionSignals },
             attentionRequiredCount = items.count { item -> item.attentionRank > 0 },
             actNowCount = items.count { item -> item.urgencyClass == ReviewerUrgencyClass.ACT_NOW },
-            overdueCount = items.count { item -> item.ageBucket == ReviewerDraftAgeBucket.OVERDUE }
+            overdueCount = items.count { item -> item.ageBucket == ReviewerDraftAgeBucket.OVERDUE },
+            untriagedCount = items.count { item -> item.queueStatus == SupervisorQueueStatus.UNTRIAGED },
+            inReviewCount = items.count { item -> item.queueStatus == SupervisorQueueStatus.IN_REVIEW },
+            waitingFieldFeedbackCount = items.count { item -> item.queueStatus == SupervisorQueueStatus.WAITING_FIELD_FEEDBACK },
+            resolvedCount = items.count { item -> item.queueStatus == SupervisorQueueStatus.RESOLVED }
         )
+    }
+
+    private fun queueSortOrder(status: SupervisorQueueStatus): Int {
+        return when (status) {
+            SupervisorQueueStatus.UNTRIAGED -> 0
+            SupervisorQueueStatus.IN_REVIEW -> 1
+            SupervisorQueueStatus.WAITING_FIELD_FEEDBACK -> 2
+            SupervisorQueueStatus.RESOLVED -> 3
+        }
     }
 }
 

@@ -267,6 +267,14 @@ For bounded supervisor triage workflows, a reviewer-focused projection layer tra
   - `GUIDED_UNRESOLVED`
 - queue progression state:
   - `progressedDraftIds` (bounded local progression memory for continue-queue action)
+- queue orchestration state:
+  - `SupervisorQueueState` persisted per draft (`UNTRIAGED`, `IN_REVIEW`, `WAITING_FIELD_FEEDBACK`, `RESOLVED`)
+  - queue-status filter state: `ALL`, `UNTRIAGED`, `IN_REVIEW`, `WAITING_FIELD_FEEDBACK`, `RESOLVED`
+  - row-level queue transitions: `MARK_IN_REVIEW`, `MARK_WAITING_FIELD_FEEDBACK`, `MARK_RESOLVED`, `REOPEN_TO_UNTRIAGED`
+  - bulk queue transition: `BULK_MARK_IN_REVIEW`
+  - explicit action journal entity: `SupervisorQueueAction` (who/when/what-context signal via filter/preset metadata)
+  - runtime disclosure policy for review surfaces:
+    - developer sync/debug controls are opt-in UI disclosure (not always visible in runtime reviewer path)
 - queue SLA/urgency state:
   - age bucket: `FRESH`, `AGING`, `STALE`, `OVERDUE`
   - urgency class: `ACT_NOW`, `HIGH`, `WATCH`, `NORMAL`
@@ -277,6 +285,7 @@ For bounded supervisor triage workflows, a reviewer-focused projection layer tra
   - `ReviewerQueueSiteMotif`
   - `ReviewerQueueWorkflowMotif`
   - `ReviewerQueueUrgencyMotif`
+  - `ReviewerQueueStatusMotif`
 
 Possible status values:
 - CREATED

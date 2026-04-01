@@ -5,8 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.quartz.platform.R
 import com.quartz.platform.core.text.UiStrings
+import com.quartz.platform.domain.model.SupervisorQueueActionType
+import com.quartz.platform.domain.model.SupervisorQueueStatus
 import com.quartz.platform.domain.usecase.ObserveReviewerControlTowerUseCase
+import com.quartz.platform.domain.usecase.RecordSupervisorQueueActionUseCase
 import com.quartz.platform.domain.usecase.RetryControlTowerFailedSyncUseCase
+import com.quartz.platform.domain.usecase.TransitionSupervisorQueueStatusUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.channels.BufferOverflow
@@ -24,11 +28,16 @@ class ReviewerControlTowerViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val observeReviewerControlTowerUseCase: ObserveReviewerControlTowerUseCase,
     private val retryControlTowerFailedSyncUseCase: RetryControlTowerFailedSyncUseCase,
+    private val transitionSupervisorQueueStatusUseCase: TransitionSupervisorQueueStatusUseCase,
+    private val recordSupervisorQueueActionUseCase: RecordSupervisorQueueActionUseCase,
     private val uiStrings: UiStrings
 ) : ViewModel() {
 
     private val restoredFilter = ReviewerControlTowerFilter.fromPersistedNameOrDefault(
         savedStateHandle[STATE_CONTROL_TOWER_SELECTED_FILTER]
+    )
+    private val restoredQueueStatusFilter = ReviewerQueueStatusFilter.fromPersistedNameOrDefault(
+        savedStateHandle[STATE_CONTROL_TOWER_SELECTED_QUEUE_STATUS_FILTER]
     )
     private val restoredGrouping = ReviewerControlTowerGrouping.fromPersistedNameOrDefault(
         savedStateHandle[STATE_CONTROL_TOWER_SELECTED_GROUPING]
@@ -42,6 +51,7 @@ class ReviewerControlTowerViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(
         ReviewerControlTowerUiState(
             selectedFilter = restoredFilter,
+            selectedQueueStatusFilter = restoredQueueStatusFilter,
             selectedGrouping = restoredGrouping,
             selectedPreset = restoredPreset,
             progressedDraftIds = restoredProgressedDraftIds
@@ -69,6 +79,21 @@ class ReviewerControlTowerViewModel @Inject constructor(
                 savedStateHandle[STATE_CONTROL_TOWER_PROGRESS_DRAFT_IDS] = emptyList<String>()
                 state.copy(
                     selectedFilter = filter,
+                    progressedDraftIds = emptySet()
+                )
+            }
+        }
+    }
+
+    fun onQueueStatusFilterSelected(filter: ReviewerQueueStatusFilter) {
+        _uiState.update { state ->
+            if (state.selectedQueueStatusFilter == filter) {
+                state
+            } else {
+                savedStateHandle[STATE_CONTROL_TOWER_SELECTED_QUEUE_STATUS_FILTER] = filter.name
+                savedStateHandle[STATE_CONTROL_TOWER_PROGRESS_DRAFT_IDS] = emptyList<String>()
+                state.copy(
+                    selectedQueueStatusFilter = filter,
                     progressedDraftIds = emptySet()
                 )
             }
@@ -142,6 +167,14 @@ class ReviewerControlTowerViewModel @Inject constructor(
             }
             runCatching { retryControlTowerFailedSyncUseCase(listOf(draftId)) }
                 .onSuccess { queued ->
+                    if (queued > 0) {
+                        recordSupervisorQueueActionUseCase(
+                            draftId = draftId,
+                            actionType = SupervisorQueueActionType.RETRY_SYNC,
+                            triggeredFromFilter = state.selectedFilter.name,
+                            triggeredFromPreset = state.selectedPreset.name
+                        )
+                    }
                     _uiState.update {
                         it.copy(
                             infoMessage = if (queued > 0) {
@@ -158,6 +191,81 @@ class ReviewerControlTowerViewModel @Inject constructor(
                     }
                 }
             _uiState.update { it.copy(retryingDraftIds = it.retryingDraftIds - draftId) }
+        }
+    }
+
+    fun onMarkDraftInReviewClicked(draftId: String) {
+        transitionDraftStatus(
+            draftId = draftId,
+            toStatus = SupervisorQueueStatus.IN_REVIEW,
+            actionType = SupervisorQueueActionType.MARK_IN_REVIEW
+        )
+    }
+
+    fun onMarkDraftWaitingFeedbackClicked(draftId: String) {
+        transitionDraftStatus(
+            draftId = draftId,
+            toStatus = SupervisorQueueStatus.WAITING_FIELD_FEEDBACK,
+            actionType = SupervisorQueueActionType.MARK_WAITING_FIELD_FEEDBACK
+        )
+    }
+
+    fun onMarkDraftResolvedClicked(draftId: String) {
+        transitionDraftStatus(
+            draftId = draftId,
+            toStatus = SupervisorQueueStatus.RESOLVED,
+            actionType = SupervisorQueueActionType.MARK_RESOLVED
+        )
+    }
+
+    fun onReopenDraftClicked(draftId: String) {
+        transitionDraftStatus(
+            draftId = draftId,
+            toStatus = SupervisorQueueStatus.UNTRIAGED,
+            actionType = SupervisorQueueActionType.REOPEN_TO_UNTRIAGED
+        )
+    }
+
+    fun onBulkMarkVisibleInReviewClicked() {
+        val state = _uiState.value
+        if (state.isBulkQueueTransitionInProgress) return
+        val ids = state.activeQueueItems
+            .filter { item -> item.queueStatus == SupervisorQueueStatus.UNTRIAGED }
+            .map { item -> item.draftId }
+            .distinct()
+        if (ids.isEmpty()) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isBulkQueueTransitionInProgress = true,
+                    errorMessage = null,
+                    infoMessage = null
+                )
+            }
+            runCatching {
+                transitionSupervisorQueueStatusUseCase.bulk(
+                    draftIds = ids,
+                    toStatus = SupervisorQueueStatus.IN_REVIEW,
+                    actionType = SupervisorQueueActionType.BULK_MARK_IN_REVIEW,
+                    triggeredFromFilter = state.selectedFilter.name,
+                    triggeredFromPreset = state.selectedPreset.name
+                )
+            }.onSuccess {
+                _uiState.update {
+                    it.copy(
+                        infoMessage = uiStrings.get(
+                            R.string.info_control_tower_bulk_marked_in_review,
+                            ids.size
+                        )
+                    )
+                }
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(errorMessage = throwable.message ?: uiStrings.get(R.string.error_update_queue_status))
+                }
+            }
+            _uiState.update { it.copy(isBulkQueueTransitionInProgress = false) }
         }
     }
 
@@ -223,6 +331,8 @@ class ReviewerControlTowerViewModel @Inject constructor(
                             summary = snapshot.summary,
                             progressedDraftIds = progressed,
                             retryingDraftIds = state.retryingDraftIds.intersect(snapshot.items.map { it.draftId }.toSet()),
+                            transitioningQueueDraftIds = state.transitioningQueueDraftIds
+                                .intersect(snapshot.items.map { it.draftId }.toSet()),
                             errorMessage = null
                         )
                     }
@@ -235,6 +345,38 @@ class ReviewerControlTowerViewModel @Inject constructor(
             val progressed = state.progressedDraftIds + draftId
             savedStateHandle[STATE_CONTROL_TOWER_PROGRESS_DRAFT_IDS] = progressed.toList()
             state.copy(progressedDraftIds = progressed)
+        }
+    }
+
+    private fun transitionDraftStatus(
+        draftId: String,
+        toStatus: SupervisorQueueStatus,
+        actionType: SupervisorQueueActionType
+    ) {
+        val state = _uiState.value
+        if (draftId in state.transitioningQueueDraftIds) return
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    transitioningQueueDraftIds = it.transitioningQueueDraftIds + draftId,
+                    errorMessage = null,
+                    infoMessage = null
+                )
+            }
+            runCatching {
+                transitionSupervisorQueueStatusUseCase(
+                    draftId = draftId,
+                    toStatus = toStatus,
+                    actionType = actionType,
+                    triggeredFromFilter = state.selectedFilter.name,
+                    triggeredFromPreset = state.selectedPreset.name
+                )
+            }.onFailure { throwable ->
+                _uiState.update {
+                    it.copy(errorMessage = throwable.message ?: uiStrings.get(R.string.error_update_queue_status))
+                }
+            }
+            _uiState.update { it.copy(transitioningQueueDraftIds = it.transitioningQueueDraftIds - draftId) }
         }
     }
 }

@@ -9,18 +9,25 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -102,6 +109,10 @@ fun RetGuidedSessionScreen(
     onSaveSummaryClicked: () -> Unit,
     onCreateReportDraft: () -> Unit
 ) {
+    var showHistory by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(state.session?.id) {
+        showHistory = false
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -169,6 +180,25 @@ fun RetGuidedSessionScreen(
                         }
                     } else {
                         item {
+                            RetMissionSummaryCard(state = state)
+                        }
+
+                        item {
+                            OutlinedButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { showHistory = !showHistory }
+                            ) {
+                                Text(
+                                    if (showHistory) {
+                                        stringResource(R.string.ret_action_hide_history)
+                                    } else {
+                                        stringResource(R.string.ret_action_show_history)
+                                    }
+                                )
+                            }
+                        }
+
+                        item {
                             Text(
                                 text = stringResource(
                                     R.string.ret_header_session_history,
@@ -178,12 +208,21 @@ fun RetGuidedSessionScreen(
                             )
                         }
 
-                        items(state.sessionHistory, key = { it.id }) { historyItem ->
-                            SessionHistoryCard(
-                                session = historyItem,
-                                isSelected = historyItem.id == state.session.id,
-                                onSelectHistorySessionClicked = onSelectHistorySessionClicked
-                            )
+                        if (showHistory) {
+                            items(state.sessionHistory, key = { it.id }) { historyItem ->
+                                SessionHistoryCard(
+                                    session = historyItem,
+                                    isSelected = historyItem.id == state.session.id,
+                                    onSelectHistorySessionClicked = onSelectHistorySessionClicked
+                                )
+                            }
+                        } else {
+                            item {
+                                Text(
+                                    text = stringResource(R.string.ret_history_collapsed_hint),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
 
                         item {
@@ -210,6 +249,38 @@ fun RetGuidedSessionScreen(
                                 selectedOutcome = state.selectedOutcome,
                                 onResultOutcomeSelected = onResultOutcomeSelected
                             )
+                        }
+
+                        item {
+                            Button(
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = state.hasUnsavedChanges && !state.isSavingSummary,
+                                onClick = onSaveSummaryClicked
+                            ) {
+                                Text(
+                                    if (state.isSavingSummary) {
+                                        stringResource(R.string.ret_action_save_summary_loading)
+                                    } else {
+                                        stringResource(R.string.ret_action_save_summary)
+                                    }
+                                )
+                            }
+                        }
+
+                        item {
+                            OutlinedButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !state.isCreatingDraft,
+                                onClick = onCreateReportDraft
+                            ) {
+                                Text(
+                                    if (state.isCreatingDraft) {
+                                        stringResource(R.string.ret_action_create_report_draft_loading)
+                                    } else {
+                                        stringResource(R.string.ret_action_create_report_draft)
+                                    }
+                                )
+                            }
                         }
 
                         item {
@@ -280,38 +351,6 @@ fun RetGuidedSessionScreen(
                     item {
                         Button(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = state.session != null && state.hasUnsavedChanges && !state.isSavingSummary,
-                            onClick = onSaveSummaryClicked
-                        ) {
-                            Text(
-                                if (state.isSavingSummary) {
-                                    stringResource(R.string.ret_action_save_summary_loading)
-                                } else {
-                                    stringResource(R.string.ret_action_save_summary)
-                                }
-                            )
-                        }
-                    }
-
-                    item {
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = state.session != null && !state.isCreatingDraft,
-                            onClick = onCreateReportDraft
-                        ) {
-                            Text(
-                                if (state.isCreatingDraft) {
-                                    stringResource(R.string.ret_action_create_report_draft_loading)
-                                } else {
-                                    stringResource(R.string.ret_action_create_report_draft)
-                                }
-                            )
-                        }
-                    }
-
-                    item {
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
                             onClick = onBack
                         ) {
                             Text(stringResource(R.string.action_back_to_site))
@@ -319,6 +358,59 @@ fun RetGuidedSessionScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun RetMissionSummaryCard(state: RetGuidedSessionUiState) {
+    val session = requireNotNull(state.session)
+    val requiredSteps = session.steps.count { it.required }
+    val completedRequiredSteps = session.steps.count { it.required && it.status == RetStepStatus.DONE }
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.ret_section_mission_status),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.ret_label_session_status,
+                    stringResource(retSessionStatusLabelRes(session.status))
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.ret_label_result_outcome,
+                    stringResource(retResultOutcomeLabelRes(state.selectedOutcome))
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.ret_mission_required_progress,
+                    completedRequiredSteps,
+                    requiredSteps
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = when (state.proximityEligibilityState) {
+                    RetProximityEligibilityState.ELIGIBLE ->
+                        stringResource(R.string.ret_helper_proximity_eligible)
+                    RetProximityEligibilityState.INELIGIBLE ->
+                        stringResource(R.string.ret_helper_proximity_ineligible)
+                    RetProximityEligibilityState.SUPPORTED ->
+                        stringResource(R.string.ret_helper_proximity_supported)
+                    RetProximityEligibilityState.UNAVAILABLE ->
+                        stringResource(R.string.ret_helper_proximity_unavailable)
+                },
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 }
@@ -603,12 +695,13 @@ private fun SessionStatusCard(
                 text = stringResource(R.string.ret_label_status_update),
                 style = MaterialTheme.typography.labelLarge
             )
-            RetSessionStatus.entries.forEach { status ->
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { onSessionStatusSelected(status) }
-                ) {
-                    Text(stringResource(retSessionStatusLabelRes(status)))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(RetSessionStatus.entries) { status ->
+                    FilterChip(
+                        selected = session.status == status,
+                        onClick = { onSessionStatusSelected(status) },
+                        label = { Text(stringResource(retSessionStatusLabelRes(status))) }
+                    )
                 }
             }
         }
@@ -632,12 +725,13 @@ private fun ResultOutcomeCard(
                 ),
                 style = MaterialTheme.typography.bodyMedium
             )
-            RetResultOutcome.entries.forEach { outcome ->
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { onResultOutcomeSelected(outcome) }
-                ) {
-                    Text(stringResource(retResultOutcomeLabelRes(outcome)))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(RetResultOutcome.entries) { outcome ->
+                    FilterChip(
+                        selected = selectedOutcome == outcome,
+                        onClick = { onResultOutcomeSelected(outcome) },
+                        label = { Text(stringResource(retResultOutcomeLabelRes(outcome))) }
+                    )
                 }
             }
         }
@@ -679,12 +773,13 @@ private fun StepCard(
                 ),
                 style = MaterialTheme.typography.bodySmall
             )
-            RetStepStatus.entries.forEach { target ->
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { onStepStatusSelected(stepCode, target) }
-                ) {
-                    Text(stringResource(retStepStatusLabelRes(target)))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(RetStepStatus.entries) { target ->
+                    FilterChip(
+                        selected = status == target,
+                        onClick = { onStepStatusSelected(stepCode, target) },
+                        label = { Text(stringResource(retStepStatusLabelRes(target))) }
+                    )
                 }
             }
         }

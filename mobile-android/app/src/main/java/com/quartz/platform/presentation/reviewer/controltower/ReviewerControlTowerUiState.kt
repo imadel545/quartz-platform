@@ -7,6 +7,8 @@ import com.quartz.platform.domain.model.ReviewerControlTowerItem
 import com.quartz.platform.domain.model.ReviewerControlTowerSummary
 import com.quartz.platform.domain.model.ReviewerDraftAgeBucket
 import com.quartz.platform.domain.model.ReviewerUrgencyClass
+import com.quartz.platform.domain.model.SupervisorQueueActionType
+import com.quartz.platform.domain.model.SupervisorQueueStatus
 
 data class ReviewerControlTowerUiState(
     val isLoading: Boolean = true,
@@ -21,19 +23,28 @@ data class ReviewerControlTowerUiState(
         staleDraftCount = 0,
         attentionRequiredCount = 0,
         actNowCount = 0,
-        overdueCount = 0
+        overdueCount = 0,
+        untriagedCount = 0,
+        inReviewCount = 0,
+        waitingFieldFeedbackCount = 0,
+        resolvedCount = 0
     ),
     val selectedFilter: ReviewerControlTowerFilter = ReviewerControlTowerFilter.ALL,
+    val selectedQueueStatusFilter: ReviewerQueueStatusFilter = ReviewerQueueStatusFilter.ALL,
     val selectedGrouping: ReviewerControlTowerGrouping = ReviewerControlTowerGrouping.ATTENTION,
     val selectedPreset: ReviewerQueuePreset = ReviewerQueuePreset.NEEDS_ATTENTION_NOW,
     val progressedDraftIds: Set<String> = emptySet(),
     val retryingDraftIds: Set<String> = emptySet(),
+    val transitioningQueueDraftIds: Set<String> = emptySet(),
     val isBulkRetryInProgress: Boolean = false,
+    val isBulkQueueTransitionInProgress: Boolean = false,
     val infoMessage: String? = null,
     val errorMessage: String? = null
 ) {
     val filteredItems: List<ReviewerControlTowerItem>
-        get() = items.filter(selectedFilter::matches)
+        get() = items
+            .filter(selectedFilter::matches)
+            .filter(selectedQueueStatusFilter::matches)
 
     val queuedItems: List<ReviewerControlTowerItem>
         get() = selectedPreset.apply(filteredItems)
@@ -43,6 +54,9 @@ data class ReviewerControlTowerUiState(
 
     val visibleSyncFailedCount: Int
         get() = activeQueueItems.count { item -> ReviewerAttentionSignal.SYNC_FAILED in item.attentionSignals }
+
+    val visibleUntriagedCount: Int
+        get() = activeQueueItems.count { item -> item.queueStatus == SupervisorQueueStatus.UNTRIAGED }
 
     val groupedItems: List<ReviewerControlTowerGroup>
         get() = activeQueueItems
@@ -151,6 +165,34 @@ data class ReviewerControlTowerUiState(
                 compareByDescending<ReviewerQueueUrgencyMotif> { it.urgencyClass.severityOrder() }
                     .thenByDescending { it.draftCount }
             )
+
+    val statusMotifs: List<ReviewerQueueStatusMotif>
+        get() = activeQueueItems
+            .groupBy { it.queueStatus }
+            .entries
+            .map { (status, statusItems) ->
+                ReviewerQueueStatusMotif(
+                    queueStatus = status,
+                    draftCount = statusItems.size,
+                    topDraftId = statusItems.maxWithOrNull(
+                        compareBy<ReviewerControlTowerItem>({ it.urgencyRank }, { it.attentionRank }, { -it.updatedAtEpochMillis })
+                    )?.draftId,
+                    dominantActionType = statusItems
+                        .mapNotNull { it.queueLastActionType }
+                        .groupingBy { it }
+                        .eachCount()
+                        .maxByOrNull { it.value }
+                        ?.key
+                )
+            }
+            .sortedBy { motif ->
+                when (motif.queueStatus) {
+                    SupervisorQueueStatus.UNTRIAGED -> 0
+                    SupervisorQueueStatus.IN_REVIEW -> 1
+                    SupervisorQueueStatus.WAITING_FIELD_FEEDBACK -> 2
+                    SupervisorQueueStatus.RESOLVED -> 3
+                }
+            }
 }
 
 enum class ReviewerControlTowerFilter {
@@ -260,11 +302,12 @@ enum class ReviewerQueuePreset {
                 item.originWorkflowType != null && ReviewerAttentionSignal.STALE_DRAFT in item.attentionSignals
             }
             GUIDED_UNRESOLVED -> items.filter { item ->
-                item.originWorkflowType != null && (
-                    item.syncTrace.state != com.quartz.platform.domain.model.ReportSyncState.SYNCED ||
-                        item.attentionRank > 0 ||
-                        item.hasIncompleteGuidedClosure()
-                    )
+                item.originWorkflowType != null &&
+                    item.queueStatus != SupervisorQueueStatus.RESOLVED && (
+                        item.syncTrace.state != com.quartz.platform.domain.model.ReportSyncState.SYNCED ||
+                            item.attentionRank > 0 ||
+                            item.hasIncompleteGuidedClosure()
+                        )
             }
         }
 
@@ -293,6 +336,30 @@ enum class ReviewerQueuePreset {
     companion object {
         fun fromPersistedNameOrDefault(raw: String?): ReviewerQueuePreset {
             return entries.firstOrNull { it.name == raw } ?: NEEDS_ATTENTION_NOW
+        }
+    }
+}
+
+enum class ReviewerQueueStatusFilter {
+    ALL,
+    UNTRIAGED,
+    IN_REVIEW,
+    WAITING_FIELD_FEEDBACK,
+    RESOLVED;
+
+    fun matches(item: ReviewerControlTowerItem): Boolean {
+        return when (this) {
+            ALL -> true
+            UNTRIAGED -> item.queueStatus == SupervisorQueueStatus.UNTRIAGED
+            IN_REVIEW -> item.queueStatus == SupervisorQueueStatus.IN_REVIEW
+            WAITING_FIELD_FEEDBACK -> item.queueStatus == SupervisorQueueStatus.WAITING_FIELD_FEEDBACK
+            RESOLVED -> item.queueStatus == SupervisorQueueStatus.RESOLVED
+        }
+    }
+
+    companion object {
+        fun fromPersistedNameOrDefault(raw: String?): ReviewerQueueStatusFilter {
+            return entries.firstOrNull { it.name == raw } ?: ALL
         }
     }
 }
@@ -332,6 +399,13 @@ data class ReviewerQueueUrgencyMotif(
     val topDraftId: String?
 )
 
+data class ReviewerQueueStatusMotif(
+    val queueStatus: SupervisorQueueStatus,
+    val draftCount: Int,
+    val topDraftId: String?,
+    val dominantActionType: SupervisorQueueActionType?
+)
+
 private fun ReviewerUrgencyClass.severityOrder(): Int {
     return when (this) {
         ReviewerUrgencyClass.ACT_NOW -> 4
@@ -342,6 +416,8 @@ private fun ReviewerUrgencyClass.severityOrder(): Int {
 }
 
 internal const val STATE_CONTROL_TOWER_SELECTED_FILTER = "state_control_tower_selected_filter"
+internal const val STATE_CONTROL_TOWER_SELECTED_QUEUE_STATUS_FILTER =
+    "state_control_tower_selected_queue_status_filter"
 internal const val STATE_CONTROL_TOWER_SELECTED_GROUPING = "state_control_tower_selected_grouping"
 internal const val STATE_CONTROL_TOWER_SELECTED_PRESET = "state_control_tower_selected_preset"
 internal const val STATE_CONTROL_TOWER_PROGRESS_DRAFT_IDS = "state_control_tower_progress_draft_ids"

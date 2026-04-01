@@ -16,7 +16,11 @@ data class ReviewerControlTowerSummary(
     val staleDraftCount: Int,
     val attentionRequiredCount: Int,
     val actNowCount: Int,
-    val overdueCount: Int
+    val overdueCount: Int,
+    val untriagedCount: Int,
+    val inReviewCount: Int,
+    val waitingFieldFeedbackCount: Int,
+    val resolvedCount: Int
 )
 
 data class ReviewerControlTowerItem(
@@ -37,7 +41,10 @@ data class ReviewerControlTowerItem(
     val ageBucket: ReviewerDraftAgeBucket,
     val urgencyClass: ReviewerUrgencyClass,
     val urgencyReason: ReviewerUrgencyReason,
-    val urgencyRank: Int
+    val urgencyRank: Int,
+    val queueStatus: SupervisorQueueStatus,
+    val queueLastActionType: SupervisorQueueActionType?,
+    val queueLastActionAtEpochMillis: Long?
 )
 
 enum class ReviewerAttentionSignal {

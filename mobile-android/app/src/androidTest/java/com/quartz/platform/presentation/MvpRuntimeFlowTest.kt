@@ -62,6 +62,8 @@ class MvpRuntimeFlowTest {
             .onAllNodesWithText(syncStatePrefix(), substring = true)
             .onFirst()
             .assertIsDisplayed()
+        composeRule.waitUntilExists(string(R.string.report_draft_action_show_developer_tools))
+        composeRule.onNodeWithText(string(R.string.report_draft_action_show_developer_tools)).performClick()
         composeRule.waitUntilExists(string(R.string.debug_header_sync_simulation))
         composeRule.onNodeWithText(string(R.string.debug_header_sync_simulation)).assertIsDisplayed()
         composeRule.waitUntilExists(string(R.string.debug_header_live_sync_snapshot))
@@ -110,8 +112,8 @@ class MvpRuntimeFlowTest {
     }
 
     private fun openDemoSiteDetail() {
-        composeRule.waitUntilExists(string(R.string.action_open_selected_site))
-        composeRule.onNodeWithText(string(R.string.action_open_selected_site)).performClick()
+        composeRule.waitUntilExists(string(R.string.home_action_open_site_intelligence))
+        composeRule.onNodeWithText(string(R.string.home_action_open_site_intelligence)).performClick()
         composeRule.waitUntilExists(string(R.string.title_site_detail))
     }
 
