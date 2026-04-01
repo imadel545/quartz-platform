@@ -267,9 +267,16 @@ For bounded supervisor triage workflows, a reviewer-focused projection layer tra
   - `GUIDED_UNRESOLVED`
 - queue progression state:
   - `progressedDraftIds` (bounded local progression memory for continue-queue action)
+- queue SLA/urgency state:
+  - age bucket: `FRESH`, `AGING`, `STALE`, `OVERDUE`
+  - urgency class: `ACT_NOW`, `HIGH`, `WATCH`, `NORMAL`
+  - urgency reason: `SYNC_FAILED`, `QOS_FAILED_OR_BLOCKED`, `QOS_PREREQUISITES_NOT_READY`, `STALE_GUIDED_WORK`, `STALE_PENDING_SYNC`, `NONE`
+    - includes generic stale fallback `STALE_DRAFT` when aging risk is not workflow-specific
+  - urgency rank integrated into deterministic queue ordering
 - lightweight motif projections for faster supervisor pattern detection:
   - `ReviewerQueueSiteMotif`
   - `ReviewerQueueWorkflowMotif`
+  - `ReviewerQueueUrgencyMotif`
 
 Possible status values:
 - CREATED

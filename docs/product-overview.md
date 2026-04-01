@@ -115,6 +115,11 @@ Control Tower queue intelligence is now strengthened with bounded mobile-first s
 - deterministic queue continuation (`open next`) with explicit local progression reset,
 - aggregated motifs (top site/workflow patterns) to identify recurring queue pressure quickly,
 - direct open-draft shortcuts from motif cards to reduce identify→open latency.
+Queue SLA intelligence is now added to improve urgency-based supervision:
+- bounded age buckets (`FRESH`, `AGING`, `STALE`, `OVERDUE`) derived from local draft timestamps,
+- bounded urgency classes (`ACT_NOW`, `HIGH`, `WATCH`, `NORMAL`) with explicit urgency reasons,
+- urgency-aware queue ordering and an `act-now / overdue` preset for faster time-risk triage,
+- per-row urgency context and urgency motifs for compact supervisor readability.
 
 ### 4. Throughput and QoS testing
 The system should support:

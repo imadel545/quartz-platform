@@ -98,6 +98,11 @@ Current Android implementation covers a bounded local-first workflow baseline:
     - explicit queue progression state (`progressedDraftIds`) with reset
     - queue-top action semantics for faster repeated supervisor review loops
     - lightweight aggregated motifs by site/workflow for pattern-oriented triage
+  - queue SLA intelligence layer (bounded/local-first):
+    - deterministic age-bucket derivation (`FRESH`, `AGING`, `STALE`, `OVERDUE`)
+    - deterministic urgency classification (`ACT_NOW`, `HIGH`, `WATCH`, `NORMAL`) with typed urgency reason
+    - urgency rank integrated into queue ordering (explainable, no opaque ML scoring)
+    - urgency motifs and row-level urgency exposure for reviewer/supervisor action speed
 
 For XFeeder proximity, implementation is intentionally explicit and bounded:
 - `UNAVAILABLE`: location/altitude data cannot be trusted for eligibility

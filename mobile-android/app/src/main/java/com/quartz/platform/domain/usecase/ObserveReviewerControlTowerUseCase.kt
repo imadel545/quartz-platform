@@ -5,9 +5,12 @@ import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.model.ReportListClosureSummary
 import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.ReviewerAttentionSignal
+import com.quartz.platform.domain.model.ReviewerDraftAgeBucket
 import com.quartz.platform.domain.model.ReviewerControlTowerItem
 import com.quartz.platform.domain.model.ReviewerControlTowerSnapshot
 import com.quartz.platform.domain.model.ReviewerControlTowerSummary
+import com.quartz.platform.domain.model.ReviewerUrgencyClass
+import com.quartz.platform.domain.model.ReviewerUrgencyReason
 import com.quartz.platform.domain.model.SiteSummary
 import com.quartz.platform.domain.repository.ReportDraftRepository
 import javax.inject.Inject
@@ -18,6 +21,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 
 private const val STALE_DRAFT_THRESHOLD_MILLIS: Long = 24L * 60L * 60L * 1000L
+private const val OVERDUE_DRAFT_THRESHOLD_MILLIS: Long = 48L * 60L * 60L * 1000L
+private const val AGING_DRAFT_THRESHOLD_MILLIS: Long = 6L * 60L * 60L * 1000L
 private const val FRESH_CRITICAL_DRAFT_THRESHOLD_MILLIS: Long = 2L * 60L * 60L * 1000L
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -48,8 +53,9 @@ class ObserveReviewerControlTowerUseCase @Inject constructor(
             val items = reportRows
                 .map { row -> row.toControlTowerItem(siteIndex = siteIndex, nowEpochMillis = now) }
                 .sortedWith(
-                    compareByDescending<ReviewerControlTowerItem> { item -> item.attentionRank }
-                        .thenByDescending { item -> item.updatedAtEpochMillis }
+                    compareByDescending<ReviewerControlTowerItem> { item -> item.urgencyRank }
+                        .thenByDescending { item -> item.attentionRank }
+                        .thenBy { item -> item.updatedAtEpochMillis }
                         .thenBy { item -> item.siteCode }
                         .thenBy { item -> item.title.lowercase() }
                 )
@@ -68,11 +74,18 @@ class ObserveReviewerControlTowerUseCase @Inject constructor(
     ): ReviewerControlTowerItem {
         val site = siteIndex[siteId]
         val ageMillis = (nowEpochMillis - updatedAtEpochMillis).coerceAtLeast(0L)
-        val isStale = ageMillis >= STALE_DRAFT_THRESHOLD_MILLIS
+        val ageBucket = resolveAgeBucket(ageMillis)
+        val isStale = ageBucket >= ReviewerDraftAgeBucket.STALE
         val attentionSignals = buildAttentionSignals(
             syncState = syncState,
             closureSummary = closureSummary,
             isStale = isStale
+        )
+        val urgency = resolveUrgency(
+            signals = attentionSignals,
+            ageMillis = ageMillis,
+            ageBucket = ageBucket,
+            isGuided = originWorkflowType != null
         )
         val staleAgeHours = (ageMillis / (60L * 60L * 1000L)).toInt()
         val dominantAttentionSignal = attentionSignals.sortedByDescending { signalWeight(it) }.firstOrNull()
@@ -92,8 +105,13 @@ class ObserveReviewerControlTowerUseCase @Inject constructor(
             staleAgeHours = staleAgeHours,
             attentionRank = computeAttentionRank(
                 signals = attentionSignals,
-                ageMillis = ageMillis
-            )
+                ageMillis = ageMillis,
+                urgencyRank = urgency.rank
+            ),
+            ageBucket = ageBucket,
+            urgencyClass = urgency.urgencyClass,
+            urgencyReason = urgency.reason,
+            urgencyRank = urgency.rank
         )
     }
 
@@ -122,7 +140,8 @@ class ObserveReviewerControlTowerUseCase @Inject constructor(
 
     private fun computeAttentionRank(
         signals: Set<ReviewerAttentionSignal>,
-        ageMillis: Long
+        ageMillis: Long,
+        urgencyRank: Int
     ): Int {
         var rank = signals.sumOf(::signalWeight)
         if (ReviewerAttentionSignal.SYNC_FAILED in signals && ageMillis <= FRESH_CRITICAL_DRAFT_THRESHOLD_MILLIS) {
@@ -131,7 +150,59 @@ class ObserveReviewerControlTowerUseCase @Inject constructor(
         if (ReviewerAttentionSignal.SYNC_PENDING in signals && ReviewerAttentionSignal.STALE_DRAFT in signals) {
             rank += 5
         }
+        rank += urgencyRank
         return rank
+    }
+
+    private fun resolveAgeBucket(ageMillis: Long): ReviewerDraftAgeBucket {
+        return when {
+            ageMillis >= OVERDUE_DRAFT_THRESHOLD_MILLIS -> ReviewerDraftAgeBucket.OVERDUE
+            ageMillis >= STALE_DRAFT_THRESHOLD_MILLIS -> ReviewerDraftAgeBucket.STALE
+            ageMillis >= AGING_DRAFT_THRESHOLD_MILLIS -> ReviewerDraftAgeBucket.AGING
+            else -> ReviewerDraftAgeBucket.FRESH
+        }
+    }
+
+    private fun resolveUrgency(
+        signals: Set<ReviewerAttentionSignal>,
+        ageMillis: Long,
+        ageBucket: ReviewerDraftAgeBucket,
+        isGuided: Boolean
+    ): UrgencyAssessment {
+        if (ReviewerAttentionSignal.SYNC_FAILED in signals) {
+            return if (ageMillis >= FRESH_CRITICAL_DRAFT_THRESHOLD_MILLIS) {
+                UrgencyAssessment(ReviewerUrgencyClass.ACT_NOW, ReviewerUrgencyReason.SYNC_FAILED, 100)
+            } else {
+                UrgencyAssessment(ReviewerUrgencyClass.HIGH, ReviewerUrgencyReason.SYNC_FAILED, 82)
+            }
+        }
+        if (ReviewerAttentionSignal.QOS_FAILED_OR_BLOCKED in signals) {
+            return if (ageBucket >= ReviewerDraftAgeBucket.STALE) {
+                UrgencyAssessment(ReviewerUrgencyClass.ACT_NOW, ReviewerUrgencyReason.QOS_FAILED_OR_BLOCKED, 92)
+            } else {
+                UrgencyAssessment(ReviewerUrgencyClass.HIGH, ReviewerUrgencyReason.QOS_FAILED_OR_BLOCKED, 74)
+            }
+        }
+        if (ReviewerAttentionSignal.QOS_PREREQUISITES_NOT_READY in signals) {
+            return if (ageBucket >= ReviewerDraftAgeBucket.STALE) {
+                UrgencyAssessment(ReviewerUrgencyClass.HIGH, ReviewerUrgencyReason.QOS_PREREQUISITES_NOT_READY, 66)
+            } else {
+                UrgencyAssessment(ReviewerUrgencyClass.WATCH, ReviewerUrgencyReason.QOS_PREREQUISITES_NOT_READY, 46)
+            }
+        }
+        if (ReviewerAttentionSignal.STALE_DRAFT in signals && isGuided) {
+            return UrgencyAssessment(ReviewerUrgencyClass.HIGH, ReviewerUrgencyReason.STALE_GUIDED_WORK, 60)
+        }
+        if (
+            ReviewerAttentionSignal.STALE_DRAFT in signals &&
+            ReviewerAttentionSignal.SYNC_PENDING in signals
+        ) {
+            return UrgencyAssessment(ReviewerUrgencyClass.HIGH, ReviewerUrgencyReason.STALE_PENDING_SYNC, 58)
+        }
+        if (ReviewerAttentionSignal.STALE_DRAFT in signals) {
+            return UrgencyAssessment(ReviewerUrgencyClass.WATCH, ReviewerUrgencyReason.STALE_DRAFT, 40)
+        }
+        return UrgencyAssessment(ReviewerUrgencyClass.NORMAL, ReviewerUrgencyReason.NONE, 0)
     }
 
     private fun signalWeight(signal: ReviewerAttentionSignal): Int {
@@ -158,7 +229,15 @@ class ObserveReviewerControlTowerUseCase @Inject constructor(
                     ReviewerAttentionSignal.QOS_PREREQUISITES_NOT_READY in item.attentionSignals
             },
             staleDraftCount = items.count { item -> ReviewerAttentionSignal.STALE_DRAFT in item.attentionSignals },
-            attentionRequiredCount = items.count { item -> item.attentionRank > 0 }
+            attentionRequiredCount = items.count { item -> item.attentionRank > 0 },
+            actNowCount = items.count { item -> item.urgencyClass == ReviewerUrgencyClass.ACT_NOW },
+            overdueCount = items.count { item -> item.ageBucket == ReviewerDraftAgeBucket.OVERDUE }
         )
     }
 }
+
+private data class UrgencyAssessment(
+    val urgencyClass: ReviewerUrgencyClass,
+    val reason: ReviewerUrgencyReason,
+    val rank: Int
+)

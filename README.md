@@ -65,6 +65,11 @@ quartz-platform/
       - queue presets (`NEEDS_ATTENTION_NOW`, `SYNC_FAILURES_FIRST`, `QOS_RISK_FIRST`, `STALE_GUIDED_WORK`, `GUIDED_UNRESOLVED`)
       - deterministic queue progression (`queueTopDraftId`, progressed items, reset action)
       - aggregated motifs (top site/workflow queue patterns with direct draft open shortcuts)
+    - queue SLA intelligence (bounded/local-first):
+      - explicit draft aging buckets (`FRESH`, `AGING`, `STALE`, `OVERDUE`)
+      - explicit urgency taxonomy (`ACT_NOW`, `HIGH`, `WATCH`, `NORMAL`) with typed urgency reasons
+      - urgency-aware ranking and preset (`ACT_NOW_OVERDUE`) for faster supervisor triage
+      - urgency/aging visibility on each queue row plus aggregate urgency motifs
   - Room migrations and schema snapshots kept explicit
 
 ## Explicitly out of scope at this stage

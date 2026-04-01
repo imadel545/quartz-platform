@@ -34,6 +34,9 @@ import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.ReviewerAttentionSignal
 import com.quartz.platform.domain.model.ReviewerControlTowerGroupKey
 import com.quartz.platform.domain.model.ReviewerControlTowerItem
+import com.quartz.platform.domain.model.ReviewerDraftAgeBucket
+import com.quartz.platform.domain.model.ReviewerUrgencyClass
+import com.quartz.platform.domain.model.ReviewerUrgencyReason
 import com.quartz.platform.presentation.sync.syncStateLabelRes
 import java.time.Instant
 import java.time.ZoneId
@@ -154,6 +157,7 @@ fun ReviewerControlTowerScreen(
                         ControlTowerMotifSection(
                             siteMotifs = state.siteMotifs,
                             workflowMotifs = state.workflowMotifs,
+                            urgencyMotifs = state.urgencyMotifs,
                             onOpenDraft = onOpenDraft
                         )
                     }
@@ -247,6 +251,14 @@ private fun ControlTowerSummaryCard(state: ReviewerControlTowerUiState) {
                     state.summary.syncPendingCount,
                     state.summary.qosRiskCount,
                     state.summary.staleDraftCount
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(
+                    R.string.reviewer_control_tower_summary_sla,
+                    state.summary.actNowCount,
+                    state.summary.overdueCount
                 ),
                 style = MaterialTheme.typography.bodySmall
             )
@@ -357,6 +369,7 @@ private fun ControlTowerPresetRow(
                         Text(
                             text = when (preset) {
                                 ReviewerQueuePreset.NEEDS_ATTENTION_NOW -> stringResource(R.string.reviewer_control_tower_preset_attention_now)
+                                ReviewerQueuePreset.ACT_NOW_OVERDUE -> stringResource(R.string.reviewer_control_tower_preset_act_now_overdue)
                                 ReviewerQueuePreset.SYNC_FAILURES_FIRST -> stringResource(R.string.reviewer_control_tower_preset_sync_failures)
                                 ReviewerQueuePreset.QOS_RISK_FIRST -> stringResource(R.string.reviewer_control_tower_preset_qos_risk)
                                 ReviewerQueuePreset.STALE_GUIDED_WORK -> stringResource(R.string.reviewer_control_tower_preset_stale_guided)
@@ -374,9 +387,10 @@ private fun ControlTowerPresetRow(
 private fun ControlTowerMotifSection(
     siteMotifs: List<ReviewerQueueSiteMotif>,
     workflowMotifs: List<ReviewerQueueWorkflowMotif>,
+    urgencyMotifs: List<ReviewerQueueUrgencyMotif>,
     onOpenDraft: (String) -> Unit
 ) {
-    if (siteMotifs.isEmpty() && workflowMotifs.isEmpty()) return
+    if (siteMotifs.isEmpty() && workflowMotifs.isEmpty() && urgencyMotifs.isEmpty()) return
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -397,8 +411,18 @@ private fun ControlTowerMotifSection(
                     items(siteMotifs) { motif ->
                         MotifCard(
                             title = "${motif.siteCode} (${motif.draftCount})",
-                            subtitle = motif.dominantAttentionSignal?.let { signal ->
-                                stringResource(attentionSignalLabelRes(signal))
+                            subtitle = buildString {
+                                append(
+                                    stringResource(
+                                        R.string.reviewer_control_tower_motif_counts,
+                                        motif.actNowCount,
+                                        motif.overdueCount
+                                    )
+                                )
+                                motif.dominantAttentionSignal?.let { signal ->
+                                    append(" • ")
+                                    append(stringResource(attentionSignalLabelRes(signal)))
+                                }
                             },
                             onOpen = motif.topDraftId?.let { draftId -> { onOpenDraft(draftId) } }
                         )
@@ -415,8 +439,46 @@ private fun ControlTowerMotifSection(
                     items(workflowMotifs) { motif ->
                         MotifCard(
                             title = "${workflowLabel(motif.workflowType)} (${motif.draftCount})",
-                            subtitle = motif.dominantAttentionSignal?.let { signal ->
-                                stringResource(attentionSignalLabelRes(signal))
+                            subtitle = buildString {
+                                append(
+                                    stringResource(
+                                        R.string.reviewer_control_tower_motif_counts,
+                                        motif.actNowCount,
+                                        motif.overdueCount
+                                    )
+                                )
+                                motif.dominantAttentionSignal?.let { signal ->
+                                    append(" • ")
+                                    append(stringResource(attentionSignalLabelRes(signal)))
+                                }
+                            },
+                            onOpen = motif.topDraftId?.let { draftId -> { onOpenDraft(draftId) } }
+                        )
+                    }
+                }
+            }
+
+            if (urgencyMotifs.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.reviewer_control_tower_motif_by_urgency),
+                    style = MaterialTheme.typography.labelMedium
+                )
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(urgencyMotifs) { motif ->
+                        MotifCard(
+                            title = "${stringResource(urgencyClassLabelRes(motif.urgencyClass))} (${motif.draftCount})",
+                            subtitle = buildString {
+                                append(
+                                    stringResource(
+                                        R.string.reviewer_control_tower_motif_urgency_counts,
+                                        motif.draftCount,
+                                        motif.overdueCount
+                                    )
+                                )
+                                motif.dominantAttentionSignal?.let { signal ->
+                                    append(" • ")
+                                    append(stringResource(attentionSignalLabelRes(signal)))
+                                }
                             },
                             onOpen = motif.topDraftId?.let { draftId -> { onOpenDraft(draftId) } }
                         )
@@ -565,6 +627,15 @@ private fun ReviewerControlTowerItemCard(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+            Text(
+                text = stringResource(
+                    R.string.reviewer_control_tower_urgency,
+                    stringResource(urgencyClassLabelRes(item.urgencyClass)),
+                    stringResource(ageBucketLabelRes(item.ageBucket)),
+                    stringResource(urgencyReasonLabelRes(item.urgencyReason))
+                ),
+                style = MaterialTheme.typography.bodySmall
+            )
 
             if (item.attentionSignals.isNotEmpty()) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -645,6 +716,36 @@ private fun attentionSignalSeverity(signal: ReviewerAttentionSignal): Int {
         ReviewerAttentionSignal.QOS_PREREQUISITES_NOT_READY -> 3
         ReviewerAttentionSignal.SYNC_PENDING -> 2
         ReviewerAttentionSignal.STALE_DRAFT -> 1
+    }
+}
+
+private fun urgencyClassLabelRes(urgencyClass: ReviewerUrgencyClass): Int {
+    return when (urgencyClass) {
+        ReviewerUrgencyClass.ACT_NOW -> R.string.reviewer_control_tower_urgency_act_now
+        ReviewerUrgencyClass.HIGH -> R.string.reviewer_control_tower_urgency_high
+        ReviewerUrgencyClass.WATCH -> R.string.reviewer_control_tower_urgency_watch
+        ReviewerUrgencyClass.NORMAL -> R.string.reviewer_control_tower_urgency_normal
+    }
+}
+
+private fun ageBucketLabelRes(ageBucket: ReviewerDraftAgeBucket): Int {
+    return when (ageBucket) {
+        ReviewerDraftAgeBucket.FRESH -> R.string.reviewer_control_tower_age_fresh
+        ReviewerDraftAgeBucket.AGING -> R.string.reviewer_control_tower_age_aging
+        ReviewerDraftAgeBucket.STALE -> R.string.reviewer_control_tower_age_stale
+        ReviewerDraftAgeBucket.OVERDUE -> R.string.reviewer_control_tower_age_overdue
+    }
+}
+
+private fun urgencyReasonLabelRes(reason: ReviewerUrgencyReason): Int {
+    return when (reason) {
+        ReviewerUrgencyReason.SYNC_FAILED -> R.string.reviewer_control_tower_urgency_reason_sync_failed
+        ReviewerUrgencyReason.QOS_FAILED_OR_BLOCKED -> R.string.reviewer_control_tower_urgency_reason_qos_failed
+        ReviewerUrgencyReason.QOS_PREREQUISITES_NOT_READY -> R.string.reviewer_control_tower_urgency_reason_qos_preflight
+        ReviewerUrgencyReason.STALE_DRAFT -> R.string.reviewer_control_tower_urgency_reason_stale_draft
+        ReviewerUrgencyReason.STALE_GUIDED_WORK -> R.string.reviewer_control_tower_urgency_reason_stale_guided
+        ReviewerUrgencyReason.STALE_PENDING_SYNC -> R.string.reviewer_control_tower_urgency_reason_stale_pending
+        ReviewerUrgencyReason.NONE -> R.string.reviewer_control_tower_urgency_reason_none
     }
 }
 

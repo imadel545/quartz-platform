@@ -17,6 +17,9 @@ import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.ReportSyncTrace
 import com.quartz.platform.domain.model.ReviewerAttentionSignal
+import com.quartz.platform.domain.model.ReviewerDraftAgeBucket
+import com.quartz.platform.domain.model.ReviewerUrgencyClass
+import com.quartz.platform.domain.model.ReviewerUrgencyReason
 import com.quartz.platform.domain.model.SiteSummary
 import com.quartz.platform.domain.model.ThroughputMetrics
 import com.quartz.platform.domain.model.workflow.WorkflowStepState
@@ -183,12 +186,18 @@ class ObserveReviewerControlTowerUseCaseTest {
         assertThat(failedItem.attentionSignals).contains(ReviewerAttentionSignal.STALE_DRAFT)
         assertThat(failedItem.dominantAttentionSignal).isEqualTo(ReviewerAttentionSignal.SYNC_FAILED)
         assertThat(failedItem.staleAgeHours).isAtLeast(0)
+        assertThat(failedItem.urgencyClass).isEqualTo(ReviewerUrgencyClass.ACT_NOW)
+        assertThat(failedItem.urgencyReason).isEqualTo(ReviewerUrgencyReason.SYNC_FAILED)
+        assertThat(failedItem.ageBucket).isEqualTo(ReviewerDraftAgeBucket.OVERDUE)
+        assertThat(failedItem.urgencyRank).isGreaterThan(0)
 
         val qosItem = snapshot.items.last()
         assertThat(qosItem.attentionSignals).contains(ReviewerAttentionSignal.QOS_FAILED_OR_BLOCKED)
         assertThat(qosItem.attentionSignals).contains(ReviewerAttentionSignal.QOS_PREREQUISITES_NOT_READY)
         assertThat(qosItem.siteCode).isEqualTo("QRTZ-001")
         assertThat(qosItem.dominantAttentionSignal).isEqualTo(ReviewerAttentionSignal.QOS_FAILED_OR_BLOCKED)
+        assertThat(qosItem.urgencyClass).isEqualTo(ReviewerUrgencyClass.HIGH)
+        assertThat(qosItem.urgencyReason).isEqualTo(ReviewerUrgencyReason.QOS_FAILED_OR_BLOCKED)
 
         assertThat(snapshot.summary.totalDraftCount).isEqualTo(2)
         assertThat(snapshot.summary.guidedDraftCount).isEqualTo(1)
@@ -197,6 +206,8 @@ class ObserveReviewerControlTowerUseCaseTest {
         assertThat(snapshot.summary.qosRiskCount).isEqualTo(1)
         assertThat(snapshot.summary.staleDraftCount).isEqualTo(1)
         assertThat(snapshot.summary.attentionRequiredCount).isEqualTo(2)
+        assertThat(snapshot.summary.actNowCount).isEqualTo(1)
+        assertThat(snapshot.summary.overdueCount).isEqualTo(1)
     }
 
     private class FakeReportDraftRepository(

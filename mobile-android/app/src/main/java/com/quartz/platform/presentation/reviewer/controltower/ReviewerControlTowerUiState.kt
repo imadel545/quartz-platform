@@ -5,6 +5,8 @@ import com.quartz.platform.domain.model.ReviewerAttentionSignal
 import com.quartz.platform.domain.model.ReviewerControlTowerGroupKey
 import com.quartz.platform.domain.model.ReviewerControlTowerItem
 import com.quartz.platform.domain.model.ReviewerControlTowerSummary
+import com.quartz.platform.domain.model.ReviewerDraftAgeBucket
+import com.quartz.platform.domain.model.ReviewerUrgencyClass
 
 data class ReviewerControlTowerUiState(
     val isLoading: Boolean = true,
@@ -17,7 +19,9 @@ data class ReviewerControlTowerUiState(
         syncPendingCount = 0,
         qosRiskCount = 0,
         staleDraftCount = 0,
-        attentionRequiredCount = 0
+        attentionRequiredCount = 0,
+        actNowCount = 0,
+        overdueCount = 0
     ),
     val selectedFilter: ReviewerControlTowerFilter = ReviewerControlTowerFilter.ALL,
     val selectedGrouping: ReviewerControlTowerGrouping = ReviewerControlTowerGrouping.ATTENTION,
@@ -38,7 +42,7 @@ data class ReviewerControlTowerUiState(
         get() = queuedItems.filterNot { it.draftId in progressedDraftIds }
 
     val visibleSyncFailedCount: Int
-        get() = queuedItems.count { item -> ReviewerAttentionSignal.SYNC_FAILED in item.attentionSignals }
+        get() = activeQueueItems.count { item -> ReviewerAttentionSignal.SYNC_FAILED in item.attentionSignals }
 
     val groupedItems: List<ReviewerControlTowerGroup>
         get() = activeQueueItems
@@ -71,6 +75,8 @@ data class ReviewerControlTowerUiState(
                     siteName = first.siteName,
                     draftCount = siteItems.size,
                     attentionCount = siteItems.count { it.attentionRank > 0 },
+                    actNowCount = siteItems.count { it.urgencyClass == ReviewerUrgencyClass.ACT_NOW },
+                    overdueCount = siteItems.count { it.ageBucket == ReviewerDraftAgeBucket.OVERDUE },
                     dominantAttentionSignal = siteItems
                         .mapNotNull { it.dominantAttentionSignal }
                         .groupingBy { it }
@@ -83,7 +89,9 @@ data class ReviewerControlTowerUiState(
                 )
             }
             .sortedWith(
-                compareByDescending<ReviewerQueueSiteMotif> { it.attentionCount }
+                compareByDescending<ReviewerQueueSiteMotif> { it.actNowCount }
+                    .thenByDescending { it.overdueCount }
+                    .thenByDescending { it.attentionCount }
                     .thenByDescending { it.draftCount }
                     .thenBy { it.siteCode }
             )
@@ -98,6 +106,8 @@ data class ReviewerControlTowerUiState(
                     workflowType = workflowType,
                     draftCount = workflowItems.size,
                     attentionCount = workflowItems.count { it.attentionRank > 0 },
+                    actNowCount = workflowItems.count { it.urgencyClass == ReviewerUrgencyClass.ACT_NOW },
+                    overdueCount = workflowItems.count { it.ageBucket == ReviewerDraftAgeBucket.OVERDUE },
                     dominantAttentionSignal = workflowItems
                         .mapNotNull { it.dominantAttentionSignal }
                         .groupingBy { it }
@@ -110,9 +120,36 @@ data class ReviewerControlTowerUiState(
                 )
             }
             .sortedWith(
-                compareByDescending<ReviewerQueueWorkflowMotif> { it.attentionCount }
+                compareByDescending<ReviewerQueueWorkflowMotif> { it.actNowCount }
+                    .thenByDescending { it.overdueCount }
+                    .thenByDescending { it.attentionCount }
                     .thenByDescending { it.draftCount }
                     .thenBy { it.workflowType?.name ?: "NON_GUIDED" }
+            )
+
+    val urgencyMotifs: List<ReviewerQueueUrgencyMotif>
+        get() = activeQueueItems
+            .groupBy { it.urgencyClass }
+            .entries
+            .map { (urgencyClass, urgencyItems) ->
+                ReviewerQueueUrgencyMotif(
+                    urgencyClass = urgencyClass,
+                    draftCount = urgencyItems.size,
+                    overdueCount = urgencyItems.count { it.ageBucket == ReviewerDraftAgeBucket.OVERDUE },
+                    dominantAttentionSignal = urgencyItems
+                        .mapNotNull { it.dominantAttentionSignal }
+                        .groupingBy { it }
+                        .eachCount()
+                        .maxByOrNull { it.value }
+                        ?.key,
+                    topDraftId = urgencyItems.maxWithOrNull(
+                        compareBy<ReviewerControlTowerItem>({ it.urgencyRank }, { it.attentionRank }, { -it.updatedAtEpochMillis })
+                    )?.draftId
+                )
+            }
+            .sortedWith(
+                compareByDescending<ReviewerQueueUrgencyMotif> { it.urgencyClass.severityOrder() }
+                    .thenByDescending { it.draftCount }
             )
 }
 
@@ -201,6 +238,7 @@ enum class ReviewerControlTowerGrouping {
 
 enum class ReviewerQueuePreset {
     NEEDS_ATTENTION_NOW,
+    ACT_NOW_OVERDUE,
     SYNC_FAILURES_FIRST,
     QOS_RISK_FIRST,
     STALE_GUIDED_WORK,
@@ -209,6 +247,10 @@ enum class ReviewerQueuePreset {
     fun apply(items: List<ReviewerControlTowerItem>): List<ReviewerControlTowerItem> {
         val filtered = when (this) {
             NEEDS_ATTENTION_NOW -> items.filter { item -> item.attentionRank > 0 }
+            ACT_NOW_OVERDUE -> items.filter { item ->
+                item.urgencyClass == ReviewerUrgencyClass.ACT_NOW ||
+                    item.ageBucket == ReviewerDraftAgeBucket.OVERDUE
+            }
             SYNC_FAILURES_FIRST -> items.filter { item -> ReviewerAttentionSignal.SYNC_FAILED in item.attentionSignals }
             QOS_RISK_FIRST -> items.filter { item ->
                 ReviewerAttentionSignal.QOS_FAILED_OR_BLOCKED in item.attentionSignals ||
@@ -227,8 +269,9 @@ enum class ReviewerQueuePreset {
         }
 
         val sorted = filtered.sortedWith(
-            compareByDescending<ReviewerControlTowerItem> { it.attentionRank }
-                .thenByDescending { it.updatedAtEpochMillis }
+            compareByDescending<ReviewerControlTowerItem> { it.urgencyRank }
+                .thenByDescending { it.attentionRank }
+                .thenBy { it.updatedAtEpochMillis }
                 .thenBy { it.siteCode }
         )
         return if (sorted.isNotEmpty()) sorted else items
@@ -265,6 +308,8 @@ data class ReviewerQueueSiteMotif(
     val siteName: String,
     val draftCount: Int,
     val attentionCount: Int,
+    val actNowCount: Int,
+    val overdueCount: Int,
     val dominantAttentionSignal: ReviewerAttentionSignal?,
     val topDraftId: String?
 )
@@ -273,9 +318,28 @@ data class ReviewerQueueWorkflowMotif(
     val workflowType: ReportDraftOriginWorkflowType?,
     val draftCount: Int,
     val attentionCount: Int,
+    val actNowCount: Int,
+    val overdueCount: Int,
     val dominantAttentionSignal: ReviewerAttentionSignal?,
     val topDraftId: String?
 )
+
+data class ReviewerQueueUrgencyMotif(
+    val urgencyClass: ReviewerUrgencyClass,
+    val draftCount: Int,
+    val overdueCount: Int,
+    val dominantAttentionSignal: ReviewerAttentionSignal?,
+    val topDraftId: String?
+)
+
+private fun ReviewerUrgencyClass.severityOrder(): Int {
+    return when (this) {
+        ReviewerUrgencyClass.ACT_NOW -> 4
+        ReviewerUrgencyClass.HIGH -> 3
+        ReviewerUrgencyClass.WATCH -> 2
+        ReviewerUrgencyClass.NORMAL -> 1
+    }
+}
 
 internal const val STATE_CONTROL_TOWER_SELECTED_FILTER = "state_control_tower_selected_filter"
 internal const val STATE_CONTROL_TOWER_SELECTED_GROUPING = "state_control_tower_selected_grouping"

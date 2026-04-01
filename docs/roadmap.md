@@ -52,6 +52,10 @@ The roadmap prioritizes:
     - deterministic queue presets for supervision intents
     - queue continuation/reset semantics for repeated triage loops
     - top motifs by site/workflow with direct open-draft shortcuts
+  - reviewer/supervisor queue SLA intelligence:
+    - deterministic age buckets + urgency classes for local deadline-risk triage
+    - urgency-aware queue ordering and `act-now / overdue` preset
+    - row-level urgency context and aggregate urgency motifs for faster supervision decisions
   - shared workflow/session core reused by multiple guided flows
   - local report-draft continuity with typed provenance
   - workflow-typed closure projection in report draft flow for XFeeder/RET local review

@@ -8,6 +8,9 @@ import com.quartz.platform.domain.model.ReportSyncTrace
 import com.quartz.platform.domain.model.ReviewerAttentionSignal
 import com.quartz.platform.domain.model.ReviewerControlTowerItem
 import com.quartz.platform.domain.model.ReviewerControlTowerSummary
+import com.quartz.platform.domain.model.ReviewerDraftAgeBucket
+import com.quartz.platform.domain.model.ReviewerUrgencyClass
+import com.quartz.platform.domain.model.ReviewerUrgencyReason
 import com.quartz.platform.domain.model.RetResultOutcome
 import org.junit.Test
 
@@ -128,6 +131,37 @@ class ReviewerControlTowerUiStateTest {
         assertThat(state.queuedItems.map { it.draftId }).containsExactly("unresolved-guided")
     }
 
+    @Test
+    fun act_now_overdue_preset_keeps_act_now_or_overdue_rows() {
+        val actNow = item(
+            draftId = "act-now",
+            attentionSignals = setOf(ReviewerAttentionSignal.SYNC_FAILED),
+            urgencyClass = ReviewerUrgencyClass.ACT_NOW,
+            ageBucket = ReviewerDraftAgeBucket.AGING,
+            attentionRank = 60
+        )
+        val overdue = item(
+            draftId = "overdue",
+            attentionSignals = setOf(ReviewerAttentionSignal.STALE_DRAFT),
+            urgencyClass = ReviewerUrgencyClass.WATCH,
+            ageBucket = ReviewerDraftAgeBucket.OVERDUE,
+            attentionRank = 12
+        )
+        val normal = item(
+            draftId = "normal",
+            attentionSignals = emptySet(),
+            urgencyClass = ReviewerUrgencyClass.NORMAL,
+            ageBucket = ReviewerDraftAgeBucket.FRESH,
+            attentionRank = 0
+        )
+
+        val state = baseState(
+            items = listOf(normal, overdue, actNow),
+            selectedPreset = ReviewerQueuePreset.ACT_NOW_OVERDUE
+        )
+        assertThat(state.queuedItems.map { it.draftId }).containsExactly("act-now", "overdue").inOrder()
+    }
+
     private fun baseState(
         items: List<ReviewerControlTowerItem>,
         selectedPreset: ReviewerQueuePreset,
@@ -144,7 +178,9 @@ class ReviewerControlTowerUiStateTest {
                 syncPendingCount = items.count { it.syncTrace.state == ReportSyncState.PENDING },
                 qosRiskCount = items.count { ReviewerAttentionSignal.QOS_FAILED_OR_BLOCKED in it.attentionSignals },
                 staleDraftCount = items.count { ReviewerAttentionSignal.STALE_DRAFT in it.attentionSignals },
-                attentionRequiredCount = items.count { it.attentionRank > 0 }
+                attentionRequiredCount = items.count { it.attentionRank > 0 },
+                actNowCount = items.count { it.urgencyClass == ReviewerUrgencyClass.ACT_NOW },
+                overdueCount = items.count { it.ageBucket == ReviewerDraftAgeBucket.OVERDUE }
             ),
             selectedPreset = selectedPreset,
             progressedDraftIds = progressedDraftIds
@@ -159,6 +195,9 @@ class ReviewerControlTowerUiStateTest {
         originWorkflowType: ReportDraftOriginWorkflowType? = ReportDraftOriginWorkflowType.PERFORMANCE,
         syncState: ReportSyncState = ReportSyncState.LOCAL_ONLY,
         attentionSignals: Set<ReviewerAttentionSignal> = emptySet(),
+        ageBucket: ReviewerDraftAgeBucket = ReviewerDraftAgeBucket.FRESH,
+        urgencyClass: ReviewerUrgencyClass = ReviewerUrgencyClass.NORMAL,
+        urgencyReason: ReviewerUrgencyReason = ReviewerUrgencyReason.NONE,
         attentionRank: Int = 0,
         closureSummary: ReportListClosureSummary? = null
     ): ReviewerControlTowerItem {
@@ -181,7 +220,16 @@ class ReviewerControlTowerUiStateTest {
             attentionSignals = attentionSignals,
             dominantAttentionSignal = attentionSignals.firstOrNull(),
             staleAgeHours = if (ReviewerAttentionSignal.STALE_DRAFT in attentionSignals) 30 else 1,
-            attentionRank = attentionRank
+            attentionRank = attentionRank,
+            ageBucket = ageBucket,
+            urgencyClass = urgencyClass,
+            urgencyReason = urgencyReason,
+            urgencyRank = when (urgencyClass) {
+                ReviewerUrgencyClass.ACT_NOW -> 100
+                ReviewerUrgencyClass.HIGH -> 60
+                ReviewerUrgencyClass.WATCH -> 30
+                ReviewerUrgencyClass.NORMAL -> 0
+            }
         )
     }
 }

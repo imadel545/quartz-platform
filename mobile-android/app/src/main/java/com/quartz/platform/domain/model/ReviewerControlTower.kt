@@ -14,7 +14,9 @@ data class ReviewerControlTowerSummary(
     val syncPendingCount: Int,
     val qosRiskCount: Int,
     val staleDraftCount: Int,
-    val attentionRequiredCount: Int
+    val attentionRequiredCount: Int,
+    val actNowCount: Int,
+    val overdueCount: Int
 )
 
 data class ReviewerControlTowerItem(
@@ -31,7 +33,11 @@ data class ReviewerControlTowerItem(
     val attentionSignals: Set<ReviewerAttentionSignal>,
     val dominantAttentionSignal: ReviewerAttentionSignal?,
     val staleAgeHours: Int,
-    val attentionRank: Int
+    val attentionRank: Int,
+    val ageBucket: ReviewerDraftAgeBucket,
+    val urgencyClass: ReviewerUrgencyClass,
+    val urgencyReason: ReviewerUrgencyReason,
+    val urgencyRank: Int
 )
 
 enum class ReviewerAttentionSignal {
@@ -40,6 +46,30 @@ enum class ReviewerAttentionSignal {
     QOS_FAILED_OR_BLOCKED,
     QOS_PREREQUISITES_NOT_READY,
     STALE_DRAFT
+}
+
+enum class ReviewerDraftAgeBucket {
+    FRESH,
+    AGING,
+    STALE,
+    OVERDUE
+}
+
+enum class ReviewerUrgencyClass {
+    ACT_NOW,
+    HIGH,
+    WATCH,
+    NORMAL
+}
+
+enum class ReviewerUrgencyReason {
+    SYNC_FAILED,
+    QOS_FAILED_OR_BLOCKED,
+    QOS_PREREQUISITES_NOT_READY,
+    STALE_DRAFT,
+    STALE_GUIDED_WORK,
+    STALE_PENDING_SYNC,
+    NONE
 }
 
 enum class ReviewerControlTowerGroupKey {
