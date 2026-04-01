@@ -103,7 +103,13 @@ Current validated supervisor visibility now also includes a mobile-first Reviewe
 - cross-site draft aggregation for faster supervisor triage without opening each site manually,
 - deterministic attention prioritization based on sync failures, QoS risk, and staleness,
 - bounded filters (`ALL`, `NEEDS_ATTENTION`, `SYNC_FAILED`, `QOS_RISK`, `GUIDED`, `NON_GUIDED`),
-- row actions to open the draft review directly or jump to site detail.
+- row actions to open the draft review directly or jump to site detail,
+- action-center controls for faster execution from the triage surface:
+  - open top-priority visible draft,
+  - retry failed sync at row-level,
+  - retry all visible failed sync rows in one action,
+  - grouping by attention or workflow with restored grouping state after process death,
+- compact triage context showing dominant attention signal and stale draft age on each visible row.
 
 ### 4. Throughput and QoS testing
 The system should support:

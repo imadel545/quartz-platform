@@ -181,11 +181,14 @@ class ObserveReviewerControlTowerUseCaseTest {
         val failedItem = snapshot.items.first()
         assertThat(failedItem.attentionSignals).contains(ReviewerAttentionSignal.SYNC_FAILED)
         assertThat(failedItem.attentionSignals).contains(ReviewerAttentionSignal.STALE_DRAFT)
+        assertThat(failedItem.dominantAttentionSignal).isEqualTo(ReviewerAttentionSignal.SYNC_FAILED)
+        assertThat(failedItem.staleAgeHours).isAtLeast(0)
 
         val qosItem = snapshot.items.last()
         assertThat(qosItem.attentionSignals).contains(ReviewerAttentionSignal.QOS_FAILED_OR_BLOCKED)
         assertThat(qosItem.attentionSignals).contains(ReviewerAttentionSignal.QOS_PREREQUISITES_NOT_READY)
         assertThat(qosItem.siteCode).isEqualTo("QRTZ-001")
+        assertThat(qosItem.dominantAttentionSignal).isEqualTo(ReviewerAttentionSignal.QOS_FAILED_OR_BLOCKED)
 
         assertThat(snapshot.summary.totalDraftCount).isEqualTo(2)
         assertThat(snapshot.summary.guidedDraftCount).isEqualTo(1)

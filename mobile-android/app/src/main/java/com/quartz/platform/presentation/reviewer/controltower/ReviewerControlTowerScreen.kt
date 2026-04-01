@@ -32,6 +32,7 @@ import com.quartz.platform.R
 import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.ReviewerAttentionSignal
+import com.quartz.platform.domain.model.ReviewerControlTowerGroupKey
 import com.quartz.platform.domain.model.ReviewerControlTowerItem
 import com.quartz.platform.presentation.sync.syncStateLabelRes
 import java.time.Instant
@@ -61,8 +62,12 @@ fun ReviewerControlTowerRoute(
         state = state,
         onBack = onBack,
         onFilterSelected = viewModel::onFilterSelected,
+        onGroupingSelected = viewModel::onGroupingSelected,
+        onOpenTopPriority = viewModel::onOpenTopPriorityClicked,
+        onRetryFailedVisibleSync = viewModel::onRetryFailedVisibleSyncClicked,
         onOpenDraft = viewModel::onOpenDraftClicked,
-        onOpenSite = viewModel::onOpenSiteClicked
+        onOpenSite = viewModel::onOpenSiteClicked,
+        onRetryDraftSync = viewModel::onRetryDraftSyncClicked
     )
 }
 
@@ -72,8 +77,12 @@ fun ReviewerControlTowerScreen(
     state: ReviewerControlTowerUiState,
     onBack: () -> Unit,
     onFilterSelected: (ReviewerControlTowerFilter) -> Unit,
+    onGroupingSelected: (ReviewerControlTowerGrouping) -> Unit,
+    onOpenTopPriority: () -> Unit,
+    onRetryFailedVisibleSync: () -> Unit,
     onOpenDraft: (String) -> Unit,
-    onOpenSite: (String) -> Unit
+    onOpenSite: (String) -> Unit,
+    onRetryDraftSync: (String) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -108,10 +117,37 @@ fun ReviewerControlTowerScreen(
                     }
 
                     item {
+                        ControlTowerActionRow(
+                            state = state,
+                            onOpenTopPriority = onOpenTopPriority,
+                            onRetryFailedVisibleSync = onRetryFailedVisibleSync
+                        )
+                    }
+
+                    item {
                         ControlTowerFilterRow(
                             selectedFilter = state.selectedFilter,
                             onFilterSelected = onFilterSelected
                         )
+                    }
+
+                    item {
+                        ControlTowerGroupingRow(
+                            selectedGrouping = state.selectedGrouping,
+                            onGroupingSelected = onGroupingSelected
+                        )
+                    }
+
+                    state.infoMessage?.let { info ->
+                        item {
+                            Card(modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    text = info,
+                                    modifier = Modifier.padding(12.dp),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
                     }
 
                     state.errorMessage?.let { error ->
@@ -138,11 +174,13 @@ fun ReviewerControlTowerScreen(
                             }
                         }
                     } else {
-                        items(state.filteredItems, key = { item -> item.draftId }) { item ->
-                            ReviewerControlTowerItemCard(
-                                item = item,
+                        items(state.groupedItems, key = { group -> group.key.name }) { group ->
+                            ControlTowerGroupSection(
+                                group = group,
                                 onOpenDraft = onOpenDraft,
-                                onOpenSite = onOpenSite
+                                onOpenSite = onOpenSite,
+                                onRetryDraftSync = onRetryDraftSync,
+                                retryingDraftIds = state.retryingDraftIds
                             )
                         }
                     }
@@ -197,6 +235,39 @@ private fun ControlTowerSummaryCard(state: ReviewerControlTowerUiState) {
 }
 
 @Composable
+private fun ControlTowerActionRow(
+    state: ReviewerControlTowerUiState,
+    onOpenTopPriority: () -> Unit,
+    onRetryFailedVisibleSync: () -> Unit
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(
+            modifier = Modifier.weight(1f),
+            enabled = state.topPriorityDraftId != null,
+            onClick = onOpenTopPriority
+        ) {
+            Text(stringResource(R.string.reviewer_control_tower_action_open_top_priority))
+        }
+        OutlinedButton(
+            modifier = Modifier.weight(1f),
+            enabled = state.visibleSyncFailedCount > 0 && !state.isBulkRetryInProgress,
+            onClick = onRetryFailedVisibleSync
+        ) {
+            Text(
+                if (state.isBulkRetryInProgress) {
+                    stringResource(R.string.action_retry_sync_loading)
+                } else {
+                    stringResource(
+                        R.string.reviewer_control_tower_action_retry_visible_failed,
+                        state.visibleSyncFailedCount
+                    )
+                }
+            )
+        }
+    }
+}
+
+@Composable
 private fun ControlTowerFilterRow(
     selectedFilter: ReviewerControlTowerFilter,
     onFilterSelected: (ReviewerControlTowerFilter) -> Unit
@@ -230,10 +301,71 @@ private fun ControlTowerFilterRow(
 }
 
 @Composable
+private fun ControlTowerGroupingRow(
+    selectedGrouping: ReviewerControlTowerGrouping,
+    onGroupingSelected: (ReviewerControlTowerGrouping) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.reviewer_control_tower_grouping_label),
+            style = MaterialTheme.typography.bodyMedium
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(ReviewerControlTowerGrouping.entries) { grouping ->
+                FilterChip(
+                    selected = grouping == selectedGrouping,
+                    onClick = { onGroupingSelected(grouping) },
+                    label = {
+                        Text(
+                            text = when (grouping) {
+                                ReviewerControlTowerGrouping.ATTENTION -> stringResource(R.string.reviewer_control_tower_grouping_attention)
+                                ReviewerControlTowerGrouping.WORKFLOW -> stringResource(R.string.reviewer_control_tower_grouping_workflow)
+                            }
+                        )
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ControlTowerGroupSection(
+    group: ReviewerControlTowerGroup,
+    onOpenDraft: (String) -> Unit,
+    onOpenSite: (String) -> Unit,
+    onRetryDraftSync: (String) -> Unit,
+    retryingDraftIds: Set<String>
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = groupTitle(group.key),
+                style = MaterialTheme.typography.titleSmall
+            )
+            group.items.forEach { item ->
+                ReviewerControlTowerItemCard(
+                    item = item,
+                    isRetrying = item.draftId in retryingDraftIds,
+                    onOpenDraft = onOpenDraft,
+                    onOpenSite = onOpenSite,
+                    onRetryDraftSync = onRetryDraftSync
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun ReviewerControlTowerItemCard(
     item: ReviewerControlTowerItem,
+    isRetrying: Boolean,
     onOpenDraft: (String) -> Unit,
-    onOpenSite: (String) -> Unit
+    onOpenSite: (String) -> Unit,
+    onRetryDraftSync: (String) -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -259,6 +391,21 @@ private fun ReviewerControlTowerItemCard(
                 ),
                 style = MaterialTheme.typography.bodySmall
             )
+            item.dominantAttentionSignal?.let { dominant ->
+                Text(
+                    text = stringResource(
+                        R.string.reviewer_control_tower_dominant_signal,
+                        stringResource(attentionSignalLabelRes(dominant))
+                    ),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            if (ReviewerAttentionSignal.STALE_DRAFT in item.attentionSignals) {
+                Text(
+                    text = stringResource(R.string.reviewer_control_tower_stale_age, item.staleAgeHours),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
 
             item.originWorkflowType?.let { workflow ->
                 Text(
@@ -276,7 +423,7 @@ private fun ReviewerControlTowerItemCard(
 
             if (item.attentionSignals.isNotEmpty()) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(item.attentionSignals.toList()) { signal ->
+                    items(item.attentionSignals.toList().sortedByDescending(::attentionSignalSeverity)) { signal ->
                         Card {
                             Text(
                                 text = stringResource(attentionSignalLabelRes(signal)),
@@ -302,7 +449,37 @@ private fun ReviewerControlTowerItemCard(
                     Text(stringResource(R.string.reviewer_control_tower_action_open_site))
                 }
             }
+            if (item.syncTrace.state == ReportSyncState.FAILED) {
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isRetrying,
+                    onClick = { onRetryDraftSync(item.draftId) }
+                ) {
+                    Text(
+                        if (isRetrying) {
+                            stringResource(R.string.action_retry_sync_loading)
+                        } else {
+                            stringResource(R.string.action_retry_sync)
+                        }
+                    )
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun groupTitle(key: ReviewerControlTowerGroupKey): String {
+    return when (key) {
+        ReviewerControlTowerGroupKey.SYNC_FAILED -> stringResource(R.string.reviewer_control_tower_group_sync_failed)
+        ReviewerControlTowerGroupKey.QOS_RISK -> stringResource(R.string.reviewer_control_tower_group_qos_risk)
+        ReviewerControlTowerGroupKey.SYNC_PENDING -> stringResource(R.string.reviewer_control_tower_group_sync_pending)
+        ReviewerControlTowerGroupKey.STALE -> stringResource(R.string.reviewer_control_tower_group_stale)
+        ReviewerControlTowerGroupKey.NO_ATTENTION -> stringResource(R.string.reviewer_control_tower_group_no_attention)
+        ReviewerControlTowerGroupKey.WORKFLOW_XFEEDER -> stringResource(R.string.reviewer_control_tower_group_workflow_xfeeder)
+        ReviewerControlTowerGroupKey.WORKFLOW_RET -> stringResource(R.string.reviewer_control_tower_group_workflow_ret)
+        ReviewerControlTowerGroupKey.WORKFLOW_PERFORMANCE -> stringResource(R.string.reviewer_control_tower_group_workflow_performance)
+        ReviewerControlTowerGroupKey.WORKFLOW_NON_GUIDED -> stringResource(R.string.reviewer_control_tower_group_workflow_non_guided)
     }
 }
 
@@ -313,6 +490,16 @@ private fun attentionSignalLabelRes(signal: ReviewerAttentionSignal): Int {
         ReviewerAttentionSignal.QOS_FAILED_OR_BLOCKED -> R.string.reviewer_control_tower_signal_qos_failed_or_blocked
         ReviewerAttentionSignal.QOS_PREREQUISITES_NOT_READY -> R.string.reviewer_control_tower_signal_qos_preflight_blocked
         ReviewerAttentionSignal.STALE_DRAFT -> R.string.reviewer_control_tower_signal_stale_draft
+    }
+}
+
+private fun attentionSignalSeverity(signal: ReviewerAttentionSignal): Int {
+    return when (signal) {
+        ReviewerAttentionSignal.SYNC_FAILED -> 5
+        ReviewerAttentionSignal.QOS_FAILED_OR_BLOCKED -> 4
+        ReviewerAttentionSignal.QOS_PREREQUISITES_NOT_READY -> 3
+        ReviewerAttentionSignal.SYNC_PENDING -> 2
+        ReviewerAttentionSignal.STALE_DRAFT -> 1
     }
 }
 

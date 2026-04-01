@@ -240,12 +240,18 @@ For bounded site-level performance workflows (Débit/QoS foundation), local sess
 For bounded supervisor triage workflows, a reviewer-focused projection layer tracks:
 - `ReviewerControlTowerSnapshot` (generated timestamp + summary KPIs + ordered row items)
 - `ReviewerControlTowerItem` (draft/site identity, workflow provenance, closure summary signal, sync trace, attention signals, attention rank)
+- `ReviewerControlTowerItem` action-center triage facets:
+  - `dominantAttentionSignal` (single top cause used for compact triage)
+  - `staleAgeHours` (bounded age context for ranking/visibility)
 - bounded attention taxonomy:
   - `SYNC_FAILED`
   - `SYNC_PENDING`
   - `QOS_FAILED_OR_BLOCKED`
   - `QOS_PREREQUISITES_NOT_READY`
   - `STALE_DRAFT`
+- bounded grouping taxonomy for action-center segmentation:
+  - attention groups: `SYNC_FAILED`, `QOS_RISK`, `SYNC_PENDING`, `STALE`, `NO_ATTENTION`
+  - workflow groups: `WORKFLOW_XFEEDER`, `WORKFLOW_RET`, `WORKFLOW_PERFORMANCE`, `WORKFLOW_NON_GUIDED`
 - deterministic triage filter state:
   - `ALL`
   - `NEEDS_ATTENTION`

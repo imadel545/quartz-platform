@@ -29,6 +29,8 @@ data class ReviewerControlTowerItem(
     val originWorkflowType: ReportDraftOriginWorkflowType?,
     val closureSummary: ReportListClosureSummary?,
     val attentionSignals: Set<ReviewerAttentionSignal>,
+    val dominantAttentionSignal: ReviewerAttentionSignal?,
+    val staleAgeHours: Int,
     val attentionRank: Int
 )
 
@@ -38,4 +40,16 @@ enum class ReviewerAttentionSignal {
     QOS_FAILED_OR_BLOCKED,
     QOS_PREREQUISITES_NOT_READY,
     STALE_DRAFT
+}
+
+enum class ReviewerControlTowerGroupKey {
+    SYNC_FAILED,
+    QOS_RISK,
+    SYNC_PENDING,
+    STALE,
+    NO_ATTENTION,
+    WORKFLOW_XFEEDER,
+    WORKFLOW_RET,
+    WORKFLOW_PERFORMANCE,
+    WORKFLOW_NON_GUIDED
 }

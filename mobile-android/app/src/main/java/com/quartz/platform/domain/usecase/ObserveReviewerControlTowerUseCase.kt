@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 
 private const val STALE_DRAFT_THRESHOLD_MILLIS: Long = 24L * 60L * 60L * 1000L
+private const val FRESH_CRITICAL_DRAFT_THRESHOLD_MILLIS: Long = 2L * 60L * 60L * 1000L
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ObserveReviewerControlTowerUseCase @Inject constructor(
@@ -73,6 +74,8 @@ class ObserveReviewerControlTowerUseCase @Inject constructor(
             closureSummary = closureSummary,
             isStale = isStale
         )
+        val staleAgeHours = (ageMillis / (60L * 60L * 1000L)).toInt()
+        val dominantAttentionSignal = attentionSignals.sortedByDescending { signalWeight(it) }.firstOrNull()
         return ReviewerControlTowerItem(
             draftId = draftId,
             siteId = siteId,
@@ -85,7 +88,12 @@ class ObserveReviewerControlTowerUseCase @Inject constructor(
             originWorkflowType = originWorkflowType,
             closureSummary = closureSummary,
             attentionSignals = attentionSignals,
-            attentionRank = computeAttentionRank(attentionSignals)
+            dominantAttentionSignal = dominantAttentionSignal,
+            staleAgeHours = staleAgeHours,
+            attentionRank = computeAttentionRank(
+                signals = attentionSignals,
+                ageMillis = ageMillis
+            )
         )
     }
 
@@ -112,14 +120,28 @@ class ObserveReviewerControlTowerUseCase @Inject constructor(
         }
     }
 
-    private fun computeAttentionRank(signals: Set<ReviewerAttentionSignal>): Int {
-        var rank = 0
-        if (ReviewerAttentionSignal.SYNC_FAILED in signals) rank += 50
-        if (ReviewerAttentionSignal.QOS_FAILED_OR_BLOCKED in signals) rank += 30
-        if (ReviewerAttentionSignal.QOS_PREREQUISITES_NOT_READY in signals) rank += 20
-        if (ReviewerAttentionSignal.SYNC_PENDING in signals) rank += 10
-        if (ReviewerAttentionSignal.STALE_DRAFT in signals) rank += 5
+    private fun computeAttentionRank(
+        signals: Set<ReviewerAttentionSignal>,
+        ageMillis: Long
+    ): Int {
+        var rank = signals.sumOf(::signalWeight)
+        if (ReviewerAttentionSignal.SYNC_FAILED in signals && ageMillis <= FRESH_CRITICAL_DRAFT_THRESHOLD_MILLIS) {
+            rank += 15
+        }
+        if (ReviewerAttentionSignal.SYNC_PENDING in signals && ReviewerAttentionSignal.STALE_DRAFT in signals) {
+            rank += 5
+        }
         return rank
+    }
+
+    private fun signalWeight(signal: ReviewerAttentionSignal): Int {
+        return when (signal) {
+            ReviewerAttentionSignal.SYNC_FAILED -> 50
+            ReviewerAttentionSignal.QOS_FAILED_OR_BLOCKED -> 35
+            ReviewerAttentionSignal.QOS_PREREQUISITES_NOT_READY -> 20
+            ReviewerAttentionSignal.SYNC_PENDING -> 12
+            ReviewerAttentionSignal.STALE_DRAFT -> 8
+        }
     }
 
     private fun buildSummary(items: List<ReviewerControlTowerItem>): ReviewerControlTowerSummary {

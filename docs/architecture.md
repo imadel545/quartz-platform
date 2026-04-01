@@ -87,8 +87,12 @@ Current Android implementation covers a bounded local-first workflow baseline:
 - reviewer/supervisor control-tower projection is now available as a mobile-first cross-site triage surface:
   - deterministic aggregation over all local drafts (not site-scoped only)
   - bounded attention-signal taxonomy (`SYNC_FAILED`, `SYNC_PENDING`, `QOS_FAILED_OR_BLOCKED`, `QOS_PREREQUISITES_NOT_READY`, `STALE_DRAFT`)
-  - deterministic rank ordering and bounded saved-state filter for triage continuity
-  - row-level actions to open report draft review or jump to site detail
+  - deterministic rank ordering and bounded saved-state filter/grouping for triage continuity
+  - action-center shortcuts:
+    - open top-priority visible draft
+    - retry failed sync from row scope
+    - retry failed sync in current visible filtered scope
+  - row-level dominant attention signal + stale-age context for quicker supervisor decisions
 
 For XFeeder proximity, implementation is intentionally explicit and bounded:
 - `UNAVAILABLE`: location/altitude data cannot be trusted for eligibility

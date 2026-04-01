@@ -19,6 +19,8 @@ import com.quartz.platform.domain.usecase.ObserveReviewerControlTowerUseCase
 import com.quartz.platform.domain.usecase.ObserveSiteListUseCase
 import com.quartz.platform.domain.usecase.ObserveSiteReportClosureProjectionsUseCase
 import com.quartz.platform.domain.usecase.ObserveSiteReportListUseCase
+import com.quartz.platform.domain.usecase.RetryControlTowerFailedSyncUseCase
+import com.quartz.platform.domain.usecase.RetryFailedReportDraftSyncUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -53,6 +55,34 @@ class ReviewerControlTowerViewModelTest {
     }
 
     @Test
+    fun restores_grouping_from_saved_state_handle() = runTest {
+        val viewModel = buildViewModel(
+            savedStateHandle = SavedStateHandle(
+                mapOf(
+                    STATE_CONTROL_TOWER_SELECTED_GROUPING to ReviewerControlTowerGrouping.WORKFLOW.name
+                )
+            )
+        )
+
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.selectedGrouping).isEqualTo(ReviewerControlTowerGrouping.WORKFLOW)
+    }
+
+    @Test
+    fun restores_unknown_grouping_to_default_attention() = runTest {
+        val viewModel = buildViewModel(
+            savedStateHandle = SavedStateHandle(
+                mapOf(
+                    STATE_CONTROL_TOWER_SELECTED_GROUPING to "UNKNOWN_GROUPING"
+                )
+            )
+        )
+
+        advanceUntilIdle()
+        assertThat(viewModel.uiState.value.selectedGrouping).isEqualTo(ReviewerControlTowerGrouping.ATTENTION)
+    }
+
+    @Test
     fun selecting_filter_persists_and_open_draft_emits_event() = runTest {
         val savedStateHandle = SavedStateHandle()
         val viewModel = buildViewModel(savedStateHandle = savedStateHandle)
@@ -69,6 +99,26 @@ class ReviewerControlTowerViewModelTest {
 
         assertThat(savedStateHandle.get<String>(STATE_CONTROL_TOWER_SELECTED_FILTER))
             .isEqualTo(ReviewerControlTowerFilter.QOS_RISK.name)
+        assertThat(events).containsExactly(ReviewerControlTowerEvent.OpenDraft("draft-1"))
+    }
+
+    @Test
+    fun selecting_grouping_persists_and_open_top_priority_emits_event() = runTest {
+        val savedStateHandle = SavedStateHandle()
+        val viewModel = buildViewModel(savedStateHandle = savedStateHandle)
+        val events = mutableListOf<ReviewerControlTowerEvent>()
+        val job = launch {
+            viewModel.events.take(1).toList(events)
+        }
+
+        advanceUntilIdle()
+        viewModel.onGroupingSelected(ReviewerControlTowerGrouping.WORKFLOW)
+        viewModel.onOpenTopPriorityClicked()
+        advanceUntilIdle()
+        job.join()
+
+        assertThat(savedStateHandle.get<String>(STATE_CONTROL_TOWER_SELECTED_GROUPING))
+            .isEqualTo(ReviewerControlTowerGrouping.WORKFLOW.name)
         assertThat(events).containsExactly(ReviewerControlTowerEvent.OpenDraft("draft-1"))
     }
 
@@ -126,6 +176,9 @@ class ReviewerControlTowerViewModelTest {
         return ReviewerControlTowerViewModel(
             savedStateHandle = savedStateHandle,
             observeReviewerControlTowerUseCase = observeReviewerControlTowerUseCase,
+            retryControlTowerFailedSyncUseCase = RetryControlTowerFailedSyncUseCase(
+                RetryFailedReportDraftSyncUseCase(syncRepository)
+            ),
             uiStrings = TestUiStrings()
         )
     }
