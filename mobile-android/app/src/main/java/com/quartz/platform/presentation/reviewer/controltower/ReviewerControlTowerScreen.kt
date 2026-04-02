@@ -44,6 +44,11 @@ import com.quartz.platform.domain.model.ReviewerUrgencyClass
 import com.quartz.platform.domain.model.ReviewerUrgencyReason
 import com.quartz.platform.domain.model.SupervisorQueueActionType
 import com.quartz.platform.domain.model.SupervisorQueueStatus
+import com.quartz.platform.presentation.components.AdvancedDisclosureButton
+import com.quartz.platform.presentation.components.OperationalSectionCard
+import com.quartz.platform.presentation.components.OperationalSeverity
+import com.quartz.platform.presentation.components.OperationalSignal
+import com.quartz.platform.presentation.components.OperationalSignalRow
 import com.quartz.platform.presentation.sync.syncStateLabelRes
 import java.time.Instant
 import java.time.ZoneId
@@ -144,57 +149,59 @@ fun ReviewerControlTowerScreen(
                     }
 
                     item {
-                        ControlTowerActionRow(
-                            state = state,
-                            onOpenTopPriority = onOpenTopPriority,
-                            onResetQueueProgress = onResetQueueProgress,
-                            onRetryFailedVisibleSync = onRetryFailedVisibleSync,
-                            onBulkMarkVisibleInReview = onBulkMarkVisibleInReview
-                        )
-                    }
-
-                    item {
-                        ControlTowerFilterRow(
-                            selectedFilter = state.selectedFilter,
-                            onFilterSelected = onFilterSelected
-                        )
-                    }
-
-                    item {
-                        ControlTowerPresetRow(
-                            selectedPreset = state.selectedPreset,
-                            onPresetSelected = onPresetSelected
-                        )
-                    }
-
-                    item {
-                        OutlinedButton(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { showAdvancedControls = !showAdvancedControls }
+                        OperationalSectionCard(
+                            title = stringResource(R.string.reviewer_control_tower_section_queue_actions_title),
+                            subtitle = stringResource(R.string.reviewer_control_tower_section_queue_actions_hint)
                         ) {
-                            Text(
-                                if (showAdvancedControls) {
-                                    stringResource(R.string.reviewer_control_tower_action_hide_advanced_controls)
-                                } else {
-                                    stringResource(R.string.reviewer_control_tower_action_show_advanced_controls)
-                                }
+                            ControlTowerActionRow(
+                                state = state,
+                                onOpenTopPriority = onOpenTopPriority,
+                                onResetQueueProgress = onResetQueueProgress,
+                                onRetryFailedVisibleSync = onRetryFailedVisibleSync,
+                                onBulkMarkVisibleInReview = onBulkMarkVisibleInReview
                             )
                         }
+                    }
+
+                    item {
+                        OperationalSectionCard(
+                            title = stringResource(R.string.reviewer_control_tower_section_lenses_title),
+                            subtitle = stringResource(R.string.reviewer_control_tower_section_lenses_hint)
+                        ) {
+                            ControlTowerPresetRow(
+                                selectedPreset = state.selectedPreset,
+                                onPresetSelected = onPresetSelected
+                            )
+                            ControlTowerFilterRow(
+                                selectedFilter = state.selectedFilter,
+                                onFilterSelected = onFilterSelected
+                            )
+                        }
+                    }
+
+                    item {
+                        AdvancedDisclosureButton(
+                            expanded = showAdvancedControls,
+                            onToggle = { showAdvancedControls = !showAdvancedControls },
+                            showLabel = stringResource(R.string.reviewer_control_tower_action_show_advanced_controls),
+                            hideLabel = stringResource(R.string.reviewer_control_tower_action_hide_advanced_controls)
+                        )
                     }
 
                     if (showAdvancedControls) {
                         item {
-                            ControlTowerQueueStatusFilterRow(
-                                selectedFilter = state.selectedQueueStatusFilter,
-                                onFilterSelected = onQueueStatusFilterSelected
-                            )
-                        }
-
-                        item {
-                            ControlTowerGroupingRow(
-                                selectedGrouping = state.selectedGrouping,
-                                onGroupingSelected = onGroupingSelected
-                            )
+                            OperationalSectionCard(
+                                title = stringResource(R.string.reviewer_control_tower_section_advanced_title)
+                            ) {
+                                ControlTowerQueueStatusFilterRow(
+                                    selectedFilter = state.selectedQueueStatusFilter,
+                                    onFilterSelected = onQueueStatusFilterSelected
+                                )
+                                ControlTowerGroupingRow(
+                                    selectedGrouping = state.selectedGrouping,
+                                    onGroupingSelected = onGroupingSelected
+                                )
+                            }
                         }
 
                         item {
@@ -276,54 +283,54 @@ fun ReviewerControlTowerScreen(
 
 @Composable
 private fun ControlTowerSummaryCard(state: ReviewerControlTowerUiState) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.reviewer_control_tower_summary_title),
-                style = MaterialTheme.typography.titleSmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.reviewer_control_tower_summary_counts,
-                    state.summary.totalDraftCount,
-                    state.summary.guidedDraftCount,
-                    state.summary.nonGuidedDraftCount
+    OperationalSectionCard(
+        title = stringResource(R.string.reviewer_control_tower_summary_title),
+        subtitle = stringResource(
+            R.string.reviewer_control_tower_summary_counts,
+            state.summary.totalDraftCount,
+            state.summary.guidedDraftCount,
+            state.summary.nonGuidedDraftCount
+        )
+    ) {
+        OperationalSignalRow(
+            signals = listOf(
+                OperationalSignal(
+                    text = stringResource(
+                        R.string.reviewer_control_tower_summary_sla,
+                        state.summary.actNowCount,
+                        state.summary.overdueCount
+                    ),
+                    severity = if (state.summary.actNowCount > 0 || state.summary.overdueCount > 0) {
+                        OperationalSeverity.CRITICAL
+                    } else {
+                        OperationalSeverity.SUCCESS
+                    }
                 ),
-                style = MaterialTheme.typography.bodySmall
+                OperationalSignal(
+                    text = stringResource(
+                        R.string.reviewer_control_tower_summary_attention_short,
+                        state.summary.attentionRequiredCount,
+                        state.summary.syncFailedCount,
+                        state.summary.qosRiskCount
+                    ),
+                    severity = if (state.summary.attentionRequiredCount > 0) {
+                        OperationalSeverity.WARNING
+                    } else {
+                        OperationalSeverity.SUCCESS
+                    }
+                )
             )
-            Text(
-                text = stringResource(
-                    R.string.reviewer_control_tower_summary_attention,
-                    state.summary.attentionRequiredCount,
-                    state.summary.syncFailedCount,
-                    state.summary.syncPendingCount,
-                    state.summary.qosRiskCount,
-                    state.summary.staleDraftCount
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.reviewer_control_tower_summary_sla,
-                    state.summary.actNowCount,
-                    state.summary.overdueCount
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.reviewer_control_tower_summary_queue,
-                    state.summary.untriagedCount,
-                    state.summary.inReviewCount,
-                    state.summary.waitingFieldFeedbackCount,
-                    state.summary.resolvedCount
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
+        )
+        Text(
+            text = stringResource(
+                R.string.reviewer_control_tower_summary_queue,
+                state.summary.untriagedCount,
+                state.summary.inReviewCount,
+                state.summary.waitingFieldFeedbackCount,
+                state.summary.resolvedCount
+            ),
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }
 
@@ -369,28 +376,30 @@ private fun ControlTowerActionRow(
                 )
             }
         }
-        OutlinedButton(
-            modifier = Modifier.fillMaxWidth(),
-            enabled = state.visibleUntriagedCount > 0 && !state.isBulkQueueTransitionInProgress,
-            onClick = onBulkMarkVisibleInReview
-        ) {
-            Text(
-                if (state.isBulkQueueTransitionInProgress) {
-                    stringResource(R.string.action_queue_status_update_loading)
-                } else {
-                    stringResource(
-                        R.string.reviewer_control_tower_action_mark_visible_in_review,
-                        state.visibleUntriagedCount
-                    )
-                }
-            )
-        }
-        OutlinedButton(
-            modifier = Modifier.fillMaxWidth(),
-            enabled = state.progressedDraftIds.isNotEmpty(),
-            onClick = onResetQueueProgress
-        ) {
-            Text(stringResource(R.string.reviewer_control_tower_action_reset_queue_progress))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                modifier = Modifier.weight(1f),
+                enabled = state.visibleUntriagedCount > 0 && !state.isBulkQueueTransitionInProgress,
+                onClick = onBulkMarkVisibleInReview
+            ) {
+                Text(
+                    if (state.isBulkQueueTransitionInProgress) {
+                        stringResource(R.string.action_queue_status_update_loading)
+                    } else {
+                        stringResource(
+                            R.string.reviewer_control_tower_action_mark_visible_in_review,
+                            state.visibleUntriagedCount
+                        )
+                    }
+                )
+            }
+            OutlinedButton(
+                modifier = Modifier.weight(1f),
+                enabled = state.progressedDraftIds.isNotEmpty(),
+                onClick = onResetQueueProgress
+            ) {
+                Text(stringResource(R.string.reviewer_control_tower_action_reset_queue_progress))
+            }
         }
     }
 }
@@ -725,199 +734,179 @@ private fun ReviewerControlTowerItemCard(
     onMarkDraftResolved: (String) -> Unit,
     onReopenDraft: (String) -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = "${item.siteCode} • ${item.siteName}",
-                style = MaterialTheme.typography.titleSmall
-            )
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = stringResource(R.string.label_updated_at, formatEpoch(item.updatedAtEpochMillis)),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.label_sync_state,
-                    stringResource(syncStateLabelRes(item.syncTrace.state))
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-            item.dominantAttentionSignal?.let { dominant ->
-                Text(
-                    text = stringResource(
-                        R.string.reviewer_control_tower_dominant_signal,
-                        stringResource(attentionSignalLabelRes(dominant))
-                    ),
-                    style = MaterialTheme.typography.bodySmall
+    OperationalSectionCard(
+        title = "${item.siteCode} • ${item.siteName}",
+        subtitle = item.title
+    ) {
+        val urgencySeverity = when (item.urgencyClass) {
+            ReviewerUrgencyClass.ACT_NOW -> OperationalSeverity.CRITICAL
+            ReviewerUrgencyClass.HIGH -> OperationalSeverity.WARNING
+            ReviewerUrgencyClass.WATCH -> OperationalSeverity.NORMAL
+            ReviewerUrgencyClass.NORMAL -> OperationalSeverity.SUCCESS
+        }
+        OperationalSignalRow(
+            signals = buildList {
+                add(
+                    OperationalSignal(
+                        text = stringResource(
+                            R.string.reviewer_control_tower_urgency_short,
+                            stringResource(urgencyClassLabelRes(item.urgencyClass)),
+                            stringResource(ageBucketLabelRes(item.ageBucket))
+                        ),
+                        severity = urgencySeverity
+                    )
                 )
-            }
-            if (ReviewerAttentionSignal.STALE_DRAFT in item.attentionSignals) {
-                Text(
-                    text = stringResource(R.string.reviewer_control_tower_stale_age, item.staleAgeHours),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item.originWorkflowType?.let { workflow ->
-                    item {
-                        AssistChip(
-                            onClick = {},
-                            label = {
-                                Text(
-                                    stringResource(
-                                        R.string.reviewer_control_tower_workflow_short,
-                                        workflowLabel(workflow)
-                                    )
-                                )
-                            }
+                add(
+                    OperationalSignal(
+                        text = stringResource(
+                            R.string.reviewer_control_tower_queue_status_short,
+                            stringResource(queueStatusLabelRes(item.queueStatus))
                         )
-                    }
-                }
-                item {
-                    AssistChip(
-                        onClick = {},
-                        label = {
-                            Text(
-                                stringResource(
-                                    R.string.reviewer_control_tower_queue_status_short,
-                                    stringResource(queueStatusLabelRes(item.queueStatus))
-                                )
-                            )
-                        }
                     )
-                }
-                item {
-                    AssistChip(
-                        onClick = {},
-                        label = {
-                            Text(
-                                stringResource(
-                                    R.string.reviewer_control_tower_urgency_short,
-                                    stringResource(urgencyClassLabelRes(item.urgencyClass)),
-                                    stringResource(ageBucketLabelRes(item.ageBucket))
-                                )
+                )
+                item.originWorkflowType?.let { workflow ->
+                    add(
+                        OperationalSignal(
+                            text = stringResource(
+                                R.string.reviewer_control_tower_workflow_short,
+                                workflowLabel(workflow)
                             )
-                        }
+                        )
                     )
                 }
             }
+        )
+        Text(
+            text = stringResource(R.string.label_updated_at, formatEpoch(item.updatedAtEpochMillis)),
+            style = MaterialTheme.typography.bodySmall
+        )
+        Text(
+            text = stringResource(
+                R.string.label_sync_state,
+                stringResource(syncStateLabelRes(item.syncTrace.state))
+            ),
+            style = MaterialTheme.typography.bodySmall
+        )
+        Text(
+            text = stringResource(
+                R.string.reviewer_control_tower_urgency_reason_short,
+                stringResource(urgencyReasonLabelRes(item.urgencyReason))
+            ),
+            style = MaterialTheme.typography.bodySmall
+        )
+        item.dominantAttentionSignal?.let { dominant ->
             Text(
                 text = stringResource(
-                    R.string.reviewer_control_tower_urgency_reason_short,
-                    stringResource(urgencyReasonLabelRes(item.urgencyReason))
+                    R.string.reviewer_control_tower_dominant_signal,
+                    stringResource(attentionSignalLabelRes(dominant))
                 ),
                 style = MaterialTheme.typography.bodySmall
             )
+        }
+        if (ReviewerAttentionSignal.STALE_DRAFT in item.attentionSignals) {
+            Text(
+                text = stringResource(R.string.reviewer_control_tower_stale_age, item.staleAgeHours),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
 
-            if (item.attentionSignals.isNotEmpty()) {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(item.attentionSignals.toList().sortedByDescending(::attentionSignalSeverity)) { signal ->
-                        Card {
-                            Text(
-                                text = stringResource(attentionSignalLabelRes(signal)),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
-                    }
-                }
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    modifier = Modifier.weight(1f),
-                    onClick = { onOpenDraft(item.draftId) }
-                ) {
-                    Text(stringResource(R.string.action_open_draft))
-                }
-                OutlinedButton(
-                    modifier = Modifier.weight(1f),
-                    onClick = { onOpenSite(item.siteId) }
-                ) {
-                    Text(stringResource(R.string.reviewer_control_tower_action_open_site))
-                }
-            }
-            if (item.syncTrace.state == ReportSyncState.FAILED) {
-                OutlinedButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isRetrying,
-                    onClick = { onRetryDraftSync(item.draftId) }
-                ) {
-                    Text(
-                        if (isRetrying) {
-                            stringResource(R.string.action_retry_sync_loading)
-                        } else {
-                            stringResource(R.string.action_retry_sync)
-                        }
+        if (item.attentionSignals.isNotEmpty()) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(item.attentionSignals.toList().sortedByDescending(::attentionSignalSeverity).take(3)) { signal ->
+                    AssistChip(
+                        onClick = {},
+                        label = { Text(stringResource(attentionSignalLabelRes(signal))) }
                     )
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                when (item.queueStatus) {
-                    SupervisorQueueStatus.UNTRIAGED -> {
-                        OutlinedButton(
-                            modifier = Modifier.weight(1f),
-                            enabled = !isQueueTransitioning,
-                            onClick = { onMarkDraftInReview(item.draftId) }
-                        ) {
-                            Text(stringResource(R.string.reviewer_control_tower_action_mark_in_review))
-                        }
-                        OutlinedButton(
-                            modifier = Modifier.weight(1f),
-                            enabled = !isQueueTransitioning,
-                            onClick = { onMarkDraftResolved(item.draftId) }
-                        ) {
-                            Text(stringResource(R.string.reviewer_control_tower_action_mark_resolved))
-                        }
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                modifier = Modifier.weight(1f),
+                onClick = { onOpenDraft(item.draftId) }
+            ) {
+                Text(stringResource(R.string.action_open_draft))
+            }
+            OutlinedButton(
+                modifier = Modifier.weight(1f),
+                onClick = { onOpenSite(item.siteId) }
+            ) {
+                Text(stringResource(R.string.reviewer_control_tower_action_open_site))
+            }
+        }
+        if (item.syncTrace.state == ReportSyncState.FAILED) {
+            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isRetrying,
+                onClick = { onRetryDraftSync(item.draftId) }
+            ) {
+                Text(
+                    if (isRetrying) {
+                        stringResource(R.string.action_retry_sync_loading)
+                    } else {
+                        stringResource(R.string.action_retry_sync)
                     }
-                    SupervisorQueueStatus.IN_REVIEW -> {
-                        OutlinedButton(
-                            modifier = Modifier.weight(1f),
-                            enabled = !isQueueTransitioning,
-                            onClick = { onMarkDraftWaitingFeedback(item.draftId) }
-                        ) {
-                            Text(stringResource(R.string.reviewer_control_tower_action_mark_waiting_feedback))
-                        }
-                        OutlinedButton(
-                            modifier = Modifier.weight(1f),
-                            enabled = !isQueueTransitioning,
-                            onClick = { onMarkDraftResolved(item.draftId) }
-                        ) {
-                            Text(stringResource(R.string.reviewer_control_tower_action_mark_resolved))
-                        }
+                )
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            when (item.queueStatus) {
+                SupervisorQueueStatus.UNTRIAGED -> {
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        enabled = !isQueueTransitioning,
+                        onClick = { onMarkDraftInReview(item.draftId) }
+                    ) {
+                        Text(stringResource(R.string.reviewer_control_tower_action_mark_in_review))
                     }
-                    SupervisorQueueStatus.WAITING_FIELD_FEEDBACK -> {
-                        OutlinedButton(
-                            modifier = Modifier.weight(1f),
-                            enabled = !isQueueTransitioning,
-                            onClick = { onMarkDraftInReview(item.draftId) }
-                        ) {
-                            Text(stringResource(R.string.reviewer_control_tower_action_mark_in_review))
-                        }
-                        OutlinedButton(
-                            modifier = Modifier.weight(1f),
-                            enabled = !isQueueTransitioning,
-                            onClick = { onMarkDraftResolved(item.draftId) }
-                        ) {
-                            Text(stringResource(R.string.reviewer_control_tower_action_mark_resolved))
-                        }
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        enabled = !isQueueTransitioning,
+                        onClick = { onMarkDraftResolved(item.draftId) }
+                    ) {
+                        Text(stringResource(R.string.reviewer_control_tower_action_mark_resolved))
                     }
-                    SupervisorQueueStatus.RESOLVED -> {
-                        OutlinedButton(
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !isQueueTransitioning,
-                            onClick = { onReopenDraft(item.draftId) }
-                        ) {
-                            Text(stringResource(R.string.reviewer_control_tower_action_reopen))
-                        }
+                }
+                SupervisorQueueStatus.IN_REVIEW -> {
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        enabled = !isQueueTransitioning,
+                        onClick = { onMarkDraftWaitingFeedback(item.draftId) }
+                    ) {
+                        Text(stringResource(R.string.reviewer_control_tower_action_mark_waiting_feedback))
+                    }
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        enabled = !isQueueTransitioning,
+                        onClick = { onMarkDraftResolved(item.draftId) }
+                    ) {
+                        Text(stringResource(R.string.reviewer_control_tower_action_mark_resolved))
+                    }
+                }
+                SupervisorQueueStatus.WAITING_FIELD_FEEDBACK -> {
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        enabled = !isQueueTransitioning,
+                        onClick = { onMarkDraftInReview(item.draftId) }
+                    ) {
+                        Text(stringResource(R.string.reviewer_control_tower_action_mark_in_review))
+                    }
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        enabled = !isQueueTransitioning,
+                        onClick = { onMarkDraftResolved(item.draftId) }
+                    ) {
+                        Text(stringResource(R.string.reviewer_control_tower_action_mark_resolved))
+                    }
+                }
+                SupervisorQueueStatus.RESOLVED -> {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isQueueTransitioning,
+                        onClick = { onReopenDraft(item.draftId) }
+                    ) {
+                        Text(stringResource(R.string.reviewer_control_tower_action_reopen))
                     }
                 }
             }

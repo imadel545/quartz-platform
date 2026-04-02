@@ -275,6 +275,7 @@ For bounded supervisor triage workflows, a reviewer-focused projection layer tra
   - explicit action journal entity: `SupervisorQueueAction` (who/when/what-context signal via filter/preset metadata)
   - runtime disclosure policy for review surfaces:
     - developer sync/debug controls are opt-in UI disclosure (not always visible in runtime reviewer path)
+    - mission/runtime surfaces use shared operational section + signal semantics so domain status categories remain visually consistent across screens
 - queue SLA/urgency state:
   - age bucket: `FRESH`, `AGING`, `STALE`, `OVERDUE`
   - urgency class: `ACT_NOW`, `HIGH`, `WATCH`, `NORMAL`

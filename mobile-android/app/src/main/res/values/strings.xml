@@ -13,9 +13,19 @@
     <string name="home_mission_summary">Sites en cache: %1$d • visibles: %2$d</string>
     <string name="home_mission_selected_site">Site sélectionné: %1$s</string>
     <string name="home_mission_no_selected_site">Sélectionnez un site sur la carte pour démarrer une mission.</string>
+    <string name="home_signal_location_ready">Position GPS prête</string>
+    <string name="home_signal_location_missing">Position GPS non disponible</string>
+    <string name="home_signal_cache_sites">Cache: %1$d • visibles: %2$d</string>
     <string name="home_map_section_title">Carte opérationnelle</string>
     <string name="home_map_section_hint">Touchez un marqueur pour préparer l’ouverture du site.</string>
+    <string name="home_map_section_targeting_title">Ciblage mission</string>
+    <string name="home_map_section_targeting_hint">Filtrez les sites puis sélectionnez le marqueur mission.</string>
     <string name="home_section_secondary_actions">Actions secondaires</string>
+    <string name="home_section_secondary_actions_hint">Outils de support et bootstrap démo.</string>
+    <string name="home_action_show_support_actions">Afficher les actions de support</string>
+    <string name="home_action_hide_support_actions">Masquer les actions de support</string>
+    <string name="home_runtime_alert_title">Point bloquant runtime</string>
+    <string name="home_runtime_info_title">Information runtime</string>
     <string name="home_action_open_site_intelligence">Ouvrir l’intelligence du site</string>
 
     <string name="action_back_to_list">Retour à la liste</string>
@@ -260,8 +270,10 @@
     <string name="title_performance_session">Sessions Débit / QoS</string>
     <string name="action_open_performance_session">Ouvrir Débit / QoS local</string>
     <string name="site_detail_section_mission_actions">Actions mission site</string>
+    <string name="site_detail_mission_actions_hint">Lancez l’exécution terrain puis ouvrez le reporting local.</string>
     <string name="site_detail_section_guided_workflows">Lancer une validation guidée par secteur</string>
     <string name="site_detail_section_technical_details">Détails techniques du site</string>
+    <string name="site_detail_local_drafts_hint">Revue locale et reprise rapide des brouillons terrain.</string>
     <string name="site_detail_sector_mission_context">Cellules: %1$d • Antennes: %2$d</string>
     <string name="site_detail_action_launch_xfeeder_short">Mission XFeeder</string>
     <string name="site_detail_action_launch_ret_short">Mission RET</string>
@@ -609,6 +621,17 @@
     <string name="ret_header_checklist">Checklist guidée RET</string>
     <string name="ret_header_session_history">Historique sessions RET secteur (%1$d)</string>
     <string name="ret_section_mission_status">Statut mission RET</string>
+    <string name="ret_section_runtime_empty_title">Démarrage mission RET</string>
+    <string name="ret_section_primary_actions_title">Actions principales RET</string>
+    <string name="ret_section_primary_actions_hint">Sauvegardez la progression puis créez le brouillon de revue.</string>
+    <string name="ret_section_execution_controls_title">Contrôles d’exécution RET</string>
+    <string name="ret_section_execution_controls_hint">Mettez à jour le statut session et le résultat opérationnel.</string>
+    <string name="ret_section_summary_inputs_title">Synthèse opérateur</string>
+    <string name="ret_section_summary_inputs_hint">Notes terrain et résumé final pour la revue.</string>
+    <string name="ret_section_blocking_points_title">Blocages de clôture RET</string>
+    <string name="ret_section_geospatial_hint">Contexte zone/proximité utilisé pendant la mission.</string>
+    <string name="ret_action_show_geospatial_advanced">Afficher les détails géospatiaux avancés</string>
+    <string name="ret_action_hide_geospatial_advanced">Masquer les détails géospatiaux avancés</string>
     <string name="ret_mission_required_progress">Étapes obligatoires terminées: %1$d/%2$d</string>
     <string name="ret_action_show_history">Afficher l’historique complet</string>
     <string name="ret_action_hide_history">Masquer l’historique complet</string>
@@ -686,6 +709,18 @@
     <string name="debug_demo_terminal_body">Mode: FAIL_NEXT_TERMINAL -&gt; Ajouter à la file. Attendu: FAILED + Cause locale. Ensuite retry manuel (bouton de synchronisation ou Relancer la synchronisation dans la liste) -&gt; PENDING -&gt; SYNCED.</string>
     <string name="report_draft_action_show_developer_tools">Afficher outils développeur sync</string>
     <string name="report_draft_action_hide_developer_tools">Masquer outils développeur sync</string>
+    <string name="report_draft_section_review_header_title">Contexte de revue</string>
+    <string name="report_draft_section_content_title">Contenu du rapport</string>
+    <string name="report_draft_section_content_hint">Rédaction structurée pour lecture superviseur.</string>
+    <string name="report_draft_section_actions_title">Actions de clôture locale</string>
+    <string name="report_draft_section_actions_hint">Enregistrer, préparer la sync, puis revenir au flux site.</string>
+
+    <string name="reviewer_control_tower_section_queue_actions_title">Actions de file</string>
+    <string name="reviewer_control_tower_section_queue_actions_hint">Réduire le temps entre triage, ouverture et reprise.</string>
+    <string name="reviewer_control_tower_section_lenses_title">Lentilles de triage</string>
+    <string name="reviewer_control_tower_section_lenses_hint">Appliquez des presets pour prioriser immédiatement.</string>
+    <string name="reviewer_control_tower_section_advanced_title">Contrôles avancés supervision</string>
+    <string name="reviewer_control_tower_summary_attention_short">Attention: %1$d • Sync KO: %2$d • Risque QoS: %3$d</string>
 
     <string name="info_demo_snapshot_loaded">Snapshot de démo chargé. Vous pouvez maintenant ouvrir le détail d’un site.</string>
     <string name="info_local_draft_created">Brouillon local créé.</string>

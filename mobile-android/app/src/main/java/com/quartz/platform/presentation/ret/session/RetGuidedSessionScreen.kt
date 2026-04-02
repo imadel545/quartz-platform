@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -44,6 +45,11 @@ import com.quartz.platform.domain.model.RetSessionStatus
 import com.quartz.platform.domain.model.RetStepCode
 import com.quartz.platform.domain.model.RetStepStatus
 import androidx.compose.foundation.text.KeyboardOptions
+import com.quartz.platform.presentation.components.AdvancedDisclosureButton
+import com.quartz.platform.presentation.components.OperationalSectionCard
+import com.quartz.platform.presentation.components.OperationalSeverity
+import com.quartz.platform.presentation.components.OperationalSignal
+import com.quartz.platform.presentation.components.OperationalSignalRow
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -173,10 +179,12 @@ fun RetGuidedSessionScreen(
 
                     if (state.session == null) {
                         item {
-                            Text(
-                                text = stringResource(R.string.ret_empty_session),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
+                            OperationalSectionCard(title = stringResource(R.string.ret_section_runtime_empty_title)) {
+                                Text(
+                                    text = stringResource(R.string.ret_empty_session),
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
                         }
                     } else {
                         item {
@@ -184,44 +192,62 @@ fun RetGuidedSessionScreen(
                         }
 
                         item {
-                            OutlinedButton(
-                                modifier = Modifier.fillMaxWidth(),
-                                onClick = { showHistory = !showHistory }
+                            RetPrimaryActionsCard(
+                                hasUnsavedChanges = state.hasUnsavedChanges,
+                                isSavingSummary = state.isSavingSummary,
+                                isCreatingDraft = state.isCreatingDraft,
+                                onSaveSummaryClicked = onSaveSummaryClicked,
+                                onCreateReportDraft = onCreateReportDraft
+                            )
+                        }
+
+                        item {
+                            OperationalSectionCard(
+                                title = stringResource(R.string.ret_section_execution_controls_title),
+                                subtitle = stringResource(R.string.ret_section_execution_controls_hint)
                             ) {
-                                Text(
-                                    if (showHistory) {
-                                        stringResource(R.string.ret_action_hide_history)
-                                    } else {
-                                        stringResource(R.string.ret_action_show_history)
-                                    }
+                                SessionStatusCard(
+                                    state = state,
+                                    onSessionStatusSelected = onSessionStatusSelected
+                                )
+                                ResultOutcomeCard(
+                                    selectedOutcome = state.selectedOutcome,
+                                    onResultOutcomeSelected = onResultOutcomeSelected
                                 )
                             }
                         }
 
                         item {
-                            Text(
-                                text = stringResource(
-                                    R.string.ret_header_session_history,
-                                    state.sessionHistory.size
-                                ),
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
-
-                        if (showHistory) {
-                            items(state.sessionHistory, key = { it.id }) { historyItem ->
-                                SessionHistoryCard(
-                                    session = historyItem,
-                                    isSelected = historyItem.id == state.session.id,
-                                    onSelectHistorySessionClicked = onSelectHistorySessionClicked
+                            OperationalSectionCard(
+                                title = stringResource(R.string.ret_section_summary_inputs_title),
+                                subtitle = stringResource(R.string.ret_section_summary_inputs_hint)
+                            ) {
+                                OutlinedTextField(
+                                    value = state.notesInput,
+                                    onValueChange = onNotesChanged,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    label = { Text(stringResource(R.string.ret_input_notes)) }
+                                )
+                                OutlinedTextField(
+                                    value = state.resultSummaryInput,
+                                    onValueChange = onResultSummaryChanged,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    label = { Text(stringResource(R.string.ret_input_result_summary)) }
                                 )
                             }
-                        } else {
+                        }
+
+                        state.completionGuardMessage?.let { guardMessage ->
                             item {
-                                Text(
-                                    text = stringResource(R.string.ret_history_collapsed_hint),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+                                OperationalSectionCard(
+                                    title = stringResource(R.string.ret_section_blocking_points_title)
+                                ) {
+                                    Text(
+                                        text = guardMessage,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
                             }
                         }
 
@@ -235,52 +261,6 @@ fun RetGuidedSessionScreen(
                                 onToggleProximityModeClicked = onToggleProximityModeClicked,
                                 onRefreshUserLocationClicked = onRefreshUserLocationClicked
                             )
-                        }
-
-                        item {
-                            SessionStatusCard(
-                                state = state,
-                                onSessionStatusSelected = onSessionStatusSelected
-                            )
-                        }
-
-                        item {
-                            ResultOutcomeCard(
-                                selectedOutcome = state.selectedOutcome,
-                                onResultOutcomeSelected = onResultOutcomeSelected
-                            )
-                        }
-
-                        item {
-                            Button(
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = state.hasUnsavedChanges && !state.isSavingSummary,
-                                onClick = onSaveSummaryClicked
-                            ) {
-                                Text(
-                                    if (state.isSavingSummary) {
-                                        stringResource(R.string.ret_action_save_summary_loading)
-                                    } else {
-                                        stringResource(R.string.ret_action_save_summary)
-                                    }
-                                )
-                            }
-                        }
-
-                        item {
-                            OutlinedButton(
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = !state.isCreatingDraft,
-                                onClick = onCreateReportDraft
-                            ) {
-                                Text(
-                                    if (state.isCreatingDraft) {
-                                        stringResource(R.string.ret_action_create_report_draft_loading)
-                                    } else {
-                                        stringResource(R.string.ret_action_create_report_draft)
-                                    }
-                                )
-                            }
                         }
 
                         item {
@@ -300,29 +280,36 @@ fun RetGuidedSessionScreen(
                         }
 
                         item {
-                            OutlinedTextField(
-                                value = state.notesInput,
-                                onValueChange = onNotesChanged,
-                                modifier = Modifier.fillMaxWidth(),
-                                label = { Text(stringResource(R.string.ret_input_notes)) }
+                            AdvancedDisclosureButton(
+                                expanded = showHistory,
+                                onToggle = { showHistory = !showHistory },
+                                showLabel = stringResource(R.string.ret_action_show_history),
+                                hideLabel = stringResource(R.string.ret_action_hide_history)
                             )
                         }
 
-                        item {
-                            OutlinedTextField(
-                                value = state.resultSummaryInput,
-                                onValueChange = onResultSummaryChanged,
-                                modifier = Modifier.fillMaxWidth(),
-                                label = { Text(stringResource(R.string.ret_input_result_summary)) }
-                            )
-                        }
-
-                        state.completionGuardMessage?.let { guardMessage ->
+                        if (showHistory) {
                             item {
                                 Text(
-                                    text = guardMessage,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.error
+                                    text = stringResource(
+                                        R.string.ret_header_session_history,
+                                        state.sessionHistory.size
+                                    ),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                            }
+                            items(state.sessionHistory, key = { it.id }) { historyItem ->
+                                SessionHistoryCard(
+                                    session = historyItem,
+                                    isSelected = historyItem.id == state.session.id,
+                                    onSelectHistorySessionClicked = onSelectHistorySessionClicked
+                                )
+                            }
+                        } else {
+                            item {
+                                Text(
+                                    text = stringResource(R.string.ret_history_collapsed_hint),
+                                    style = MaterialTheme.typography.bodySmall
                                 )
                             }
                         }
@@ -367,49 +354,94 @@ private fun RetMissionSummaryCard(state: RetGuidedSessionUiState) {
     val session = requireNotNull(state.session)
     val requiredSteps = session.steps.count { it.required }
     val completedRequiredSteps = session.steps.count { it.required && it.status == RetStepStatus.DONE }
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+    OperationalSectionCard(
+        title = stringResource(R.string.ret_section_mission_status),
+        subtitle = stringResource(
+            R.string.ret_label_site_sector,
+            state.siteLabel.ifBlank { state.siteId },
+            state.sectorCode.ifBlank { state.sectorId }
+        )
+    ) {
+        OperationalSignalRow(
+            signals = listOf(
+                OperationalSignal(
+                    text = stringResource(
+                        R.string.ret_label_session_status,
+                        stringResource(retSessionStatusLabelRes(session.status))
+                    )
+                ),
+                OperationalSignal(
+                    text = stringResource(
+                        R.string.ret_label_result_outcome,
+                        stringResource(retResultOutcomeLabelRes(state.selectedOutcome))
+                    ),
+                    severity = if (state.selectedOutcome == RetResultOutcome.PASS) {
+                        OperationalSeverity.SUCCESS
+                    } else {
+                        OperationalSeverity.WARNING
+                    }
+                ),
+                OperationalSignal(
+                    text = stringResource(
+                        R.string.ret_mission_required_progress,
+                        completedRequiredSteps,
+                        requiredSteps
+                    )
+                )
+            )
+        )
+        Text(
+            text = when (state.proximityEligibilityState) {
+                RetProximityEligibilityState.ELIGIBLE ->
+                    stringResource(R.string.ret_helper_proximity_eligible)
+                RetProximityEligibilityState.INELIGIBLE ->
+                    stringResource(R.string.ret_helper_proximity_ineligible)
+                RetProximityEligibilityState.SUPPORTED ->
+                    stringResource(R.string.ret_helper_proximity_supported)
+                RetProximityEligibilityState.UNAVAILABLE ->
+                    stringResource(R.string.ret_helper_proximity_unavailable)
+            },
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
+private fun RetPrimaryActionsCard(
+    hasUnsavedChanges: Boolean,
+    isSavingSummary: Boolean,
+    isCreatingDraft: Boolean,
+    onSaveSummaryClicked: () -> Unit,
+    onCreateReportDraft: () -> Unit
+) {
+    OperationalSectionCard(
+        title = stringResource(R.string.ret_section_primary_actions_title),
+        subtitle = stringResource(R.string.ret_section_primary_actions_hint)
+    ) {
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            enabled = hasUnsavedChanges && !isSavingSummary,
+            onClick = onSaveSummaryClicked
         ) {
             Text(
-                text = stringResource(R.string.ret_section_mission_status),
-                style = MaterialTheme.typography.titleSmall
+                if (isSavingSummary) {
+                    stringResource(R.string.ret_action_save_summary_loading)
+                } else {
+                    stringResource(R.string.ret_action_save_summary)
+                }
             )
+        }
+        OutlinedButton(
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isCreatingDraft,
+            onClick = onCreateReportDraft
+        ) {
             Text(
-                text = stringResource(
-                    R.string.ret_label_session_status,
-                    stringResource(retSessionStatusLabelRes(session.status))
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.ret_label_result_outcome,
-                    stringResource(retResultOutcomeLabelRes(state.selectedOutcome))
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.ret_mission_required_progress,
-                    completedRequiredSteps,
-                    requiredSteps
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = when (state.proximityEligibilityState) {
-                    RetProximityEligibilityState.ELIGIBLE ->
-                        stringResource(R.string.ret_helper_proximity_eligible)
-                    RetProximityEligibilityState.INELIGIBLE ->
-                        stringResource(R.string.ret_helper_proximity_ineligible)
-                    RetProximityEligibilityState.SUPPORTED ->
-                        stringResource(R.string.ret_helper_proximity_supported)
-                    RetProximityEligibilityState.UNAVAILABLE ->
-                        stringResource(R.string.ret_helper_proximity_unavailable)
-                },
-                style = MaterialTheme.typography.bodySmall
+                if (isCreatingDraft) {
+                    stringResource(R.string.ret_action_create_report_draft_loading)
+                } else {
+                    stringResource(R.string.ret_action_create_report_draft)
+                }
             )
         }
     }
@@ -425,30 +457,96 @@ private fun RetGeospatialSessionSurfaceCard(
     onToggleProximityModeClicked: (Boolean) -> Unit,
     onRefreshUserLocationClicked: () -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+    var showAdvancedGeospatial by remember { mutableStateOf(false) }
+    OperationalSectionCard(
+        title = stringResource(R.string.ret_header_geospatial),
+        subtitle = stringResource(R.string.ret_section_geospatial_hint)
+    ) {
+        OperationalSignalRow(
+            signals = listOf(
+                OperationalSignal(
+                    text = stringResource(
+                        R.string.ret_label_distance_to_zone,
+                        state.distanceToMeasurementZoneMeters?.toString()
+                            ?: stringResource(R.string.value_not_available)
+                    ),
+                    severity = when (state.proximityEligibilityState) {
+                        RetProximityEligibilityState.ELIGIBLE -> OperationalSeverity.SUCCESS
+                        RetProximityEligibilityState.INELIGIBLE -> OperationalSeverity.CRITICAL
+                        RetProximityEligibilityState.SUPPORTED -> OperationalSeverity.WARNING
+                        RetProximityEligibilityState.UNAVAILABLE -> OperationalSeverity.WARNING
+                    }
+                ),
+                OperationalSignal(
+                    text = stringResource(
+                        R.string.ret_label_zone_radius,
+                        state.measurementZoneRadiusMeters
+                    )
+                ),
+                OperationalSignal(
+                    text = stringResource(
+                        R.string.ret_label_proximity_eligibility,
+                        when (state.proximityEligibilityState) {
+                            RetProximityEligibilityState.ELIGIBLE ->
+                                stringResource(R.string.ret_value_proximity_eligible)
+                            RetProximityEligibilityState.INELIGIBLE ->
+                                stringResource(R.string.ret_value_proximity_ineligible)
+                            RetProximityEligibilityState.SUPPORTED ->
+                                stringResource(R.string.ret_value_proximity_supported)
+                            RetProximityEligibilityState.UNAVAILABLE ->
+                                stringResource(R.string.ret_value_proximity_unavailable)
+                        }
+                    )
+                )
+            )
+        )
+
+        Text(
+            text = when (state.proximityEligibilityState) {
+                RetProximityEligibilityState.ELIGIBLE ->
+                    stringResource(R.string.ret_helper_proximity_eligible)
+                RetProximityEligibilityState.INELIGIBLE ->
+                    stringResource(R.string.ret_helper_proximity_ineligible)
+                RetProximityEligibilityState.SUPPORTED ->
+                    stringResource(R.string.ret_helper_proximity_supported)
+                RetProximityEligibilityState.UNAVAILABLE ->
+                    stringResource(R.string.ret_helper_proximity_unavailable)
+            },
+            style = MaterialTheme.typography.bodySmall
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = stringResource(R.string.ret_header_geospatial),
-                style = MaterialTheme.typography.titleSmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.ret_label_zone_radius,
-                    state.measurementZoneRadiusMeters
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.ret_label_distance_to_zone,
-                    state.distanceToMeasurementZoneMeters?.toString()
-                        ?: stringResource(R.string.value_not_available)
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
+            Button(
+                modifier = Modifier.weight(1f),
+                onClick = { onToggleProximityModeClicked(!state.proximityModeEnabled) }
+            ) {
+                Text(
+                    if (state.proximityModeEnabled) {
+                        stringResource(R.string.ret_action_disable_proximity)
+                    } else {
+                        stringResource(R.string.ret_action_enable_proximity)
+                    }
+                )
+            }
+            OutlinedButton(
+                modifier = Modifier.weight(1f),
+                onClick = onRefreshUserLocationClicked
+            ) {
+                Text(stringResource(R.string.ret_action_refresh_position))
+            }
+        }
+
+        AdvancedDisclosureButton(
+            expanded = showAdvancedGeospatial,
+            onToggle = { showAdvancedGeospatial = !showAdvancedGeospatial },
+            showLabel = stringResource(R.string.ret_action_show_geospatial_advanced),
+            hideLabel = stringResource(R.string.ret_action_hide_geospatial_advanced)
+        )
+
+        if (showAdvancedGeospatial) {
             Text(
                 text = stringResource(
                     R.string.ret_label_inside_zone,
@@ -456,22 +554,6 @@ private fun RetGeospatialSessionSurfaceCard(
                         true -> stringResource(R.string.value_yes)
                         false -> stringResource(R.string.value_no)
                         null -> stringResource(R.string.value_not_available)
-                    }
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.ret_label_proximity_eligibility,
-                    when (state.proximityEligibilityState) {
-                        RetProximityEligibilityState.ELIGIBLE ->
-                            stringResource(R.string.ret_value_proximity_eligible)
-                        RetProximityEligibilityState.INELIGIBLE ->
-                            stringResource(R.string.ret_value_proximity_ineligible)
-                        RetProximityEligibilityState.SUPPORTED ->
-                            stringResource(R.string.ret_value_proximity_supported)
-                        RetProximityEligibilityState.UNAVAILABLE ->
-                            stringResource(R.string.ret_value_proximity_unavailable)
                     }
                 ),
                 style = MaterialTheme.typography.bodySmall
@@ -514,19 +596,7 @@ private fun RetGeospatialSessionSurfaceCard(
                 ),
                 style = MaterialTheme.typography.bodySmall
             )
-            Text(
-                text = when (state.proximityEligibilityState) {
-                    RetProximityEligibilityState.ELIGIBLE ->
-                        stringResource(R.string.ret_helper_proximity_eligible)
-                    RetProximityEligibilityState.INELIGIBLE ->
-                        stringResource(R.string.ret_helper_proximity_ineligible)
-                    RetProximityEligibilityState.SUPPORTED ->
-                        stringResource(R.string.ret_helper_proximity_supported)
-                    RetProximityEligibilityState.UNAVAILABLE ->
-                        stringResource(R.string.ret_helper_proximity_unavailable)
-                },
-                style = MaterialTheme.typography.bodySmall
-            )
+
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
                 value = state.measurementZoneExtensionReasonInput,
@@ -552,34 +622,11 @@ private fun RetGeospatialSessionSurfaceCard(
                 ) {
                     Text(stringResource(R.string.ret_action_extend_zone))
                 }
-                Button(
+                OutlinedButton(
                     modifier = Modifier.weight(1f),
                     onClick = onResetMeasurementZoneClicked
                 ) {
                     Text(stringResource(R.string.ret_action_reset_zone))
-                }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    modifier = Modifier.weight(1f),
-                    onClick = { onToggleProximityModeClicked(!state.proximityModeEnabled) }
-                ) {
-                    Text(
-                        if (state.proximityModeEnabled) {
-                            stringResource(R.string.ret_action_disable_proximity)
-                        } else {
-                            stringResource(R.string.ret_action_enable_proximity)
-                        }
-                    )
-                }
-                Button(
-                    modifier = Modifier.weight(1f),
-                    onClick = onRefreshUserLocationClicked
-                ) {
-                    Text(stringResource(R.string.ret_action_refresh_position))
                 }
             }
         }

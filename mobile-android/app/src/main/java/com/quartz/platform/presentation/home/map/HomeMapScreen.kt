@@ -12,11 +12,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -25,7 +23,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,10 +37,15 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
 import com.quartz.platform.domain.model.SiteSummary
+import com.quartz.platform.presentation.components.AdvancedDisclosureButton
+import com.quartz.platform.presentation.components.OperationalSectionCard
+import com.quartz.platform.presentation.components.OperationalSeverity
+import com.quartz.platform.presentation.components.OperationalSignal
+import com.quartz.platform.presentation.components.OperationalSignalRow
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -120,6 +125,8 @@ fun HomeMapScreen(
             return@Scaffold
         }
 
+        var showSupportActions by rememberSaveable { mutableStateOf(false) }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -130,16 +137,33 @@ fun HomeMapScreen(
             HomeMissionEntryCard(
                 state = state,
                 onOpenControlTower = onOpenControlTower,
+                onOpenSelectedSite = onOpenSelectedSite,
                 onRecenter = onRecenter
             )
 
-            OutlinedTextField(
-                value = state.searchQuery,
-                onValueChange = onSearchQueryChanged,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.hint_site_search)) },
-                singleLine = true
-            )
+            OperationalSectionCard(
+                title = stringResource(R.string.home_map_section_targeting_title),
+                subtitle = stringResource(R.string.home_map_section_targeting_hint)
+            ) {
+                OutlinedTextField(
+                    value = state.searchQuery,
+                    onValueChange = onSearchQueryChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(R.string.hint_site_search)) },
+                    singleLine = true
+                )
+                Text(
+                    text = stringResource(R.string.label_sites_found, state.filteredSites.size),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (state.hasNoSearchResults) {
+                    Text(
+                        text = stringResource(R.string.empty_map_no_search_result),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
 
             state.errorMessage?.let { error ->
                 RuntimeMessageCard(
@@ -160,94 +184,41 @@ fun HomeMapScreen(
                     isBootstrappingDemo = state.isBootstrappingDemo,
                     onLoadDemoSnapshot = onLoadDemoSnapshot
                 )
-                return@Column
-            }
-
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = stringResource(R.string.label_sites_found, state.filteredSites.size),
-                    modifier = Modifier.padding(12.dp),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            if (state.hasNoSearchResults) {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = stringResource(R.string.empty_map_no_search_result),
-                        modifier = Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodyMedium
+            } else {
+                OperationalSectionCard(
+                    modifier = Modifier.weight(1f),
+                    title = stringResource(R.string.home_map_section_title),
+                    subtitle = stringResource(R.string.home_map_section_hint)
+                ) {
+                    QuartzHomeMapView(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        sites = state.filteredSites,
+                        selectedSiteId = state.selectedSiteId,
+                        userLocation = state.userLocation?.let {
+                            MapCoordinate(it.latitude, it.longitude)
+                        },
+                        cameraCenter = state.cameraCenter,
+                        cameraRequestVersion = state.cameraRequestVersion,
+                        onSiteSelected = onMapSiteSelected
                     )
                 }
-            } else {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.home_map_section_title),
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                        Text(
-                            text = stringResource(R.string.home_map_section_hint),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        QuartzHomeMapView(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            sites = state.filteredSites,
-                            selectedSiteId = state.selectedSiteId,
-                            userLocation = state.userLocation?.let {
-                                MapCoordinate(it.latitude, it.longitude)
-                            },
-                            cameraCenter = state.cameraCenter,
-                            cameraRequestVersion = state.cameraRequestVersion,
-                            onSiteSelected = onMapSiteSelected
-                        )
-                    }
-                }
             }
 
-            state.selectedSite?.let { selected ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.label_selected_site),
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                        Text(
-                            text = selected.name,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = stringResource(R.string.label_site_code, selected.externalCode),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { onOpenSelectedSite(selected.id) }
-                        ) {
-                            Text(stringResource(R.string.home_action_open_site_intelligence))
-                        }
-                    }
-                }
-            }
-
-            HomeSecondaryActionsCard(
-                isBootstrappingDemo = state.isBootstrappingDemo,
-                onLoadDemoSnapshot = onLoadDemoSnapshot
+            AdvancedDisclosureButton(
+                expanded = showSupportActions,
+                onToggle = { showSupportActions = !showSupportActions },
+                showLabel = stringResource(R.string.home_action_show_support_actions),
+                hideLabel = stringResource(R.string.home_action_hide_support_actions)
             )
+
+            if (showSupportActions) {
+                HomeSecondaryActionsCard(
+                    isBootstrappingDemo = state.isBootstrappingDemo,
+                    onLoadDemoSnapshot = onLoadDemoSnapshot
+                )
+            }
         }
     }
 }
@@ -256,54 +227,81 @@ fun HomeMapScreen(
 private fun HomeMissionEntryCard(
     state: HomeMapUiState,
     onOpenControlTower: () -> Unit,
+    onOpenSelectedSite: (String) -> Unit,
     onRecenter: () -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+    val selectionLabel = state.selectedSite?.let { selected ->
+        stringResource(R.string.home_mission_selected_site, selected.name)
+    } ?: stringResource(R.string.home_mission_no_selected_site)
+    val visibleSiteCode = state.selectedSite?.externalCode
+        ?: state.filteredSites.firstOrNull()?.externalCode
+        ?: state.sites.firstOrNull()?.externalCode
+
+    val locationSignal = if (state.userLocation != null) {
+        OperationalSignal(
+            text = stringResource(R.string.home_signal_location_ready),
+            severity = OperationalSeverity.SUCCESS
+        )
+    } else {
+        OperationalSignal(
+            text = stringResource(R.string.home_signal_location_missing),
+            severity = OperationalSeverity.WARNING
+        )
+    }
+
+    val cacheSignal = OperationalSignal(
+        text = stringResource(
+            R.string.home_signal_cache_sites,
+            state.sites.size,
+            state.filteredSites.size
+        )
+    )
+
+    OperationalSectionCard(
+        title = stringResource(R.string.home_mission_title),
+        subtitle = selectionLabel
+    ) {
+        OperationalSignalRow(
+            signals = listOf(locationSignal, cacheSignal)
+        )
+        visibleSiteCode?.let { code ->
+            Text(
+                text = stringResource(R.string.label_site_code, code),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = stringResource(R.string.home_mission_title),
-                style = MaterialTheme.typography.titleSmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.home_mission_summary,
-                    state.sites.size,
-                    state.filteredSites.size
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = state.selectedSite?.let { selected ->
-                    stringResource(R.string.home_mission_selected_site, selected.name)
-                } ?: stringResource(R.string.home_mission_no_selected_site),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            Button(
+                modifier = Modifier.weight(1f),
+                onClick = onOpenControlTower
             ) {
-                Button(
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenControlTower
-                ) {
-                    Text(stringResource(R.string.action_open_control_tower))
-                }
-                OutlinedButton(
-                    modifier = Modifier.weight(1f),
-                    enabled = !state.isRecenterInProgress,
-                    onClick = onRecenter
-                ) {
-                    Text(
-                        if (state.isRecenterInProgress) {
-                            stringResource(R.string.action_recenter_loading)
-                        } else {
-                            stringResource(R.string.action_recenter)
-                        }
-                    )
-                }
+                Text(stringResource(R.string.action_open_control_tower))
+            }
+            Button(
+                modifier = Modifier.weight(1f),
+                enabled = !state.isRecenterInProgress,
+                onClick = onRecenter
+            ) {
+                Text(
+                    if (state.isRecenterInProgress) {
+                        stringResource(R.string.action_recenter_loading)
+                    } else {
+                        stringResource(R.string.action_recenter)
+                    }
+                )
+            }
+        }
+
+        state.selectedSite?.let { selected ->
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { onOpenSelectedSite(selected.id) }
+            ) {
+                Text(stringResource(R.string.home_action_open_site_intelligence))
             }
         }
     }
@@ -314,10 +312,15 @@ private fun RuntimeMessageCard(
     message: String,
     isError: Boolean
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    OperationalSectionCard(
+        title = if (isError) {
+            stringResource(R.string.home_runtime_alert_title)
+        } else {
+            stringResource(R.string.home_runtime_info_title)
+        }
+    ) {
         Text(
             text = message,
-            modifier = Modifier.padding(12.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
         )
@@ -329,28 +332,22 @@ private fun HomeSecondaryActionsCard(
     isBootstrappingDemo: Boolean,
     onLoadDemoSnapshot: () -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+    OperationalSectionCard(
+        title = stringResource(R.string.home_section_secondary_actions),
+        subtitle = stringResource(R.string.home_section_secondary_actions_hint)
+    ) {
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isBootstrappingDemo,
+            onClick = onLoadDemoSnapshot
         ) {
             Text(
-                text = stringResource(R.string.home_section_secondary_actions),
-                style = MaterialTheme.typography.labelLarge
+                if (isBootstrappingDemo) {
+                    stringResource(R.string.action_load_demo_snapshot_loading)
+                } else {
+                    stringResource(R.string.action_load_demo_snapshot)
+                }
             )
-            OutlinedButton(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isBootstrappingDemo,
-                onClick = onLoadDemoSnapshot
-            ) {
-                Text(
-                    if (isBootstrappingDemo) {
-                        stringResource(R.string.action_load_demo_snapshot_loading)
-                    } else {
-                        stringResource(R.string.action_load_demo_snapshot)
-                    }
-                )
-            }
         }
     }
 }
@@ -360,32 +357,22 @@ private fun EmptyMapState(
     isBootstrappingDemo: Boolean,
     onLoadDemoSnapshot: () -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+    OperationalSectionCard(
+        title = stringResource(R.string.empty_site_snapshot_cache),
+        subtitle = stringResource(R.string.empty_site_snapshot_cache_hint)
+    ) {
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isBootstrappingDemo,
+            onClick = onLoadDemoSnapshot
         ) {
             Text(
-                text = stringResource(R.string.empty_site_snapshot_cache),
-                style = MaterialTheme.typography.bodyMedium
+                if (isBootstrappingDemo) {
+                    stringResource(R.string.action_load_demo_snapshot_loading)
+                } else {
+                    stringResource(R.string.action_load_demo_snapshot)
+                }
             )
-            Text(
-                text = stringResource(R.string.empty_site_snapshot_cache_hint),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isBootstrappingDemo,
-                onClick = onLoadDemoSnapshot
-            ) {
-                Text(
-                    if (isBootstrappingDemo) {
-                        stringResource(R.string.action_load_demo_snapshot_loading)
-                    } else {
-                        stringResource(R.string.action_load_demo_snapshot)
-                    }
-                )
-            }
         }
     }
 }

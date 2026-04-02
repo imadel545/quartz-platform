@@ -67,6 +67,7 @@ The roadmap prioritizes:
     - RET guided runtime refocused on mission status/progress and reduced control density
     - ReportDraft debug tooling moved behind explicit developer disclosure
     - Control Tower advanced controls made collapsible for mobile triage readability
+    - reusable operational design primitives now applied cross-surface to enforce consistent hierarchy/severity/disclosure semantics
   - shared workflow/session core reused by multiple guided flows
   - local report-draft continuity with typed provenance
   - workflow-typed closure projection in report draft flow for XFeeder/RET local review

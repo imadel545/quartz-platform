@@ -38,6 +38,11 @@ import com.quartz.platform.domain.model.SiteAntenna
 import com.quartz.platform.domain.model.SiteCell
 import com.quartz.platform.domain.model.SiteDetail
 import com.quartz.platform.domain.model.SiteSector
+import com.quartz.platform.presentation.components.AdvancedDisclosureButton
+import com.quartz.platform.presentation.components.OperationalSectionCard
+import com.quartz.platform.presentation.components.OperationalSeverity
+import com.quartz.platform.presentation.components.OperationalSignal
+import com.quartz.platform.presentation.components.OperationalSignalRow
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -156,7 +161,7 @@ fun SiteDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     item {
-                        SiteTechnicalSnapshotCard(site = state.site)
+                        SiteMissionHeaderCard(site = state.site)
                     }
 
                     item {
@@ -169,18 +174,6 @@ fun SiteDetailScreen(
                         )
                     }
 
-                    state.infoMessage?.let { info ->
-                        item {
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = info,
-                                    modifier = Modifier.padding(16.dp),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
-                    }
-
                     item {
                         Text(
                             text = stringResource(R.string.site_detail_section_guided_workflows),
@@ -188,12 +181,22 @@ fun SiteDetailScreen(
                         )
                     }
 
+                    state.infoMessage?.let { info ->
+                        item {
+                            OperationalSectionCard(title = stringResource(R.string.home_runtime_info_title)) {
+                                Text(
+                                    text = info,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+
                     if (state.site.sectors.isEmpty()) {
                         item {
-                            Card(modifier = Modifier.fillMaxWidth()) {
+                            OperationalSectionCard(title = stringResource(R.string.site_detail_section_guided_workflows)) {
                                 Text(
                                     text = stringResource(R.string.empty_site_technical_structure),
-                                    modifier = Modifier.padding(16.dp),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -210,18 +213,12 @@ fun SiteDetailScreen(
                     }
 
                     item {
-                        OutlinedButton(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { showTechnicalDetails = !showTechnicalDetails }
-                        ) {
-                            Text(
-                                if (showTechnicalDetails) {
-                                    stringResource(R.string.site_detail_action_hide_technical_details)
-                                } else {
-                                    stringResource(R.string.site_detail_action_show_technical_details)
-                                }
-                            )
-                        }
+                        AdvancedDisclosureButton(
+                            expanded = showTechnicalDetails,
+                            onToggle = { showTechnicalDetails = !showTechnicalDetails },
+                            showLabel = stringResource(R.string.site_detail_action_show_technical_details),
+                            hideLabel = stringResource(R.string.site_detail_action_hide_technical_details)
+                        )
                     }
 
                     if (showTechnicalDetails) {
@@ -236,18 +233,17 @@ fun SiteDetailScreen(
                     }
 
                     item {
-                        Text(
-                            text = stringResource(R.string.header_local_drafts),
-                            style = MaterialTheme.typography.titleMedium
-                        )
+                        OperationalSectionCard(
+                            title = stringResource(R.string.header_local_drafts),
+                            subtitle = stringResource(R.string.site_detail_local_drafts_hint)
+                        ) {}
                     }
 
                     if (state.drafts.isEmpty()) {
                         item {
-                            Card(modifier = Modifier.fillMaxWidth()) {
+                            OperationalSectionCard(title = stringResource(R.string.header_local_drafts)) {
                                 Text(
                                     text = stringResource(R.string.empty_local_drafts_for_site),
-                                    modifier = Modifier.padding(16.dp),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -262,7 +258,7 @@ fun SiteDetailScreen(
                     }
 
                     item {
-                        Button(
+                        OutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = onBack
                         ) {
@@ -283,44 +279,38 @@ private fun SiteMissionActionsCard(
     onOpenReportList: (String) -> Unit,
     onOpenPerformanceSession: (String) -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+    OperationalSectionCard(
+        title = stringResource(R.string.site_detail_section_mission_actions),
+        subtitle = stringResource(R.string.site_detail_mission_actions_hint)
+    ) {
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { onOpenPerformanceSession(siteId) }
         ) {
-            Text(
-                text = stringResource(R.string.site_detail_section_mission_actions),
-                style = MaterialTheme.typography.titleSmall
-            )
+            Text(stringResource(R.string.action_open_performance_session))
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Button(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { onOpenPerformanceSession(siteId) }
+                modifier = Modifier.weight(1f),
+                enabled = !isCreatingDraft,
+                onClick = onCreateDraftClicked
             ) {
-                Text(stringResource(R.string.action_open_performance_session))
+                Text(
+                    text = if (isCreatingDraft) {
+                        stringResource(R.string.action_create_local_draft_loading)
+                    } else {
+                        stringResource(R.string.action_create_local_draft)
+                    }
+                )
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            OutlinedButton(
+                modifier = Modifier.weight(1f),
+                onClick = { onOpenReportList(siteId) }
             ) {
-                Button(
-                    modifier = Modifier.weight(1f),
-                    enabled = !isCreatingDraft,
-                    onClick = onCreateDraftClicked
-                ) {
-                    Text(
-                        text = if (isCreatingDraft) {
-                            stringResource(R.string.action_create_local_draft_loading)
-                        } else {
-                            stringResource(R.string.action_create_local_draft)
-                        }
-                    )
-                }
-                OutlinedButton(
-                    modifier = Modifier.weight(1f),
-                    onClick = { onOpenReportList(siteId) }
-                ) {
-                    Text(stringResource(R.string.action_open_site_local_reports))
-                }
+                Text(stringResource(R.string.action_open_site_local_reports))
             }
         }
     }
@@ -333,97 +323,85 @@ private fun SectorMissionLaunchCard(
     onOpenXfeederSession: (siteId: String, sectorId: String) -> Unit,
     onOpenRetSession: (siteId: String, sectorId: String) -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+    OperationalSectionCard(
+        title = stringResource(R.string.label_sector_title, sector.code),
+        subtitle = stringResource(
+            R.string.site_detail_sector_mission_context,
+            sector.cells.size,
+            sector.antennas.size
+        )
+    ) {
+        OperationalSignalRow(
+            signals = listOf(
+                OperationalSignal(
+                    text = if (sector.hasConnectedCell) {
+                        stringResource(R.string.label_sector_connected_cell_detected)
+                    } else {
+                        stringResource(R.string.label_sector_connected_cell_none)
+                    },
+                    severity = if (sector.hasConnectedCell) {
+                        OperationalSeverity.SUCCESS
+                    } else {
+                        OperationalSeverity.WARNING
+                    }
+                )
+            )
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = stringResource(R.string.label_sector_title, sector.code),
-                style = MaterialTheme.typography.titleSmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.site_detail_sector_mission_context,
-                    sector.cells.size,
-                    sector.antennas.size
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = if (sector.hasConnectedCell) {
-                    stringResource(R.string.label_sector_connected_cell_detected)
-                } else {
-                    stringResource(R.string.label_sector_connected_cell_none)
-                },
-                style = MaterialTheme.typography.bodySmall
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            Button(
+                modifier = Modifier.weight(1f),
+                onClick = { onOpenXfeederSession(siteId, sector.id) }
             ) {
-                Button(
-                    modifier = Modifier.weight(1f),
-                    onClick = { onOpenXfeederSession(siteId, sector.id) }
-                ) {
-                    Text(stringResource(R.string.site_detail_action_launch_xfeeder_short))
-                }
-                OutlinedButton(
-                    modifier = Modifier.weight(1f),
-                    onClick = { onOpenRetSession(siteId, sector.id) }
-                ) {
-                    Text(stringResource(R.string.site_detail_action_launch_ret_short))
-                }
+                Text(stringResource(R.string.site_detail_action_launch_xfeeder_short))
+            }
+            OutlinedButton(
+                modifier = Modifier.weight(1f),
+                onClick = { onOpenRetSession(siteId, sector.id) }
+            ) {
+                Text(stringResource(R.string.site_detail_action_launch_ret_short))
             }
         }
     }
 }
 
 @Composable
-private fun SiteTechnicalSnapshotCard(site: SiteDetail) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(text = site.name, style = MaterialTheme.typography.titleLarge)
-            Text(
-                text = stringResource(R.string.label_site_code, site.externalCode),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = stringResource(R.string.label_site_status, site.status),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = stringResource(R.string.label_site_sectors_in_service, site.sectorsInService),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = stringResource(R.string.label_site_sectors_forecast, site.sectorsForecast),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = stringResource(R.string.label_site_sectors_total, site.sectors.size),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = if (site.indoorOnly) {
-                    stringResource(R.string.label_site_profile_indoor)
-                } else {
-                    stringResource(R.string.label_site_profile_mixed)
-                },
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = stringResource(
-                    R.string.label_coordinates,
-                    site.latitude.toString(),
-                    site.longitude.toString()
+private fun SiteMissionHeaderCard(site: SiteDetail) {
+    OperationalSectionCard(
+        title = site.name,
+        subtitle = stringResource(R.string.label_site_code, site.externalCode)
+    ) {
+        OperationalSignalRow(
+            signals = listOf(
+                OperationalSignal(stringResource(R.string.label_site_status, site.status)),
+                OperationalSignal(
+                    text = stringResource(R.string.label_site_sectors_in_service, site.sectorsInService),
+                    severity = OperationalSeverity.SUCCESS
                 ),
-                style = MaterialTheme.typography.bodySmall
+                OperationalSignal(
+                    text = stringResource(R.string.label_site_sectors_forecast, site.sectorsForecast),
+                    severity = OperationalSeverity.WARNING
+                )
             )
-        }
+        )
+        Text(
+            text = if (site.indoorOnly) {
+                stringResource(R.string.label_site_profile_indoor)
+            } else {
+                stringResource(R.string.label_site_profile_mixed)
+            },
+            style = MaterialTheme.typography.bodySmall
+        )
+        Text(
+            text = stringResource(
+                R.string.label_coordinates,
+                site.latitude.toString(),
+                site.longitude.toString()
+            ),
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }
 

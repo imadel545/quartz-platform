@@ -113,6 +113,7 @@ Current Android implementation covers a bounded local-first workflow baseline:
     - guided RET runtime keeps progress/status primary and defers full-history/detail through progressive disclosure
     - report draft runtime flow keeps reviewer actions primary while debug sync tooling is explicitly gated behind developer disclosure
     - control-tower advanced controls are collapsible to keep first-screen triage density readable on mobile
+    - shared operational presentation primitives centralize section hierarchy, severity signal rendering, and advanced-disclosure behavior to reduce UX drift across runtime surfaces
 
 For XFeeder proximity, implementation is intentionally explicit and bounded:
 - `UNAVAILABLE`: location/altitude data cannot be trusted for eligibility

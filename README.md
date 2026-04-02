@@ -81,6 +81,7 @@ quartz-platform/
       - RET guided session refocused on mission status/progress, with history progressive disclosure and reduced action density (status/outcome/step chips)
       - ReportDraft debug sync tools now hidden behind explicit developer disclosure toggle
       - Control Tower advanced controls (queue-status filter/grouping/motifs) behind explicit disclosure to reduce runtime cognitive load
+      - shared operational UI primitives (`OperationalSectionCard`, `OperationalSignalRow`, `AdvancedDisclosureButton`) now enforce consistent hierarchy/severity/disclosure patterns across Home, Site Detail, RET, ReportDraft, and Control Tower
   - Room migrations and schema snapshots kept explicit
 
 ## Explicitly out of scope at this stage

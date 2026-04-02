@@ -131,6 +131,7 @@ Product/UX recovery now also reinforces mission-driven runtime execution clarity
 - RET guided execution exposes mission status/progress first and collapses full history by default,
 - ReportDraft keeps reviewer flow primary while debug sync tools require explicit developer disclosure,
 - Control Tower keeps high-value triage visible while advanced controls are intentionally collapsible.
+- shared operational presentation patterns (mission cards, signal chips, disclosure controls) are now reused across these surfaces to keep action hierarchy and severity language consistent in runtime.
 
 ### 4. Throughput and QoS testing
 The system should support:
