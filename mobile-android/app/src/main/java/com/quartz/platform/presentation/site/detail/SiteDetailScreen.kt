@@ -152,6 +152,7 @@ fun SiteDetailScreen(
 
             else -> {
                 var showTechnicalDetails by rememberSaveable { mutableStateOf(false) }
+                var showLocalDrafts by rememberSaveable { mutableStateOf(false) }
 
                 LazyColumn(
                     modifier = Modifier
@@ -233,27 +234,62 @@ fun SiteDetailScreen(
                     }
 
                     item {
+                        val latestDraftUpdatedAt = state.drafts.maxOfOrNull { it.updatedAtEpochMillis }
                         OperationalSectionCard(
                             title = stringResource(R.string.header_local_drafts),
                             subtitle = stringResource(R.string.site_detail_local_drafts_hint)
-                        ) {}
+                        ) {
+                            OperationalSignalRow(
+                                signals = listOf(
+                                    OperationalSignal(
+                                        text = stringResource(
+                                            R.string.site_detail_signal_local_draft_count,
+                                            state.drafts.size
+                                        ),
+                                        severity = if (state.drafts.isEmpty()) {
+                                            OperationalSeverity.NORMAL
+                                        } else {
+                                            OperationalSeverity.SUCCESS
+                                        }
+                                    ),
+                                    OperationalSignal(
+                                        text = stringResource(
+                                            R.string.site_detail_signal_local_draft_latest_update,
+                                            latestDraftUpdatedAt?.let(::formatEpoch)
+                                                ?: stringResource(R.string.value_not_available)
+                                        )
+                                    )
+                                )
+                            )
+                        }
                     }
 
-                    if (state.drafts.isEmpty()) {
-                        item {
-                            OperationalSectionCard(title = stringResource(R.string.header_local_drafts)) {
-                                Text(
-                                    text = stringResource(R.string.empty_local_drafts_for_site),
-                                    style = MaterialTheme.typography.bodyMedium
+                    item {
+                        AdvancedDisclosureButton(
+                            expanded = showLocalDrafts,
+                            onToggle = { showLocalDrafts = !showLocalDrafts },
+                            showLabel = stringResource(R.string.site_detail_action_show_local_drafts),
+                            hideLabel = stringResource(R.string.site_detail_action_hide_local_drafts)
+                        )
+                    }
+
+                    if (showLocalDrafts) {
+                        if (state.drafts.isEmpty()) {
+                            item {
+                                OperationalSectionCard(title = stringResource(R.string.header_local_drafts)) {
+                                    Text(
+                                        text = stringResource(R.string.empty_local_drafts_for_site),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                        } else {
+                            items(state.drafts, key = { it.id }) { draft ->
+                                ReportDraftSummaryCard(
+                                    draft = draft,
+                                    onClick = { onOpenDraft(draft.id) }
                                 )
                             }
-                        }
-                    } else {
-                        items(state.drafts, key = { it.id }) { draft ->
-                            ReportDraftSummaryCard(
-                                draft = draft,
-                                onClick = { onOpenDraft(draft.id) }
-                            )
                         }
                     }
 

@@ -77,10 +77,17 @@ quartz-platform/
       - direct row actions (mark in review / waiting feedback / resolved / reopen) and bulk mark-in-review on visible queue
     - product/UX architecture recovery (mission-driven runtime surfaces):
       - Home Map reframed as mission entrypoint (`Mission terrain`) with primary actions (control tower + recenter) and secondary/demo actions demoted
+      - Home Map site-targeting controls moved behind explicit disclosure to keep map mission context above the fold
       - Site Detail split between mission actions and technical depth, with guided sector launch cards and collapsible technical details
+      - Site Detail local draft list moved behind explicit disclosure while keeping draft count/latest-update summary visible
+      - XFeeder session runtime now prioritizes mission status/proximity context and collapses history/sector context/geospatial advanced controls
       - RET guided session refocused on mission status/progress, with history progressive disclosure and reduced action density (status/outcome/step chips)
+      - Débit/QoS session now separates history/checklist/diagnostics/run-plan/timeline/script-editor via explicit progressive-disclosure controls
       - ReportDraft debug sync tools now hidden behind explicit developer disclosure toggle
+      - ReportDraft guided evidence now starts with compact summary signals and keeps detailed projection behind explicit disclosure
+      - ReportList now adds an above-the-fold triage summary card and uses compact QoS closure wording for faster scanability
       - Control Tower advanced controls (queue-status filter/grouping/motifs) behind explicit disclosure to reduce runtime cognitive load
+      - Control Tower triage lenses keep presets visible and move queue-tuning filters behind explicit disclosure
       - shared operational UI primitives (`OperationalSectionCard`, `OperationalSignalRow`, `AdvancedDisclosureButton`) now enforce consistent hierarchy/severity/disclosure patterns across Home, Site Detail, RET, ReportDraft, and Control Tower
   - Room migrations and schema snapshots kept explicit
 

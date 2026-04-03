@@ -63,10 +63,17 @@ The roadmap prioritizes:
     - queue-status filters and status motifs for action-center steering speed
   - mission-driven product/UX recovery on Android runtime surfaces:
     - Home Map reframed as mission entrypoint with explicit primary vs secondary actions
+    - Home Map site-targeting controls moved behind explicit disclosure to keep mission context/map actions primary
     - Site Detail split into mission-launch actions and collapsible technical details
+    - Site Detail local draft rows moved behind explicit disclosure with persistent draft summary signals
+    - XFeeder guided runtime now prioritizes mission status/proximity signals and collapses history/sector context/geospatial advanced controls
     - RET guided runtime refocused on mission status/progress and reduced control density
+    - Débit/QoS runtime now uses progressive disclosure for diagnostics/checklist/run-plan/timeline/script-editor to reduce mixed mission/debug overload
     - ReportDraft debug tooling moved behind explicit developer disclosure
+    - ReportDraft guided-evidence details moved behind explicit disclosure after compact reviewer summary
+    - ReportList now includes a compact mission triage summary card and simplified QoS closure wording for faster scanability
     - Control Tower advanced controls made collapsible for mobile triage readability
+    - Control Tower queue-tuning filter controls are now disclosure-based while presets stay immediately available
     - reusable operational design primitives now applied cross-surface to enforce consistent hierarchy/severity/disclosure semantics
   - shared workflow/session core reused by multiple guided flows
   - local report-draft continuity with typed provenance

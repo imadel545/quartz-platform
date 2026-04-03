@@ -127,9 +127,15 @@ Supervisor Queue Orchestration v3 now adds bounded queue lifecycle control for r
 - queue-status filter and status motifs for faster queue steering without leaving mobile control-tower flow.
 Product/UX recovery now also reinforces mission-driven runtime execution clarity:
 - Home Map acts as mission entrypoint (primary actions first, secondary/demo actions clearly demoted),
+- Home Map keeps site-targeting controls in progressive disclosure so map mission context stays primary,
 - Site Detail separates mission actions from technical structure with progressive disclosure,
+- Site Detail keeps local draft counts visible while moving full draft rows behind explicit disclosure,
+- XFeeder guided runtime now prioritizes mission header/proximity status and defers history + sector/advanced geospatial details behind disclosures,
 - RET guided execution exposes mission status/progress first and collapses full history by default,
+- Débit/QoS runtime now separates mission context from diagnostics/checklist/run-plan/timeline/script-editor using bounded disclosure controls,
 - ReportDraft keeps reviewer flow primary while debug sync tools require explicit developer disclosure,
+- ReportDraft guided evidence now starts with compact reviewer signals and keeps detailed projections behind disclosure,
+- ReportList adds a mission triage summary card with compact QoS closure wording for faster supervisor scan,
 - Control Tower keeps high-value triage visible while advanced controls are intentionally collapsible.
 - shared operational presentation patterns (mission cards, signal chips, disclosure controls) are now reused across these surfaces to keep action hierarchy and severity language consistent in runtime.
 

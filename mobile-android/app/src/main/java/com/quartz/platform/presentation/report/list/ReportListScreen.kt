@@ -32,14 +32,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
 import com.quartz.platform.domain.model.QosExecutionEngineState
-import com.quartz.platform.domain.model.QosRecoveryState
 import com.quartz.platform.domain.model.QosExecutionIssueCode
-import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.NetworkStatus
 import com.quartz.platform.domain.model.ReportListClosureSummary
 import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.SiteReportListItem
 import com.quartz.platform.domain.model.XfeederSignal
+import com.quartz.platform.presentation.components.OperationalSectionCard
+import com.quartz.platform.presentation.components.OperationalSeverity
+import com.quartz.platform.presentation.components.OperationalSignal
+import com.quartz.platform.presentation.components.OperationalSignalRow
 import com.quartz.platform.presentation.performance.session.performanceSessionStatusLabelRes
 import com.quartz.platform.presentation.performance.session.performanceWorkflowTypeLabelRes
 import com.quartz.platform.presentation.ret.session.retResultOutcomeLabelRes
@@ -155,10 +157,33 @@ fun ReportListScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     item {
-                        Text(
-                            text = stringResource(R.string.label_site_id, state.siteId),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        val failedSyncCount = state.filteredReports.count { it.syncState == ReportSyncState.FAILED }
+                        val guidedCount = state.filteredReports.count { it.originWorkflowType != null }
+                        OperationalSectionCard(
+                            title = stringResource(R.string.report_list_mission_title),
+                            subtitle = stringResource(R.string.label_site_id, state.siteId)
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    R.string.report_list_mission_summary,
+                                    state.filteredReports.size,
+                                    state.reports.size
+                                ),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            OperationalSignalRow(
+                                signals = listOf(
+                                    OperationalSignal(
+                                        text = stringResource(R.string.report_list_signal_guided, guidedCount),
+                                        severity = if (guidedCount > 0) OperationalSeverity.SUCCESS else OperationalSeverity.NORMAL
+                                    ),
+                                    OperationalSignal(
+                                        text = stringResource(R.string.report_list_signal_sync_failed, failedSyncCount),
+                                        severity = if (failedSyncCount > 0) OperationalSeverity.CRITICAL else OperationalSeverity.SUCCESS
+                                    )
+                                )
+                            )
+                        }
                     }
                     item {
                         ReportListFilterRow(
@@ -401,19 +426,10 @@ private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
 
         is ReportListClosureSummary.Qos -> {
             val baseSignal = stringResource(
-                R.string.report_list_closure_signal_performance_qos,
+                R.string.report_list_closure_signal_performance_qos_compact,
                 summary.completedRequiredStepCount,
                 summary.requiredStepCount,
                 if (summary.preconditionsReady) {
-                    stringResource(R.string.value_yes)
-                } else {
-                    stringResource(R.string.value_no)
-                },
-                summary.scriptName ?: stringResource(R.string.value_not_available),
-                summary.configuredRepeatCount?.toString() ?: "-",
-                summary.targetTechnology ?: stringResource(R.string.value_not_available),
-                summary.configuredTechnologyCount,
-                if (summary.targetTechnologyAligned) {
                     stringResource(R.string.value_yes)
                 } else {
                     stringResource(R.string.value_no)
@@ -422,37 +438,24 @@ private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
                 summary.completedFamilyCount,
                 summary.failedFamilyCount,
                 summary.blockedFamilyCount,
-                summary.timelineEventCount,
-                summary.timelineFamilyCoverageCount,
-                summary.requiredRepeatCount,
-                summary.familiesMeetingRequiredRepeatCount,
-                summary.passFailRunCount,
-                summary.blockedRunCount,
-                summary.plannedRunCount,
-                summary.pendingRunCount,
-                stringResource(qosEngineStateLabelRes(summary.executionEngineState)),
-                stringResource(qosRecoveryStateLabelRes(summary.recoveryState)),
-                summary.checkpointCount,
-                summary.activeFamily?.let { family ->
-                    stringResource(qosTestFamilyLabelRes(family))
-                } ?: stringResource(R.string.value_not_available),
-                summary.activeRepetitionIndex?.toString() ?: "-",
-                summary.nextFamily?.let { family ->
-                    stringResource(qosTestFamilyLabelRes(family))
-                } ?: stringResource(R.string.value_not_available),
-                summary.nextRepetitionIndex?.toString() ?: "-",
-                summary.iterationCount,
-                summary.successCount,
-                summary.failureCount
+                stringResource(qosEngineStateLabelRes(summary.executionEngineState))
             )
+            val withCoverage = "$baseSignal · ${
+                stringResource(
+                    R.string.report_list_closure_signal_performance_qos_coverage,
+                    summary.familiesMeetingRequiredRepeatCount,
+                    summary.requiredRepeatCount,
+                    summary.pendingRunCount
+                )
+            }"
             val withReason = summary.dominantIssueCode?.let { code ->
-                "$baseSignal · ${
+                "$withCoverage · ${
                     stringResource(
                         R.string.report_list_closure_signal_performance_qos_reason,
                         stringResource(qosIssueCodeLabelRes(code))
                     )
                 }"
-            } ?: baseSignal
+            } ?: withCoverage
             val diagnostics = buildDeviceDiagnosticsSignal(
                 observedNetworkStatus = summary.observedNetworkStatus,
                 observedBatteryLevelPercent = summary.observedBatteryLevelPercent,
@@ -587,26 +590,6 @@ private fun qosEngineStateLabelRes(state: QosExecutionEngineState): Int {
         QosExecutionEngineState.COMPLETED -> R.string.performance_qos_engine_state_completed
         QosExecutionEngineState.FAILED -> R.string.performance_qos_engine_state_failed
         QosExecutionEngineState.BLOCKED -> R.string.performance_qos_engine_state_blocked
-    }
-}
-
-private fun qosTestFamilyLabelRes(family: QosTestFamily): Int {
-    return when (family) {
-        QosTestFamily.THROUGHPUT_LATENCY -> R.string.qos_test_family_throughput_latency
-        QosTestFamily.VIDEO_STREAMING -> R.string.qos_test_family_video_streaming
-        QosTestFamily.SMS -> R.string.qos_test_family_sms
-        QosTestFamily.VOLTE_CALL -> R.string.qos_test_family_volte_call
-        QosTestFamily.CSFB_CALL -> R.string.qos_test_family_csfb_call
-        QosTestFamily.EMERGENCY_CALL -> R.string.qos_test_family_emergency_call
-        QosTestFamily.STANDARD_CALL -> R.string.qos_test_family_standard_call
-    }
-}
-
-private fun qosRecoveryStateLabelRes(state: QosRecoveryState): Int {
-    return when (state) {
-        QosRecoveryState.NONE -> R.string.performance_qos_recovery_state_none
-        QosRecoveryState.RESUME_AVAILABLE -> R.string.performance_qos_recovery_state_resume_available
-        QosRecoveryState.INVARIANT_BROKEN -> R.string.performance_qos_recovery_state_invariant_broken
     }
 }
 

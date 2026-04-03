@@ -137,6 +137,7 @@ fun ReviewerControlTowerScreen(
 
             else -> {
                 var showAdvancedControls by rememberSaveable { mutableStateOf(false) }
+                var showQueueTuning by rememberSaveable { mutableStateOf(false) }
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -172,10 +173,18 @@ fun ReviewerControlTowerScreen(
                                 selectedPreset = state.selectedPreset,
                                 onPresetSelected = onPresetSelected
                             )
-                            ControlTowerFilterRow(
-                                selectedFilter = state.selectedFilter,
-                                onFilterSelected = onFilterSelected
+                            AdvancedDisclosureButton(
+                                expanded = showQueueTuning,
+                                onToggle = { showQueueTuning = !showQueueTuning },
+                                showLabel = stringResource(R.string.reviewer_control_tower_action_show_queue_tuning),
+                                hideLabel = stringResource(R.string.reviewer_control_tower_action_hide_queue_tuning)
                             )
+                            if (showQueueTuning) {
+                                ControlTowerFilterRow(
+                                    selectedFilter = state.selectedFilter,
+                                    onFilterSelected = onFilterSelected
+                                )
+                            }
                         }
                     }
 

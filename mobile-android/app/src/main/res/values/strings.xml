@@ -22,6 +22,8 @@
     <string name="home_map_section_targeting_hint">Filtrez les sites puis sélectionnez le marqueur mission.</string>
     <string name="home_section_secondary_actions">Actions secondaires</string>
     <string name="home_section_secondary_actions_hint">Outils de support et bootstrap démo.</string>
+    <string name="home_action_show_site_targeting">Afficher le ciblage site</string>
+    <string name="home_action_hide_site_targeting">Masquer le ciblage site</string>
     <string name="home_action_show_support_actions">Afficher les actions de support</string>
     <string name="home_action_hide_support_actions">Masquer les actions de support</string>
     <string name="home_runtime_alert_title">Point bloquant runtime</string>
@@ -167,6 +169,12 @@
     <string name="report_list_closure_signal_ret_steps">%1$d/%2$d étapes obligatoires terminées</string>
     <string name="report_list_closure_signal_performance_throughput">Étapes %1$d/%2$d • Prérequis %3$s • DL/UL/Lat: %4$s/%5$s/%6$s</string>
     <string name="report_list_closure_signal_performance_qos">Étapes %1$d/%2$d • Prérequis %3$s • Script %4$s • Config %5$s • Tech cible %6$s (Script %7$d, Alignée %8$s) • Familles %9$d (Complétées %10$d / Échecs %11$d / Bloquées %12$d) • Timeline %13$d événements / %14$d familles • Couverture runs %15$d familles à %16$d répétitions • Runs PASS/FAIL %17$d • Runs bloqués %18$d • Plan %19$d (restants %20$d) • Engine %21$s • Recovery %22$s • Checkpoints %23$d • Actif %24$s #%25$s • Suivant %26$s #%27$s • Itérations %28$d • OK/NOK %29$d/%30$d</string>
+    <string name="report_list_closure_signal_performance_qos_compact">Étapes %1$d/%2$d • Prérequis %3$s • Familles %4$d/%5$d • Échecs %6$d • Bloquées %7$d • Engine %8$s</string>
+    <string name="report_list_closure_signal_performance_qos_coverage">Couverture répétitions: %1$d/%2$d • Runs restants: %3$d</string>
+    <string name="report_list_mission_title">Triage rapports locaux</string>
+    <string name="report_list_mission_summary">Visibles: %1$d • Total local: %2$d</string>
+    <string name="report_list_signal_guided">Guidés: %1$d</string>
+    <string name="report_list_signal_sync_failed">Sync KO: %1$d</string>
     <string name="label_report_list_filter">Filtrer les brouillons</string>
     <string name="report_list_filter_all">Tous</string>
     <string name="report_list_filter_xfeeder">XFeeder</string>
@@ -279,12 +287,27 @@
     <string name="site_detail_action_launch_ret_short">Mission RET</string>
     <string name="site_detail_action_show_technical_details">Afficher les détails techniques</string>
     <string name="site_detail_action_hide_technical_details">Masquer les détails techniques</string>
+    <string name="site_detail_signal_local_draft_count">Brouillons locaux: %1$d</string>
+    <string name="site_detail_signal_local_draft_latest_update">Dernière mise à jour: %1$s</string>
+    <string name="site_detail_action_show_local_drafts">Afficher les brouillons locaux</string>
+    <string name="site_detail_action_hide_local_drafts">Masquer les brouillons locaux</string>
     <string name="performance_shell_disclaimer">Fondation locale Débit/QoS: exécution guidée et structurée sans automatisation réseau OEM.</string>
+    <string name="performance_mission_title">Console mission Débit/QoS</string>
+    <string name="performance_mission_subtitle">Site: %1$s</string>
+    <string name="performance_signal_workflow">Workflow actif: %1$s</string>
+    <string name="performance_signal_no_active_session">Aucune session active</string>
+    <string name="performance_signal_prerequisites">Prérequis validés: %1$s</string>
     <string name="performance_label_site">Site: %1$s</string>
     <string name="performance_header_create_session">Créer une session locale</string>
     <string name="performance_action_create_throughput_session">Créer une session Débit</string>
     <string name="performance_action_create_qos_session">Créer une session QoS</string>
     <string name="performance_header_session_history">Historique sessions Débit/QoS (%1$d)</string>
+    <string name="performance_action_show_history">Afficher l’historique (%1$d)</string>
+    <string name="performance_action_hide_history">Masquer l’historique (%1$d)</string>
+    <string name="performance_action_show_diagnostics">Afficher diagnostics device</string>
+    <string name="performance_action_hide_diagnostics">Masquer diagnostics device</string>
+    <string name="performance_action_show_checklist">Afficher checklist guidée</string>
+    <string name="performance_action_hide_checklist">Masquer checklist guidée</string>
     <string name="performance_empty_session">Aucune session locale Débit/QoS sur ce site. Créez une session pour démarrer.</string>
     <string name="performance_action_open_session">Ouvrir cette session</string>
     <string name="performance_action_session_selected">Session sélectionnée</string>
@@ -335,6 +358,8 @@
     <string name="performance_label_qos_script_snapshot_at">Snapshot script: %1$s</string>
     <string name="performance_header_qos_family_execution">Exécution par famille QoS</string>
     <string name="performance_header_qos_run_plan">Plan d’exécution QoS (famille x répétition)</string>
+    <string name="performance_action_show_qos_run_plan">Afficher plan d’exécution</string>
+    <string name="performance_action_hide_qos_run_plan">Masquer plan d’exécution</string>
     <string name="performance_header_qos_preflight_issues">Blocages de clôture QoS</string>
     <string name="performance_label_qos_preflight_issue">• %1$s</string>
     <string name="performance_label_qos_family_status">%1$s: %2$s</string>
@@ -346,9 +371,13 @@
     <string name="performance_label_qos_run_plan_line">%1$s • répétition %2$d • %3$s</string>
     <string name="performance_label_qos_run_plan_more">… %1$d run(s) supplémentaire(s)</string>
     <string name="performance_header_qos_execution_timeline">Timeline exécution QoS (persistée)</string>
+    <string name="performance_action_show_qos_timeline">Afficher timeline QoS</string>
+    <string name="performance_action_hide_qos_timeline">Masquer timeline QoS</string>
     <string name="performance_label_qos_timeline_empty">Aucun événement QoS persisté pour cette session.</string>
     <string name="performance_label_qos_timeline_line">%1$s • %2$s • répétition %3$d • %4$s</string>
     <string name="performance_header_qos_script_editor">Création / édition script QoS local</string>
+    <string name="performance_action_show_qos_script_editor">Afficher édition script QoS</string>
+    <string name="performance_action_hide_qos_script_editor">Masquer édition script QoS</string>
     <string name="performance_input_qos_script_name">Nom script QoS</string>
     <string name="performance_input_qos_script_repeat_count">Répétitions script</string>
     <string name="performance_input_qos_script_technologies">Technologies script (CSV)</string>
@@ -387,6 +416,8 @@
     <string name="performance_qos_run_plan_status_blocked">BLOCKED</string>
     <string name="performance_input_notes">Notes terrain Débit/QoS</string>
     <string name="performance_input_result_summary">Résumé résultat Débit/QoS</string>
+    <string name="performance_section_review_capture">Clôture et revue mission</string>
+    <string name="performance_section_review_capture_hint">Renseignez un résumé opérateur avant ouverture du brouillon rapport.</string>
     <string name="performance_action_save">Enregistrer statut et résultat Débit/QoS</string>
     <string name="performance_action_save_loading">Enregistrement Débit/QoS...</string>
     <string name="action_open_linked_report_draft">Ouvrir brouillon rapport lié</string>
@@ -497,6 +528,9 @@
     <string name="xfeeder_hint_observed_sector_count">Exemple: 3</string>
 
     <string name="xfeeder_shell_disclaimer">Shell guidé local: aide opérateur sans automatisation radio OEM.</string>
+    <string name="xfeeder_mission_title">Mission guidée XFeeder / MixFeeder</string>
+    <string name="xfeeder_signal_proximity_state">Proximité: %1$s</string>
+    <string name="xfeeder_signal_session_status">Session: %1$s</string>
     <string name="xfeeder_label_site_sector">Site: %1$s | Secteur: %2$s</string>
     <string name="xfeeder_label_session_status">Statut session: %1$s</string>
     <string name="xfeeder_label_status_update">Mettre à jour le statut session</string>
@@ -508,6 +542,12 @@
     <string name="xfeeder_header_closure_evidence">Résumé de clôture (local)</string>
     <string name="xfeeder_closure_no_additional_evidence">Aucune justification structurée supplémentaire requise pour ce résultat.</string>
     <string name="xfeeder_header_session_history">Historique sessions secteur (%1$d)</string>
+    <string name="xfeeder_action_show_history">Afficher historique (%1$d)</string>
+    <string name="xfeeder_action_hide_history">Masquer historique (%1$d)</string>
+    <string name="xfeeder_action_show_sector_context">Afficher contexte cellules/systèmes</string>
+    <string name="xfeeder_action_hide_sector_context">Masquer contexte cellules/systèmes</string>
+    <string name="xfeeder_action_show_checklist">Afficher checklist guidée</string>
+    <string name="xfeeder_action_hide_checklist">Masquer checklist guidée</string>
     <string name="xfeeder_empty_session">Aucune session guidée locale sur ce secteur. Créez une session pour démarrer.</string>
     <string name="xfeeder_entry_choice_title">Choix session secteur</string>
     <string name="xfeeder_action_resume_latest">Reprendre la dernière session</string>
@@ -554,6 +594,10 @@
     <string name="xfeeder_action_open_navigation_to_zone">Navigation vers la zone</string>
     <string name="xfeeder_action_enable_proximity">Activer le mode proximité</string>
     <string name="xfeeder_action_disable_proximity">Désactiver le mode proximité</string>
+    <string name="xfeeder_action_show_geospatial_advanced">Afficher réglages géospatiaux avancés</string>
+    <string name="xfeeder_action_hide_geospatial_advanced">Masquer réglages géospatiaux avancés</string>
+    <string name="xfeeder_section_review_capture">Capture résultat terrain</string>
+    <string name="xfeeder_section_review_capture_hint">Validez le résultat secteur et les notes avant création du brouillon rapport.</string>
     <string name="xfeeder_map_marker_site">Site</string>
     <string name="xfeeder_map_marker_zone_target">Zone cible de mesure</string>
     <string name="xfeeder_header_sector_cells_context">Contexte systèmes/opérateurs du secteur</string>
@@ -591,6 +635,9 @@
     <string name="xfeeder_step_finalize_summary">Finaliser le résumé secteur</string>
 
     <string name="ret_shell_disclaimer">Shell guidé local RET: exécution assistée sans automatisation radio OEM.</string>
+    <string name="ret_mission_runtime_title">Mission RET terrain</string>
+    <string name="ret_mission_signal_history_count">Sessions locales: %1$d</string>
+    <string name="ret_mission_signal_proximity_mode">Mode proximité actif: %1$s</string>
     <string name="ret_label_site_sector">Site: %1$s | Secteur: %2$s</string>
     <string name="ret_label_session_status">Statut session RET: %1$s</string>
     <string name="ret_label_status_update">Mettre à jour le statut session RET</string>
@@ -619,6 +666,8 @@
     <string name="ret_label_required_step">Étape obligatoire</string>
     <string name="ret_label_optional_step">Étape optionnelle</string>
     <string name="ret_header_checklist">Checklist guidée RET</string>
+    <string name="ret_action_show_checklist">Afficher la checklist RET</string>
+    <string name="ret_action_hide_checklist">Masquer la checklist RET</string>
     <string name="ret_header_session_history">Historique sessions RET secteur (%1$d)</string>
     <string name="ret_section_mission_status">Statut mission RET</string>
     <string name="ret_section_runtime_empty_title">Démarrage mission RET</string>
@@ -626,8 +675,12 @@
     <string name="ret_section_primary_actions_hint">Sauvegardez la progression puis créez le brouillon de revue.</string>
     <string name="ret_section_execution_controls_title">Contrôles d’exécution RET</string>
     <string name="ret_section_execution_controls_hint">Mettez à jour le statut session et le résultat opérationnel.</string>
+    <string name="ret_action_show_execution_controls">Afficher les contrôles d’exécution</string>
+    <string name="ret_action_hide_execution_controls">Masquer les contrôles d’exécution</string>
     <string name="ret_section_summary_inputs_title">Synthèse opérateur</string>
     <string name="ret_section_summary_inputs_hint">Notes terrain et résumé final pour la revue.</string>
+    <string name="ret_action_show_review_capture">Afficher la capture revue</string>
+    <string name="ret_action_hide_review_capture">Masquer la capture revue</string>
     <string name="ret_section_blocking_points_title">Blocages de clôture RET</string>
     <string name="ret_section_geospatial_hint">Contexte zone/proximité utilisé pendant la mission.</string>
     <string name="ret_action_show_geospatial_advanced">Afficher les détails géospatiaux avancés</string>
@@ -710,6 +763,11 @@
     <string name="report_draft_action_show_developer_tools">Afficher outils développeur sync</string>
     <string name="report_draft_action_hide_developer_tools">Masquer outils développeur sync</string>
     <string name="report_draft_section_review_header_title">Contexte de revue</string>
+    <string name="report_draft_section_guided_evidence_title">Évidence guidée</string>
+    <string name="report_draft_section_guided_evidence_hint">Projections workflow disponibles: %1$d</string>
+    <string name="report_draft_signal_guided_projection_count">Workflows projetés: %1$d</string>
+    <string name="report_draft_action_show_guided_evidence">Afficher l’évidence guidée détaillée</string>
+    <string name="report_draft_action_hide_guided_evidence">Masquer l’évidence guidée détaillée</string>
     <string name="report_draft_section_content_title">Contenu du rapport</string>
     <string name="report_draft_section_content_hint">Rédaction structurée pour lecture superviseur.</string>
     <string name="report_draft_section_actions_title">Actions de clôture locale</string>
@@ -719,6 +777,8 @@
     <string name="reviewer_control_tower_section_queue_actions_hint">Réduire le temps entre triage, ouverture et reprise.</string>
     <string name="reviewer_control_tower_section_lenses_title">Lentilles de triage</string>
     <string name="reviewer_control_tower_section_lenses_hint">Appliquez des presets pour prioriser immédiatement.</string>
+    <string name="reviewer_control_tower_action_show_queue_tuning">Afficher le tuning de file</string>
+    <string name="reviewer_control_tower_action_hide_queue_tuning">Masquer le tuning de file</string>
     <string name="reviewer_control_tower_section_advanced_title">Contrôles avancés supervision</string>
     <string name="reviewer_control_tower_summary_attention_short">Attention: %1$d • Sync KO: %2$d • Risque QoS: %3$d</string>
 

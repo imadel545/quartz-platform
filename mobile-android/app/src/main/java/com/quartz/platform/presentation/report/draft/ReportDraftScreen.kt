@@ -133,6 +133,7 @@ fun ReportDraftScreen(
         }
 
         var showDeveloperTools by rememberSaveable { mutableStateOf(false) }
+        var showClosureDetails by rememberSaveable { mutableStateOf(false) }
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -178,9 +179,43 @@ fun ReportDraftScreen(
             }
 
             item {
-                GuidedClosureProjectionCard(
-                    projections = state.closureProjections
-                )
+                OperationalSectionCard(
+                    title = stringResource(R.string.report_draft_section_guided_evidence_title),
+                    subtitle = stringResource(
+                        R.string.report_draft_section_guided_evidence_hint,
+                        state.closureProjections.size
+                    )
+                ) {
+                    OperationalSignalRow(
+                        signals = listOf(
+                            OperationalSignal(
+                                text = stringResource(
+                                    R.string.report_draft_signal_guided_projection_count,
+                                    state.closureProjections.size
+                                ),
+                                severity = if (state.closureProjections.isEmpty()) {
+                                    OperationalSeverity.NORMAL
+                                } else {
+                                    OperationalSeverity.SUCCESS
+                                }
+                            )
+                        )
+                    )
+                    AdvancedDisclosureButton(
+                        expanded = showClosureDetails,
+                        onToggle = { showClosureDetails = !showClosureDetails },
+                        showLabel = stringResource(R.string.report_draft_action_show_guided_evidence),
+                        hideLabel = stringResource(R.string.report_draft_action_hide_guided_evidence)
+                    )
+                }
+            }
+
+            if (showClosureDetails) {
+                item {
+                    GuidedClosureProjectionCard(
+                        projections = state.closureProjections
+                    )
+                }
             }
 
             if (state.isSyncSimulationControlVisible) {

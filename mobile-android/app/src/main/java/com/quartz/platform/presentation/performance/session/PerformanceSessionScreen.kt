@@ -23,6 +23,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -53,6 +57,11 @@ import com.quartz.platform.domain.model.QosScriptDefinition
 import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.qosExecutionEventSortOrder
+import com.quartz.platform.presentation.components.AdvancedDisclosureButton
+import com.quartz.platform.presentation.components.OperationalSectionCard
+import com.quartz.platform.presentation.components.OperationalSeverity
+import com.quartz.platform.presentation.components.OperationalSignal
+import com.quartz.platform.presentation.components.OperationalSignalRow
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -185,6 +194,10 @@ fun PerformanceSessionScreen(
             return@Scaffold
         }
 
+        var showSessionHistory by rememberSaveable { mutableStateOf(false) }
+        var showDiagnostics by rememberSaveable { mutableStateOf(false) }
+        var showChecklist by rememberSaveable { mutableStateOf(true) }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -193,20 +206,71 @@ fun PerformanceSessionScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                val workflowSignal = state.selectedSessionWorkflowType?.let { workflow ->
+                    OperationalSignal(
+                        text = stringResource(
+                            R.string.performance_signal_workflow,
+                            stringResource(performanceWorkflowTypeLabelRes(workflow))
+                        ),
+                        severity = OperationalSeverity.SUCCESS
+                    )
+                } ?: OperationalSignal(
+                    text = stringResource(R.string.performance_signal_no_active_session),
+                    severity = OperationalSeverity.WARNING
+                )
+                val prereqSignal = OperationalSignal(
+                    text = stringResource(
+                        R.string.performance_signal_prerequisites,
+                        if (state.prerequisiteNetworkReady && state.prerequisiteBatterySufficient && state.prerequisiteLocationReady) {
+                            stringResource(R.string.value_yes)
+                        } else {
+                            stringResource(R.string.value_no)
+                        }
+                    ),
+                    severity = if (state.prerequisiteNetworkReady && state.prerequisiteBatterySufficient && state.prerequisiteLocationReady) {
+                        OperationalSeverity.SUCCESS
+                    } else {
+                        OperationalSeverity.WARNING
+                    }
+                )
+                OperationalSectionCard(
+                    title = stringResource(R.string.performance_mission_title),
+                    subtitle = stringResource(
+                        R.string.performance_mission_subtitle,
+                        state.siteLabel.ifBlank { state.siteId }
+                    )
+                ) {
+                    Text(
+                        text = stringResource(R.string.performance_shell_disclaimer),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    OperationalSignalRow(
+                        signals = listOf(workflowSignal, prereqSignal)
+                    )
+                }
+            }
+
+            state.errorMessage?.let { error ->
+                item {
+                    OperationalSectionCard(
+                        title = stringResource(R.string.home_runtime_alert_title)
                     ) {
                         Text(
-                            text = stringResource(R.string.performance_shell_disclaimer),
-                            style = MaterialTheme.typography.bodySmall
+                            text = error,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium
                         )
+                    }
+                }
+            }
+
+            state.infoMessage?.let { info ->
+                item {
+                    OperationalSectionCard(
+                        title = stringResource(R.string.home_runtime_info_title)
+                    ) {
                         Text(
-                            text = stringResource(
-                                R.string.performance_label_site,
-                                state.siteLabel.ifBlank { state.siteId }
-                            ),
+                            text = info,
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -228,26 +292,40 @@ fun PerformanceSessionScreen(
             }
 
             item {
-                Text(
-                    text = stringResource(R.string.performance_header_session_history, state.sessionHistory.size),
-                    style = MaterialTheme.typography.titleMedium
+                AdvancedDisclosureButton(
+                    expanded = showSessionHistory,
+                    onToggle = { showSessionHistory = !showSessionHistory },
+                    showLabel = stringResource(
+                        R.string.performance_action_show_history,
+                        state.sessionHistory.size
+                    ),
+                    hideLabel = stringResource(
+                        R.string.performance_action_hide_history,
+                        state.sessionHistory.size
+                    )
                 )
             }
 
-            if (state.sessionHistory.isEmpty()) {
-                item {
-                    Text(
-                        text = stringResource(R.string.performance_empty_session),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            } else {
-                items(state.sessionHistory, key = { it.id }) { session ->
-                    PerformanceHistoryCard(
-                        session = session,
-                        isSelected = session.id == state.selectedSessionId,
-                        onSelect = onSelectHistorySessionClicked
-                    )
+            if (showSessionHistory) {
+                if (state.sessionHistory.isEmpty()) {
+                    item {
+                        OperationalSectionCard(
+                            title = stringResource(R.string.performance_header_session_history, 0)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.performance_empty_session),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                } else {
+                    items(state.sessionHistory, key = { session -> session.id }) { session ->
+                        PerformanceHistoryCard(
+                            session = session,
+                            isSelected = session.id == state.selectedSessionId,
+                            onSelect = onSelectHistorySessionClicked
+                        )
+                    }
                 }
             }
 
@@ -257,20 +335,6 @@ fun PerformanceSessionScreen(
                         session = session,
                         selectedStatus = state.selectedStatus,
                         onSessionStatusSelected = onSessionStatusSelected
-                    )
-                }
-
-                item {
-                    DeviceDiagnosticsCard(
-                        observedNetworkStatus = state.observedNetworkStatus,
-                        observedBatteryLevelPercent = state.observedBatteryLevelPercent,
-                        observedBatteryIsCharging = state.observedBatteryIsCharging,
-                        observedBatterySufficient = state.observedBatterySufficient,
-                        observedLocationAvailable = state.observedLocationAvailable,
-                        observedSignalsCapturedAtEpochMillis = state.observedSignalsCapturedAtEpochMillis,
-                        isRefreshing = state.isRefreshingDeviceDiagnostics,
-                        onRefreshDeviceDiagnosticsClicked = onRefreshDeviceDiagnosticsClicked,
-                        onApplyDeviceDiagnosticsClicked = onApplyDeviceDiagnosticsClicked
                     )
                 }
 
@@ -286,14 +350,43 @@ fun PerformanceSessionScreen(
                 }
 
                 item {
-                    Text(
-                        text = stringResource(R.string.performance_header_checklist),
-                        style = MaterialTheme.typography.titleMedium
+                    AdvancedDisclosureButton(
+                        expanded = showDiagnostics,
+                        onToggle = { showDiagnostics = !showDiagnostics },
+                        showLabel = stringResource(R.string.performance_action_show_diagnostics),
+                        hideLabel = stringResource(R.string.performance_action_hide_diagnostics)
                     )
                 }
 
-                items(session.steps, key = { it.code.name }) { step ->
-                    PerformanceStepCard(step = step, onStepStatusSelected = onStepStatusSelected)
+                if (showDiagnostics) {
+                    item {
+                        DeviceDiagnosticsCard(
+                            observedNetworkStatus = state.observedNetworkStatus,
+                            observedBatteryLevelPercent = state.observedBatteryLevelPercent,
+                            observedBatteryIsCharging = state.observedBatteryIsCharging,
+                            observedBatterySufficient = state.observedBatterySufficient,
+                            observedLocationAvailable = state.observedLocationAvailable,
+                            observedSignalsCapturedAtEpochMillis = state.observedSignalsCapturedAtEpochMillis,
+                            isRefreshing = state.isRefreshingDeviceDiagnostics,
+                            onRefreshDeviceDiagnosticsClicked = onRefreshDeviceDiagnosticsClicked,
+                            onApplyDeviceDiagnosticsClicked = onApplyDeviceDiagnosticsClicked
+                        )
+                    }
+                }
+
+                item {
+                    AdvancedDisclosureButton(
+                        expanded = showChecklist,
+                        onToggle = { showChecklist = !showChecklist },
+                        showLabel = stringResource(R.string.performance_action_show_checklist),
+                        hideLabel = stringResource(R.string.performance_action_hide_checklist)
+                    )
+                }
+
+                if (showChecklist) {
+                    items(session.steps, key = { step -> step.code.name }) { step ->
+                        PerformanceStepCard(step = step, onStepStatusSelected = onStepStatusSelected)
+                    }
                 }
 
                 when (session.workflowType) {
@@ -372,51 +465,37 @@ fun PerformanceSessionScreen(
                 }
 
                 item {
-                    OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
-                        value = state.notesInput,
-                        onValueChange = onNotesChanged,
-                        label = { Text(stringResource(R.string.performance_input_notes)) }
-                    )
-                }
-
-                item {
-                    OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
-                        value = state.resultSummaryInput,
-                        onValueChange = onResultSummaryChanged,
-                        label = { Text(stringResource(R.string.performance_input_result_summary)) }
-                    )
+                    OperationalSectionCard(
+                        title = stringResource(R.string.performance_section_review_capture),
+                        subtitle = stringResource(R.string.performance_section_review_capture_hint)
+                    ) {
+                        OutlinedTextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            value = state.resultSummaryInput,
+                            onValueChange = onResultSummaryChanged,
+                            label = { Text(stringResource(R.string.performance_input_result_summary)) }
+                        )
+                        OutlinedTextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            value = state.notesInput,
+                            onValueChange = onNotesChanged,
+                            label = { Text(stringResource(R.string.performance_input_notes)) }
+                        )
+                    }
                 }
 
                 state.completionGuardMessage?.let { guard ->
                     item {
-                        Text(
-                            text = guard,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        OperationalSectionCard(
+                            title = stringResource(R.string.home_runtime_alert_title)
+                        ) {
+                            Text(
+                                text = guard,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
                     }
-                }
-            }
-
-            state.errorMessage?.let { error ->
-                item {
-                    Text(
-                        text = error,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-
-            state.infoMessage?.let { info ->
-                item {
-                    Text(
-                        text = info,
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
                 }
             }
 
@@ -437,21 +516,23 @@ fun PerformanceSessionScreen(
             }
 
             item {
-                Button(
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = state.session != null,
-                    onClick = onOpenLinkedDraftClicked
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(stringResource(R.string.action_open_linked_report_draft))
-                }
-            }
-
-            item {
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = onBack
-                ) {
-                    Text(stringResource(R.string.action_back_to_site))
+                    Button(
+                        modifier = Modifier.weight(1f),
+                        enabled = state.session != null,
+                        onClick = onOpenLinkedDraftClicked
+                    ) {
+                        Text(stringResource(R.string.action_open_linked_report_draft))
+                    }
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = onBack
+                    ) {
+                        Text(stringResource(R.string.action_back_to_site))
+                    }
                 }
             }
         }
@@ -906,6 +987,10 @@ private fun QosPanel(
     onQosSuccessCountChanged: (String) -> Unit,
     onQosFailureCountChanged: (String) -> Unit
 ) {
+    var showRunPlan by rememberSaveable { mutableStateOf(false) }
+    var showTimeline by rememberSaveable { mutableStateOf(false) }
+    var showScriptEditor by rememberSaveable { mutableStateOf(false) }
+
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -1022,30 +1107,38 @@ private fun QosPanel(
                 }
             }
             if (runPlan.isNotEmpty()) {
-                Text(
-                    text = stringResource(R.string.performance_header_qos_run_plan),
-                    style = MaterialTheme.typography.titleSmall
+                AdvancedDisclosureButton(
+                    expanded = showRunPlan,
+                    onToggle = { showRunPlan = !showRunPlan },
+                    showLabel = stringResource(R.string.performance_action_show_qos_run_plan),
+                    hideLabel = stringResource(R.string.performance_action_hide_qos_run_plan)
                 )
-                runPlan.take(10).forEach { run ->
+                if (showRunPlan) {
                     Text(
-                        text = stringResource(
-                            R.string.performance_label_qos_run_plan_line,
-                            stringResource(qosTestFamilyLabelRes(run.family)),
-                            run.repetitionIndex,
-                            stringResource(qosRunPlanStatusLabelRes(run.status))
-                        ),
-                        style = MaterialTheme.typography.bodySmall
+                        text = stringResource(R.string.performance_header_qos_run_plan),
+                        style = MaterialTheme.typography.titleSmall
                     )
-                }
-                val hiddenRunCount = runPlan.size - 10
-                if (hiddenRunCount > 0) {
-                    Text(
-                        text = stringResource(
-                            R.string.performance_label_qos_run_plan_more,
-                            hiddenRunCount
-                        ),
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    runPlan.take(10).forEach { run ->
+                        Text(
+                            text = stringResource(
+                                R.string.performance_label_qos_run_plan_line,
+                                stringResource(qosTestFamilyLabelRes(run.family)),
+                                run.repetitionIndex,
+                                stringResource(qosRunPlanStatusLabelRes(run.status))
+                            ),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    val hiddenRunCount = runPlan.size - 10
+                    if (hiddenRunCount > 0) {
+                        Text(
+                            text = stringResource(
+                                R.string.performance_label_qos_run_plan_more,
+                                hiddenRunCount
+                            ),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
             }
             if (showCompletionIssues && completionIssues.isNotEmpty()) {
@@ -1188,46 +1281,54 @@ private fun QosPanel(
                     )
                 }
             }
-            Text(
-                text = stringResource(R.string.performance_header_qos_execution_timeline),
-                style = MaterialTheme.typography.titleSmall
+            AdvancedDisclosureButton(
+                expanded = showTimeline,
+                onToggle = { showTimeline = !showTimeline },
+                showLabel = stringResource(R.string.performance_action_show_qos_timeline),
+                hideLabel = stringResource(R.string.performance_action_hide_qos_timeline)
             )
-            if (timelineEvents.isEmpty()) {
+            if (showTimeline) {
                 Text(
-                    text = stringResource(R.string.performance_label_qos_timeline_empty),
-                    style = MaterialTheme.typography.bodySmall
+                    text = stringResource(R.string.performance_header_qos_execution_timeline),
+                    style = MaterialTheme.typography.titleSmall
                 )
-            } else {
-                timelineEvents
-                    .sortedWith(
-                        compareByDescending<QosExecutionTimelineEvent> { event ->
-                            event.checkpointSequence
-                        }.thenBy { event ->
-                            event.family.name
-                        }.thenBy { event ->
-                            event.repetitionIndex
-                        }.thenBy { event ->
-                            event.occurredAtEpochMillis
-                        }.thenBy { event ->
-                            qosExecutionEventSortOrder(event.eventType)
-                        }
+                if (timelineEvents.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.performance_label_qos_timeline_empty),
+                        style = MaterialTheme.typography.bodySmall
                     )
-                    .take(8)
-                    .forEach { event ->
-                        val line = stringResource(
-                            R.string.performance_label_qos_timeline_line,
-                            formatEpoch(event.occurredAtEpochMillis),
-                            stringResource(qosTestFamilyLabelRes(event.family)),
-                            event.repetitionIndex,
-                            stringResource(qosExecutionEventTypeLabelRes(event.eventType))
+                } else {
+                    timelineEvents
+                        .sortedWith(
+                            compareByDescending<QosExecutionTimelineEvent> { event ->
+                                event.checkpointSequence
+                            }.thenBy { event ->
+                                event.family.name
+                            }.thenBy { event ->
+                                event.repetitionIndex
+                            }.thenBy { event ->
+                                event.occurredAtEpochMillis
+                            }.thenBy { event ->
+                                qosExecutionEventSortOrder(event.eventType)
+                            }
                         )
-                        Text(
-                            text = event.reason?.takeIf { reason -> reason.isNotBlank() }?.let { reason ->
-                                "$line (${stringResource(R.string.label_failure_reason, reason)})"
-                            } ?: line,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+                        .take(8)
+                        .forEach { event ->
+                            val line = stringResource(
+                                R.string.performance_label_qos_timeline_line,
+                                formatEpoch(event.occurredAtEpochMillis),
+                                stringResource(qosTestFamilyLabelRes(event.family)),
+                                event.repetitionIndex,
+                                stringResource(qosExecutionEventTypeLabelRes(event.eventType))
+                            )
+                            Text(
+                                text = event.reason?.takeIf { reason -> reason.isNotBlank() }?.let { reason ->
+                                    "$line (${stringResource(R.string.label_failure_reason, reason)})"
+                                } ?: line,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                }
             }
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
@@ -1236,48 +1337,56 @@ private fun QosPanel(
                 label = { Text(stringResource(R.string.performance_input_qos_configured_repeat_count)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
-            Text(
-                text = stringResource(R.string.performance_header_qos_script_editor),
-                style = MaterialTheme.typography.titleSmall
+            AdvancedDisclosureButton(
+                expanded = showScriptEditor,
+                onToggle = { showScriptEditor = !showScriptEditor },
+                showLabel = stringResource(R.string.performance_action_show_qos_script_editor),
+                hideLabel = stringResource(R.string.performance_action_hide_qos_script_editor)
             )
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = scriptEditorName,
-                onValueChange = onQosScriptEditorNameChanged,
-                label = { Text(stringResource(R.string.performance_input_qos_script_name)) }
-            )
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = scriptEditorRepeat,
-                onValueChange = onQosScriptEditorRepeatChanged,
-                label = { Text(stringResource(R.string.performance_input_qos_script_repeat_count)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = scriptEditorTechnologies,
-                onValueChange = onQosScriptEditorTechnologiesChanged,
-                label = { Text(stringResource(R.string.performance_input_qos_script_technologies)) }
-            )
-            QosTestFamily.entries.forEach { family ->
-                ToggleRow(
-                    label = stringResource(qosTestFamilyLabelRes(family)),
-                    value = scriptEditorSelectedFamilies.contains(family),
-                    onChange = { onQosScriptEditorFamilyToggled(family) }
-                )
-            }
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isSavingScript,
-                onClick = onSaveQosScriptClicked
-            ) {
+            if (showScriptEditor) {
                 Text(
-                    if (isSavingScript) {
-                        stringResource(R.string.performance_action_save_loading)
-                    } else {
-                        stringResource(R.string.performance_action_save_qos_script)
-                    }
+                    text = stringResource(R.string.performance_header_qos_script_editor),
+                    style = MaterialTheme.typography.titleSmall
                 )
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = scriptEditorName,
+                    onValueChange = onQosScriptEditorNameChanged,
+                    label = { Text(stringResource(R.string.performance_input_qos_script_name)) }
+                )
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = scriptEditorRepeat,
+                    onValueChange = onQosScriptEditorRepeatChanged,
+                    label = { Text(stringResource(R.string.performance_input_qos_script_repeat_count)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = scriptEditorTechnologies,
+                    onValueChange = onQosScriptEditorTechnologiesChanged,
+                    label = { Text(stringResource(R.string.performance_input_qos_script_technologies)) }
+                )
+                QosTestFamily.entries.forEach { family ->
+                    ToggleRow(
+                        label = stringResource(qosTestFamilyLabelRes(family)),
+                        value = scriptEditorSelectedFamilies.contains(family),
+                        onChange = { onQosScriptEditorFamilyToggled(family) }
+                    )
+                }
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isSavingScript,
+                    onClick = onSaveQosScriptClicked
+                ) {
+                    Text(
+                        if (isSavingScript) {
+                            stringResource(R.string.performance_action_save_loading)
+                        } else {
+                            stringResource(R.string.performance_action_save_qos_script)
+                        }
+                    )
+                }
             }
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),

@@ -24,6 +24,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -33,7 +34,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +61,11 @@ import com.quartz.platform.domain.model.XfeederStepStatus
 import com.quartz.platform.domain.model.XfeederUnreliableReason
 import com.quartz.platform.domain.model.XfeederProximityEligibilityState
 import com.quartz.platform.domain.model.XfeederReferenceAltitudeSourceState
+import com.quartz.platform.presentation.components.AdvancedDisclosureButton
+import com.quartz.platform.presentation.components.OperationalSectionCard
+import com.quartz.platform.presentation.components.OperationalSeverity
+import com.quartz.platform.presentation.components.OperationalSignal
+import com.quartz.platform.presentation.components.OperationalSignalRow
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -194,6 +202,10 @@ fun XfeederGuidedSessionScreen(
             }
 
             else -> {
+                var showSessionHistory by rememberSaveable { mutableStateOf(false) }
+                var showSectorContext by rememberSaveable { mutableStateOf(false) }
+                var showChecklist by rememberSaveable { mutableStateOf(true) }
+
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -202,54 +214,86 @@ fun XfeederGuidedSessionScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     item {
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Column(
-                                modifier = Modifier.padding(14.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = stringResource(
-                                        R.string.xfeeder_label_site_sector,
-                                        if (state.siteLabel.isBlank()) state.siteId else state.siteLabel,
-                                        state.sectorCode.ifBlank { state.sectorId }
-                                    ),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = stringResource(R.string.xfeeder_shell_disclaimer),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+                        val proximitySignal = OperationalSignal(
+                            text = stringResource(
+                                R.string.xfeeder_signal_proximity_state,
+                                when (state.proximityEligibilityState) {
+                                    XfeederProximityEligibilityState.ELIGIBLE -> stringResource(R.string.xfeeder_value_proximity_eligible)
+                                    XfeederProximityEligibilityState.INELIGIBLE -> stringResource(R.string.xfeeder_value_proximity_ineligible)
+                                    XfeederProximityEligibilityState.SUPPORTED -> stringResource(R.string.xfeeder_value_proximity_supported)
+                                    XfeederProximityEligibilityState.UNAVAILABLE -> stringResource(R.string.xfeeder_value_proximity_unavailable)
+                                }
+                            ),
+                            severity = when (state.proximityEligibilityState) {
+                                XfeederProximityEligibilityState.ELIGIBLE -> OperationalSeverity.SUCCESS
+                                XfeederProximityEligibilityState.INELIGIBLE -> OperationalSeverity.WARNING
+                                XfeederProximityEligibilityState.SUPPORTED -> OperationalSeverity.NORMAL
+                                XfeederProximityEligibilityState.UNAVAILABLE -> OperationalSeverity.CRITICAL
                             }
+                        )
+                        val statusSignal = state.session?.let { session ->
+                            OperationalSignal(
+                                text = stringResource(
+                                    R.string.xfeeder_signal_session_status,
+                                    stringResource(xfeederSessionStatusLabelRes(session.status))
+                                ),
+                                severity = when (session.status) {
+                                    XfeederSessionStatus.COMPLETED -> OperationalSeverity.SUCCESS
+                                    XfeederSessionStatus.CANCELLED -> OperationalSeverity.WARNING
+                                    else -> OperationalSeverity.NORMAL
+                                }
+                            )
+                        }
+                        OperationalSectionCard(
+                            title = stringResource(R.string.xfeeder_mission_title),
+                            subtitle = stringResource(
+                                R.string.xfeeder_label_site_sector,
+                                if (state.siteLabel.isBlank()) state.siteId else state.siteLabel,
+                                state.sectorCode.ifBlank { state.sectorId }
+                            )
+                        ) {
+                            Text(
+                                text = stringResource(R.string.xfeeder_shell_disclaimer),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            OperationalSignalRow(
+                                signals = listOfNotNull(proximitySignal, statusSignal)
+                            )
                         }
                     }
 
                     state.errorMessage?.let { error ->
                         item {
-                            Text(
-                                text = error,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error
-                            )
+                            OperationalSectionCard(title = stringResource(R.string.home_runtime_alert_title)) {
+                                Text(
+                                    text = error,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
                     }
 
                     state.infoMessage?.let { info ->
                         item {
-                            Text(
-                                text = info,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            OperationalSectionCard(title = stringResource(R.string.home_runtime_info_title)) {
+                                Text(
+                                    text = info,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
                         }
                     }
 
                     state.completionGuardMessage?.let { guardMessage ->
                         item {
-                            Text(
-                                text = guardMessage,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error
-                            )
+                            OperationalSectionCard(title = stringResource(R.string.home_runtime_alert_title)) {
+                                Text(
+                                    text = guardMessage,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
                     }
 
@@ -264,36 +308,49 @@ fun XfeederGuidedSessionScreen(
 
                     if (state.session == null) {
                         item {
-                            Text(
-                                text = stringResource(R.string.xfeeder_empty_session),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                            OperationalSectionCard(title = stringResource(R.string.xfeeder_mission_title)) {
+                                Text(
+                                    text = stringResource(R.string.xfeeder_empty_session),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
                         }
                     } else {
                         item {
-                            Text(
-                                text = stringResource(
-                                    R.string.xfeeder_header_session_history,
+                            AdvancedDisclosureButton(
+                                expanded = showSessionHistory,
+                                onToggle = { showSessionHistory = !showSessionHistory },
+                                showLabel = stringResource(
+                                    R.string.xfeeder_action_show_history,
                                     state.sessionHistory.size
                                 ),
-                                style = MaterialTheme.typography.titleMedium
+                                hideLabel = stringResource(
+                                    R.string.xfeeder_action_hide_history,
+                                    state.sessionHistory.size
+                                )
                             )
                         }
 
-                        items(state.sessionHistory, key = { it.id }) { historyItem ->
-                            SessionHistoryItemCard(
-                                session = historyItem,
-                                isSelected = historyItem.id == state.session.id,
-                                onOpen = { onOpenHistorySession(historyItem.id) }
-                            )
+                        if (showSessionHistory) {
+                            items(state.sessionHistory, key = { historyItem -> historyItem.id }) { historyItem ->
+                                SessionHistoryItemCard(
+                                    session = historyItem,
+                                    isSelected = historyItem.id == state.session.id,
+                                    onOpen = { onOpenHistorySession(historyItem.id) }
+                                )
+                            }
+                        }
+
+                        item {
+                            SessionSummaryCard(state = state, onSessionStatusSelected = onSessionStatusSelected)
                         }
 
                         item {
                             GeospatialSessionSurfaceCard(
-                            state = state,
-                            onMeasurementZoneExtensionReasonChanged = onMeasurementZoneExtensionReasonChanged,
-                            onProximityReferenceAltitudeChanged = onProximityReferenceAltitudeChanged,
-                            onExtendMeasurementZoneClicked = onExtendMeasurementZoneClicked,
+                                state = state,
+                                onMeasurementZoneExtensionReasonChanged = onMeasurementZoneExtensionReasonChanged,
+                                onProximityReferenceAltitudeChanged = onProximityReferenceAltitudeChanged,
+                                onExtendMeasurementZoneClicked = onExtendMeasurementZoneClicked,
                                 onResetMeasurementZoneClicked = onResetMeasurementZoneClicked,
                                 onToggleProximityModeClicked = onToggleProximityModeClicked,
                                 onRefreshUserLocationClicked = onRefreshUserLocationClicked,
@@ -302,11 +359,18 @@ fun XfeederGuidedSessionScreen(
                         }
 
                         item {
-                            SectorCellsContextCard(state = state)
+                            AdvancedDisclosureButton(
+                                expanded = showSectorContext,
+                                onToggle = { showSectorContext = !showSectorContext },
+                                showLabel = stringResource(R.string.xfeeder_action_show_sector_context),
+                                hideLabel = stringResource(R.string.xfeeder_action_hide_sector_context)
+                            )
                         }
 
-                        item {
-                            SessionSummaryCard(state = state, onSessionStatusSelected = onSessionStatusSelected)
+                        if (showSectorContext) {
+                            item {
+                                SectorCellsContextCard(state = state)
+                            }
                         }
 
                         item {
@@ -326,35 +390,41 @@ fun XfeederGuidedSessionScreen(
                         }
 
                         item {
-                            Text(
-                                text = stringResource(R.string.xfeeder_header_checklist),
-                                style = MaterialTheme.typography.titleMedium
+                            AdvancedDisclosureButton(
+                                expanded = showChecklist,
+                                onToggle = { showChecklist = !showChecklist },
+                                showLabel = stringResource(R.string.xfeeder_action_show_checklist),
+                                hideLabel = stringResource(R.string.xfeeder_action_hide_checklist)
                             )
                         }
 
-                        items(state.session.steps, key = { it.code.name }) { step ->
-                            StepChecklistCard(
-                                step = step,
-                                onStepStatusSelected = onStepStatusSelected
-                            )
-                        }
-
-                        item {
-                            OutlinedTextField(
-                                value = state.notesInput,
-                                onValueChange = onNotesChanged,
-                                modifier = Modifier.fillMaxWidth(),
-                                label = { Text(stringResource(R.string.xfeeder_input_notes)) }
-                            )
+                        if (showChecklist) {
+                            items(state.session.steps, key = { step -> step.code.name }) { step ->
+                                StepChecklistCard(
+                                    step = step,
+                                    onStepStatusSelected = onStepStatusSelected
+                                )
+                            }
                         }
 
                         item {
-                            OutlinedTextField(
-                                value = state.resultSummaryInput,
-                                onValueChange = onResultSummaryChanged,
-                                modifier = Modifier.fillMaxWidth(),
-                                label = { Text(stringResource(R.string.xfeeder_input_result_summary)) }
-                            )
+                            OperationalSectionCard(
+                                title = stringResource(R.string.xfeeder_section_review_capture),
+                                subtitle = stringResource(R.string.xfeeder_section_review_capture_hint)
+                            ) {
+                                OutlinedTextField(
+                                    value = state.resultSummaryInput,
+                                    onValueChange = onResultSummaryChanged,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    label = { Text(stringResource(R.string.xfeeder_input_result_summary)) }
+                                )
+                                OutlinedTextField(
+                                    value = state.notesInput,
+                                    onValueChange = onNotesChanged,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    label = { Text(stringResource(R.string.xfeeder_input_notes)) }
+                                )
+                            }
                         }
 
                         item {
@@ -490,6 +560,8 @@ private fun GeospatialSessionSurfaceCard(
     onRefreshUserLocationClicked: () -> Unit,
     onOpenNavigationToMeasurementZone: () -> Unit
 ) {
+    var showAdvanced by rememberSaveable { mutableStateOf(false) }
+
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -503,13 +575,6 @@ private fun GeospatialSessionSurfaceCard(
                 text = stringResource(
                     R.string.xfeeder_label_measurement_zone_radius,
                     state.measurementZoneRadiusMeters
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.xfeeder_label_sector_azimuth,
-                    state.sectorAzimuthDegrees?.toString() ?: stringResource(R.string.value_not_available)
                 ),
                 style = MaterialTheme.typography.bodySmall
             )
@@ -590,15 +655,6 @@ private fun GeospatialSessionSurfaceCard(
                 style = MaterialTheme.typography.bodySmall
             )
             Text(
-                text = stringResource(
-                    R.string.xfeeder_label_operator_override_altitude,
-                    state.proximityReferenceAltitudeInput.ifBlank {
-                        stringResource(R.string.value_not_available)
-                    }
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
                 text = when (state.proximityEligibilityState) {
                     XfeederProximityEligibilityState.ELIGIBLE -> {
                         stringResource(R.string.xfeeder_helper_proximity_eligible)
@@ -629,40 +685,6 @@ private fun GeospatialSessionSurfaceCard(
                 userLatitude = state.userLocation?.latitude,
                 userLongitude = state.userLocation?.longitude
             )
-
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = state.measurementZoneExtensionReasonInput,
-                onValueChange = onMeasurementZoneExtensionReasonChanged,
-                label = { Text(stringResource(R.string.xfeeder_input_zone_extension_reason)) },
-                supportingText = { Text(stringResource(R.string.xfeeder_hint_zone_extension_reason)) }
-            )
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = state.proximityReferenceAltitudeInput,
-                onValueChange = onProximityReferenceAltitudeChanged,
-                label = { Text(stringResource(R.string.xfeeder_input_reference_altitude_override)) },
-                supportingText = { Text(stringResource(R.string.xfeeder_hint_reference_altitude_override)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    modifier = Modifier.weight(1f),
-                    onClick = onExtendMeasurementZoneClicked
-                ) {
-                    Text(stringResource(R.string.xfeeder_action_extend_zone))
-                }
-                Button(
-                    modifier = Modifier.weight(1f),
-                    onClick = onResetMeasurementZoneClicked
-                ) {
-                    Text(stringResource(R.string.xfeeder_action_reset_zone))
-                }
-            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -700,6 +722,64 @@ private fun GeospatialSessionSurfaceCard(
                         stringResource(R.string.xfeeder_action_enable_proximity)
                     }
                 )
+            }
+
+            AdvancedDisclosureButton(
+                expanded = showAdvanced,
+                onToggle = { showAdvanced = !showAdvanced },
+                showLabel = stringResource(R.string.xfeeder_action_show_geospatial_advanced),
+                hideLabel = stringResource(R.string.xfeeder_action_hide_geospatial_advanced)
+            )
+
+            if (showAdvanced) {
+                Text(
+                    text = stringResource(
+                        R.string.xfeeder_label_sector_azimuth,
+                        state.sectorAzimuthDegrees?.toString() ?: stringResource(R.string.value_not_available)
+                    ),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = stringResource(
+                        R.string.xfeeder_label_operator_override_altitude,
+                        state.proximityReferenceAltitudeInput.ifBlank {
+                            stringResource(R.string.value_not_available)
+                        }
+                    ),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = state.measurementZoneExtensionReasonInput,
+                    onValueChange = onMeasurementZoneExtensionReasonChanged,
+                    label = { Text(stringResource(R.string.xfeeder_input_zone_extension_reason)) },
+                    supportingText = { Text(stringResource(R.string.xfeeder_hint_zone_extension_reason)) }
+                )
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = state.proximityReferenceAltitudeInput,
+                    onValueChange = onProximityReferenceAltitudeChanged,
+                    label = { Text(stringResource(R.string.xfeeder_input_reference_altitude_override)) },
+                    supportingText = { Text(stringResource(R.string.xfeeder_hint_reference_altitude_override)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        modifier = Modifier.weight(1f),
+                        onClick = onExtendMeasurementZoneClicked
+                    ) {
+                        Text(stringResource(R.string.xfeeder_action_extend_zone))
+                    }
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = onResetMeasurementZoneClicked
+                    ) {
+                        Text(stringResource(R.string.xfeeder_action_reset_zone))
+                    }
+                }
             }
         }
     }

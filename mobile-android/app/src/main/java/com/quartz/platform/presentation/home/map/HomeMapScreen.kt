@@ -126,6 +126,7 @@ fun HomeMapScreen(
         }
 
         var showSupportActions by rememberSaveable { mutableStateOf(false) }
+        var showTargeting by rememberSaveable { mutableStateOf(state.searchQuery.isNotBlank()) }
 
         Column(
             modifier = Modifier
@@ -140,30 +141,6 @@ fun HomeMapScreen(
                 onOpenSelectedSite = onOpenSelectedSite,
                 onRecenter = onRecenter
             )
-
-            OperationalSectionCard(
-                title = stringResource(R.string.home_map_section_targeting_title),
-                subtitle = stringResource(R.string.home_map_section_targeting_hint)
-            ) {
-                OutlinedTextField(
-                    value = state.searchQuery,
-                    onValueChange = onSearchQueryChanged,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.hint_site_search)) },
-                    singleLine = true
-                )
-                Text(
-                    text = stringResource(R.string.label_sites_found, state.filteredSites.size),
-                    style = MaterialTheme.typography.bodySmall
-                )
-                if (state.hasNoSearchResults) {
-                    Text(
-                        text = stringResource(R.string.empty_map_no_search_result),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
 
             state.errorMessage?.let { error ->
                 RuntimeMessageCard(
@@ -203,6 +180,39 @@ fun HomeMapScreen(
                         cameraRequestVersion = state.cameraRequestVersion,
                         onSiteSelected = onMapSiteSelected
                     )
+                }
+            }
+
+            AdvancedDisclosureButton(
+                expanded = showTargeting,
+                onToggle = { showTargeting = !showTargeting },
+                showLabel = stringResource(R.string.home_action_show_site_targeting),
+                hideLabel = stringResource(R.string.home_action_hide_site_targeting)
+            )
+
+            if (showTargeting) {
+                OperationalSectionCard(
+                    title = stringResource(R.string.home_map_section_targeting_title),
+                    subtitle = stringResource(R.string.home_map_section_targeting_hint)
+                ) {
+                    OutlinedTextField(
+                        value = state.searchQuery,
+                        onValueChange = onSearchQueryChanged,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text(stringResource(R.string.hint_site_search)) },
+                        singleLine = true
+                    )
+                    Text(
+                        text = stringResource(R.string.label_sites_found, state.filteredSites.size),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (state.hasNoSearchResults) {
+                        Text(
+                            text = stringResource(R.string.empty_map_no_search_result),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
 

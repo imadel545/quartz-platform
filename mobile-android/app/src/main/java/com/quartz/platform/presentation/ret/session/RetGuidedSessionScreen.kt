@@ -116,8 +116,14 @@ fun RetGuidedSessionScreen(
     onCreateReportDraft: () -> Unit
 ) {
     var showHistory by rememberSaveable { mutableStateOf(false) }
+    var showExecutionControls by rememberSaveable { mutableStateOf(false) }
+    var showReviewCapture by rememberSaveable { mutableStateOf(false) }
+    var showChecklist by rememberSaveable { mutableStateOf(true) }
     LaunchedEffect(state.session?.id) {
         showHistory = false
+        showExecutionControls = false
+        showReviewCapture = false
+        showChecklist = true
     }
     Scaffold(
         topBar = {
@@ -147,24 +153,43 @@ fun RetGuidedSessionScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     item {
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.ret_shell_disclaimer),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                                Text(
-                                    text = stringResource(
-                                        R.string.ret_label_site_sector,
-                                        state.siteLabel.ifBlank { state.siteId },
-                                        state.sectorCode.ifBlank { state.sectorId }
+                        OperationalSectionCard(
+                            title = stringResource(R.string.ret_mission_runtime_title),
+                            subtitle = stringResource(
+                                R.string.ret_label_site_sector,
+                                state.siteLabel.ifBlank { state.siteId },
+                                state.sectorCode.ifBlank { state.sectorId }
+                            )
+                        ) {
+                            OperationalSignalRow(
+                                signals = listOf(
+                                    OperationalSignal(
+                                        text = stringResource(
+                                            R.string.ret_mission_signal_history_count,
+                                            state.sessionHistory.size
+                                        )
                                     ),
-                                    style = MaterialTheme.typography.bodyMedium
+                                    OperationalSignal(
+                                        text = stringResource(
+                                            R.string.ret_mission_signal_proximity_mode,
+                                            if (state.proximityModeEnabled) {
+                                                stringResource(R.string.value_yes)
+                                            } else {
+                                                stringResource(R.string.value_no)
+                                            }
+                                        ),
+                                        severity = if (state.proximityModeEnabled) {
+                                            OperationalSeverity.SUCCESS
+                                        } else {
+                                            OperationalSeverity.NORMAL
+                                        }
+                                    )
                                 )
-                            }
+                            )
+                            Text(
+                                text = stringResource(R.string.ret_shell_disclaimer),
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                     }
 
@@ -202,38 +227,60 @@ fun RetGuidedSessionScreen(
                         }
 
                         item {
-                            OperationalSectionCard(
-                                title = stringResource(R.string.ret_section_execution_controls_title),
-                                subtitle = stringResource(R.string.ret_section_execution_controls_hint)
-                            ) {
-                                SessionStatusCard(
-                                    state = state,
-                                    onSessionStatusSelected = onSessionStatusSelected
-                                )
-                                ResultOutcomeCard(
-                                    selectedOutcome = state.selectedOutcome,
-                                    onResultOutcomeSelected = onResultOutcomeSelected
-                                )
+                            AdvancedDisclosureButton(
+                                expanded = showExecutionControls,
+                                onToggle = { showExecutionControls = !showExecutionControls },
+                                showLabel = stringResource(R.string.ret_action_show_execution_controls),
+                                hideLabel = stringResource(R.string.ret_action_hide_execution_controls)
+                            )
+                        }
+
+                        if (showExecutionControls) {
+                            item {
+                                OperationalSectionCard(
+                                    title = stringResource(R.string.ret_section_execution_controls_title),
+                                    subtitle = stringResource(R.string.ret_section_execution_controls_hint)
+                                ) {
+                                    SessionStatusCard(
+                                        state = state,
+                                        onSessionStatusSelected = onSessionStatusSelected
+                                    )
+                                    ResultOutcomeCard(
+                                        selectedOutcome = state.selectedOutcome,
+                                        onResultOutcomeSelected = onResultOutcomeSelected
+                                    )
+                                }
                             }
                         }
 
                         item {
-                            OperationalSectionCard(
-                                title = stringResource(R.string.ret_section_summary_inputs_title),
-                                subtitle = stringResource(R.string.ret_section_summary_inputs_hint)
-                            ) {
-                                OutlinedTextField(
-                                    value = state.notesInput,
-                                    onValueChange = onNotesChanged,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    label = { Text(stringResource(R.string.ret_input_notes)) }
-                                )
-                                OutlinedTextField(
-                                    value = state.resultSummaryInput,
-                                    onValueChange = onResultSummaryChanged,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    label = { Text(stringResource(R.string.ret_input_result_summary)) }
-                                )
+                            AdvancedDisclosureButton(
+                                expanded = showReviewCapture,
+                                onToggle = { showReviewCapture = !showReviewCapture },
+                                showLabel = stringResource(R.string.ret_action_show_review_capture),
+                                hideLabel = stringResource(R.string.ret_action_hide_review_capture)
+                            )
+                        }
+
+                        if (showReviewCapture) {
+                            item {
+                                OperationalSectionCard(
+                                    title = stringResource(R.string.ret_section_summary_inputs_title),
+                                    subtitle = stringResource(R.string.ret_section_summary_inputs_hint)
+                                ) {
+                                    OutlinedTextField(
+                                        value = state.notesInput,
+                                        onValueChange = onNotesChanged,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        label = { Text(stringResource(R.string.ret_input_notes)) }
+                                    )
+                                    OutlinedTextField(
+                                        value = state.resultSummaryInput,
+                                        onValueChange = onResultSummaryChanged,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        label = { Text(stringResource(R.string.ret_input_result_summary)) }
+                                    )
+                                }
                             }
                         }
 
@@ -264,19 +311,30 @@ fun RetGuidedSessionScreen(
                         }
 
                         item {
-                            Text(
-                                text = stringResource(R.string.ret_header_checklist),
-                                style = MaterialTheme.typography.titleMedium
+                            AdvancedDisclosureButton(
+                                expanded = showChecklist,
+                                onToggle = { showChecklist = !showChecklist },
+                                showLabel = stringResource(R.string.ret_action_show_checklist),
+                                hideLabel = stringResource(R.string.ret_action_hide_checklist)
                             )
                         }
 
-                        items(state.session.steps, key = { it.code.name }) { step ->
-                            StepCard(
-                                stepCode = step.code,
-                                required = step.required,
-                                status = step.status,
-                                onStepStatusSelected = onStepStatusSelected
-                            )
+                        if (showChecklist) {
+                            item {
+                                Text(
+                                    text = stringResource(R.string.ret_header_checklist),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                            }
+
+                            items(state.session.steps, key = { it.code.name }) { step ->
+                                StepCard(
+                                    stepCode = step.code,
+                                    required = step.required,
+                                    status = step.status,
+                                    onStepStatusSelected = onStepStatusSelected
+                                )
+                            }
                         }
 
                         item {

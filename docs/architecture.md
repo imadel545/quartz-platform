@@ -110,9 +110,16 @@ Current Android implementation covers a bounded local-first workflow baseline:
     - queue-status filters/motifs and row-level/bulk transition actions for faster supervision loops
   - mission-driven UI recovery guardrails (runtime, not debug-first):
     - home/map and site detail surfaces prioritize mission entry/launch actions above technical depth
+    - home map site-targeting controls are progressive-disclosure only, keeping map mission context and primary CTAs above the fold
+    - site detail exposes local draft signals in summary while draft row listings are disclosure-based to reduce default scroll burden
+    - xfeeder runtime promotes mission/proximity status first and defers history/sector context/geospatial advanced controls
     - guided RET runtime keeps progress/status primary and defers full-history/detail through progressive disclosure
+    - débit/qos runtime isolates diagnostics/checklist/run-plan/timeline/script-editor behind bounded disclosures to avoid mixed mission+debug surfaces
     - report draft runtime flow keeps reviewer actions primary while debug sync tooling is explicitly gated behind developer disclosure
+    - report draft guided closure details are disclosure-gated after compact reviewer summary signals
+    - report list adds compact mission summary + concise qos closure wording for triage readability
     - control-tower advanced controls are collapsible to keep first-screen triage density readable on mobile
+    - control-tower queue-tuning filters are explicitly disclosure-based while presets remain immediately actionable
     - shared operational presentation primitives centralize section hierarchy, severity signal rendering, and advanced-disclosure behavior to reduce UX drift across runtime surfaces
 
 For XFeeder proximity, implementation is intentionally explicit and bounded:
