@@ -124,6 +124,10 @@ Current Android implementation covers a bounded local-first workflow baseline:
       - `PerformanceSessionScreen` enforces mission-first runtime order (preflight, active run, outcome capture) with advanced QoS controls disclosure-only
       - `ReportDraftScreen` enforces reviewer-first runtime order and keeps technical evidence/editor/debug paths disclosure-gated
       - `ReviewerControlTowerScreen` keeps urgency/queue actions above the fold and defers preset library/tuning/advanced controls behind disclosure
+    - mission surface consolidation v2 extends the runtime recovery to the remaining high-value surfaces:
+      - `ReportListScreen` now behaves as a reviewer/operator queue with explicit priority summary, dominant issue labeling, next-action guidance, and stronger workflow/sync/urgency visual differentiation
+      - `XfeederGuidedSessionScreen` now layers mission context, progress, terrain context, and outcome capture before checklist/history/advanced controls
+      - shared operational primitives now include compact metric rows and empty-state cards to reduce ad-hoc textual cards on mission/review surfaces
     - shared operational presentation primitives centralize section hierarchy, severity signal rendering, and advanced-disclosure behavior to reduce UX drift across runtime surfaces
     - shared mission/runtime primitives now include:
       - `MissionHeaderCard` to standardize mission header/action hierarchy across entry surfaces

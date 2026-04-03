@@ -11,9 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -31,22 +29,27 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
+import com.quartz.platform.domain.model.PerformanceWorkflowType
 import com.quartz.platform.domain.model.QosExecutionEngineState
-import com.quartz.platform.domain.model.QosExecutionIssueCode
-import com.quartz.platform.domain.model.NetworkStatus
+import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
 import com.quartz.platform.domain.model.ReportListClosureSummary
 import com.quartz.platform.domain.model.ReportSyncState
 import com.quartz.platform.domain.model.SiteReportListItem
 import com.quartz.platform.domain.model.XfeederSignal
+import com.quartz.platform.presentation.components.MissionHeaderCard
+import com.quartz.platform.presentation.components.OperationalEmptyStateCard
+import com.quartz.platform.presentation.components.OperationalMessageCard
+import com.quartz.platform.presentation.components.OperationalMetric
+import com.quartz.platform.presentation.components.OperationalMetricRow
 import com.quartz.platform.presentation.components.OperationalSectionCard
 import com.quartz.platform.presentation.components.OperationalSeverity
 import com.quartz.platform.presentation.components.OperationalSignal
 import com.quartz.platform.presentation.components.OperationalSignalRow
-import com.quartz.platform.presentation.performance.session.performanceSessionStatusLabelRes
 import com.quartz.platform.presentation.performance.session.performanceWorkflowTypeLabelRes
 import com.quartz.platform.presentation.ret.session.retResultOutcomeLabelRes
 import com.quartz.platform.presentation.sync.syncStateLabelRes
 import com.quartz.platform.presentation.xfeeder.session.xfeederSectorOutcomeLabelRes
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -86,6 +89,12 @@ fun ReportListScreen(
     onRetryFailedSync: (String) -> Unit,
     onFilterSelected: (ReportListFilter) -> Unit
 ) {
+    val rankedReports = state.filteredReports.sortedWith(
+        compareByDescending<SiteReportListItem> { reportPriorityScore(it) }
+            .thenByDescending { it.updatedAtEpochMillis }
+    )
+    val topPriorityReport = rankedReports.firstOrNull()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -114,10 +123,9 @@ fun ReportListScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = state.errorMessage,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyLarge
+                    OperationalEmptyStateCard(
+                        title = stringResource(R.string.report_list_error_title),
+                        message = state.errorMessage
                     )
                     Button(onClick = onBack) {
                         Text(stringResource(R.string.action_back_to_site))
@@ -134,13 +142,9 @@ fun ReportListScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = stringResource(R.string.empty_local_reports_for_site),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = stringResource(R.string.empty_local_reports_for_site_hint),
-                        style = MaterialTheme.typography.bodyMedium
+                    OperationalEmptyStateCard(
+                        title = stringResource(R.string.empty_local_reports_for_site),
+                        message = stringResource(R.string.empty_local_reports_for_site_hint)
                     )
                     Button(onClick = onBack) {
                         Text(stringResource(R.string.action_back_to_site))
@@ -157,79 +161,15 @@ fun ReportListScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     item {
-                        val failedSyncCount = state.filteredReports.count { it.syncState == ReportSyncState.FAILED }
-                        val guidedCount = state.filteredReports.count { it.originWorkflowType != null }
-                        OperationalSectionCard(
-                            title = stringResource(R.string.report_list_mission_title),
-                            subtitle = stringResource(R.string.label_site_id, state.siteId)
-                        ) {
-                            Text(
-                                text = stringResource(
-                                    R.string.report_list_mission_summary,
-                                    state.filteredReports.size,
-                                    state.reports.size
-                                ),
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                            OperationalSignalRow(
-                                signals = listOf(
-                                    OperationalSignal(
-                                        text = stringResource(R.string.report_list_signal_guided, guidedCount),
-                                        severity = if (guidedCount > 0) OperationalSeverity.SUCCESS else OperationalSeverity.NORMAL
-                                    ),
-                                    OperationalSignal(
-                                        text = stringResource(R.string.report_list_signal_sync_failed, failedSyncCount),
-                                        severity = if (failedSyncCount > 0) OperationalSeverity.CRITICAL else OperationalSeverity.SUCCESS
-                                    )
-                                )
-                            )
-                        }
-                    }
-                    item {
-                        ReportListFilterRow(
-                            selectedFilter = state.selectedFilter,
-                            onFilterSelected = onFilterSelected
+                        ReportListMissionHeader(
+                            state = state,
+                            rankedReports = rankedReports
                         )
                     }
 
-                    state.infoMessage?.let { info ->
+                    topPriorityReport?.let { report ->
                         item {
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = info,
-                                    modifier = Modifier.padding(16.dp),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
-                    }
-
-                    state.errorMessage?.let { error ->
-                        item {
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = error,
-                                    modifier = Modifier.padding(16.dp),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                    }
-
-                    if (state.isFilterEmpty) {
-                        item {
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = stringResource(R.string.empty_filtered_local_reports),
-                                    modifier = Modifier.padding(16.dp),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
-                    } else {
-                        items(state.filteredReports, key = { it.draftId }) { report ->
-                            ReportListItemCard(
+                            ReportListPriorityCard(
                                 report = report,
                                 isRetrying = report.draftId in state.retryingDraftIds,
                                 onOpenDraft = onOpenDraft,
@@ -239,7 +179,57 @@ fun ReportListScreen(
                     }
 
                     item {
-                        Button(
+                        OperationalSectionCard(
+                            title = stringResource(R.string.report_list_queue_title),
+                            subtitle = stringResource(R.string.report_list_queue_hint)
+                        ) {
+                            ReportListFilterRow(
+                                selectedFilter = state.selectedFilter,
+                                onFilterSelected = onFilterSelected
+                            )
+                        }
+                    }
+
+                    state.infoMessage?.let { info ->
+                        item {
+                            OperationalMessageCard(
+                                title = stringResource(R.string.home_runtime_info_title),
+                                message = info,
+                                severity = OperationalSeverity.NORMAL
+                            )
+                        }
+                    }
+
+                    state.errorMessage?.let { error ->
+                        item {
+                            OperationalMessageCard(
+                                title = stringResource(R.string.home_runtime_alert_title),
+                                message = error,
+                                severity = OperationalSeverity.CRITICAL
+                            )
+                        }
+                    }
+
+                    if (state.isFilterEmpty) {
+                        item {
+                            OperationalEmptyStateCard(
+                                title = stringResource(R.string.report_list_empty_filter_title),
+                                message = stringResource(R.string.empty_filtered_local_reports)
+                            )
+                        }
+                    } else {
+                        items(rankedReports, key = { it.draftId }) { report ->
+                            ReportQueueItemCard(
+                                report = report,
+                                isRetrying = report.draftId in state.retryingDraftIds,
+                                onOpenDraft = onOpenDraft,
+                                onRetryFailedSync = onRetryFailedSync
+                            )
+                        }
+                    }
+
+                    item {
+                        OutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = onBack
                         ) {
@@ -253,324 +243,514 @@ fun ReportListScreen(
 }
 
 @Composable
-private fun ReportListFilterRow(
-    selectedFilter: ReportListFilter,
-    onFilterSelected: (ReportListFilter) -> Unit
+private fun ReportListMissionHeader(
+    state: ReportListUiState,
+    rankedReports: List<SiteReportListItem>
 ) {
-    val filters = ReportListFilter.values().toList()
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.label_report_list_filter),
-            style = MaterialTheme.typography.bodyMedium
+    val failedSyncCount = rankedReports.count { it.syncState == ReportSyncState.FAILED }
+    val guidedCount = rankedReports.count { it.originWorkflowType != null }
+    val attentionCount = rankedReports.count(::reportNeedsAttention)
+    MissionHeaderCard(
+        title = stringResource(R.string.report_list_mission_title),
+        subtitle = stringResource(R.string.label_site_id, state.siteId),
+        signals = listOf(
+            OperationalSignal(
+                text = stringResource(
+                    R.string.report_list_selected_filter,
+                    reportFilterLabel(state.selectedFilter)
+                ),
+                severity = OperationalSeverity.NORMAL
+            )
+        ),
+        metrics = listOf(
+            OperationalMetric(
+                value = rankedReports.size.toString(),
+                label = stringResource(R.string.report_list_metric_visible),
+                severity = OperationalSeverity.NORMAL
+            ),
+            OperationalMetric(
+                value = guidedCount.toString(),
+                label = stringResource(R.string.report_list_metric_guided),
+                severity = if (guidedCount > 0) OperationalSeverity.SUCCESS else OperationalSeverity.NORMAL
+            ),
+            OperationalMetric(
+                value = attentionCount.toString(),
+                label = stringResource(R.string.report_list_metric_attention),
+                severity = if (attentionCount > 0) OperationalSeverity.WARNING else OperationalSeverity.SUCCESS
+            ),
+            OperationalMetric(
+                value = failedSyncCount.toString(),
+                label = stringResource(R.string.report_list_metric_sync_failed),
+                severity = if (failedSyncCount > 0) OperationalSeverity.CRITICAL else OperationalSeverity.SUCCESS
+            )
         )
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(filters) { filter ->
-                FilterChip(
-                    selected = filter == selectedFilter,
-                    onClick = { onFilterSelected(filter) },
-                    label = {
-                        Text(
-                            text = when (filter) {
-                                ReportListFilter.ALL -> stringResource(R.string.report_list_filter_all)
-                                ReportListFilter.XFEEDER -> stringResource(R.string.report_list_filter_xfeeder)
-                                ReportListFilter.RET -> stringResource(R.string.report_list_filter_ret)
-                                ReportListFilter.PERFORMANCE -> stringResource(R.string.report_list_filter_performance)
-                                ReportListFilter.NON_GUIDED -> stringResource(R.string.report_list_filter_non_guided)
-                            }
-                        )
-                    }
-                )
-            }
-        }
+    ) {
+        Text(
+            text = stringResource(
+                R.string.report_list_mission_summary,
+                rankedReports.size,
+                state.reports.size
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
 @Composable
-private fun ReportListItemCard(
+private fun ReportListPriorityCard(
     report: SiteReportListItem,
     isRetrying: Boolean,
     onOpenDraft: (String) -> Unit,
     onRetryFailedSync: (String) -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+    OperationalSectionCard(
+        title = stringResource(R.string.report_list_priority_title),
+        subtitle = stringResource(R.string.report_list_priority_hint)
+    ) {
+        ReportQueueCardBody(
+            report = report,
+            isRetrying = isRetrying,
+            onOpenDraft = onOpenDraft,
+            onRetryFailedSync = onRetryFailedSync,
+            emphasizeTitle = true
+        )
+    }
+}
+
+@Composable
+private fun ReportQueueItemCard(
+    report: SiteReportListItem,
+    isRetrying: Boolean,
+    onOpenDraft: (String) -> Unit,
+    onRetryFailedSync: (String) -> Unit
+) {
+    OperationalSectionCard(
+        title = report.title,
+        subtitle = stringResource(
+            R.string.report_list_card_subtitle,
+            reportWorkflowLabel(report),
+            report.revision,
+            formatEpoch(report.updatedAtEpochMillis),
+            formatRelativeAge(report.updatedAtEpochMillis)
+        )
+    ) {
+        ReportQueueCardBody(
+            report = report,
+            isRetrying = isRetrying,
+            onOpenDraft = onOpenDraft,
+            onRetryFailedSync = onRetryFailedSync,
+            emphasizeTitle = false
+        )
+    }
+}
+
+@Composable
+private fun ReportQueueCardBody(
+    report: SiteReportListItem,
+    isRetrying: Boolean,
+    onOpenDraft: (String) -> Unit,
+    onRetryFailedSync: (String) -> Unit,
+    emphasizeTitle: Boolean
+) {
+    val dominantIssue = reportDominantIssue(report)
+    val nextAction = reportNextAction(report)
+    val issueSeverity = reportSeverity(report)
+
+    if (emphasizeTitle) {
+        Text(
+            text = report.title,
+            style = MaterialTheme.typography.titleMedium
+        )
+        Text(
+            text = stringResource(
+                R.string.report_list_card_subtitle,
+                reportWorkflowLabel(report),
+                report.revision,
+                formatEpoch(report.updatedAtEpochMillis),
+                formatRelativeAge(report.updatedAtEpochMillis)
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+
+    OperationalSignalRow(
+        signals = listOf(
+            OperationalSignal(
+                text = stringResource(
+                    R.string.label_sync_state,
+                    stringResource(syncStateLabelRes(report.syncState))
+                ),
+                severity = syncStateSeverity(report.syncState)
+            ),
+            OperationalSignal(
+                text = reportWorkflowLabel(report),
+                severity = if (report.originWorkflowType != null) {
+                    OperationalSeverity.SUCCESS
+                } else {
+                    OperationalSeverity.NORMAL
+                }
+            ),
+            OperationalSignal(
+                text = dominantIssue,
+                severity = issueSeverity
+            )
+        ),
+        maxVisibleSignals = 3
+    )
+
+    Text(
+        text = stringResource(R.string.report_list_issue_line, dominantIssue),
+        style = MaterialTheme.typography.bodyMedium,
+        color = if (issueSeverity == OperationalSeverity.CRITICAL) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        }
+    )
+    Text(
+        text = stringResource(R.string.report_list_next_action_line, nextAction),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+
+    OperationalMetricRow(metrics = reportMetrics(report))
+
+    reportFailureTraceMessage(report)?.let { failureTrace ->
+        Text(
+            text = failureTrace,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Button(
+            modifier = Modifier.weight(1f),
+            onClick = { onOpenDraft(report.draftId) }
         ) {
-            Text(text = report.title, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = stringResource(R.string.label_revision, report.revision),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = stringResource(R.string.label_updated_at, formatEpoch(report.updatedAtEpochMillis)),
-                style = MaterialTheme.typography.bodySmall
-            )
-            SyncStateChip(syncState = report.syncState)
-            report.closureSummary?.let { summary ->
-                ReportClosureSummaryRow(summary = summary)
-            }
-            if (report.syncState == ReportSyncState.FAILED) {
-                ReportFailureTrace(
-                    lastAttemptAtEpochMillis = report.syncTrace.lastAttemptAtEpochMillis,
-                    retryCount = report.syncTrace.retryCount,
-                    failureReason = report.syncTrace.failureReason
-                )
-            }
+            Text(stringResource(R.string.action_open_draft))
+        }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+        if (report.syncState == ReportSyncState.FAILED) {
+            OutlinedButton(
+                modifier = Modifier.weight(1f),
+                enabled = !isRetrying,
+                onClick = { onRetryFailedSync(report.draftId) }
             ) {
-                Button(
-                    modifier = Modifier.weight(1f),
-                    onClick = { onOpenDraft(report.draftId) }
-                ) {
-                    Text(stringResource(R.string.action_open_draft))
-                }
-
-                if (report.syncState == ReportSyncState.FAILED) {
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        enabled = !isRetrying,
-                        onClick = { onRetryFailedSync(report.draftId) }
-                    ) {
-                        Text(
-                            if (isRetrying) {
-                                stringResource(R.string.action_retry_sync_loading)
-                            } else {
-                                stringResource(R.string.action_retry_sync)
-                            }
-                        )
+                Text(
+                    if (isRetrying) {
+                        stringResource(R.string.action_retry_sync_loading)
+                    } else {
+                        stringResource(R.string.action_retry_sync)
                     }
-                }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ReportClosureSummaryRow(summary: ReportListClosureSummary) {
-    val workflowLabel = when (summary) {
+private fun ReportListFilterRow(
+    selectedFilter: ReportListFilter,
+    onFilterSelected: (ReportListFilter) -> Unit
+) {
+    val filters = ReportListFilter.values().toList()
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(filters) { filter ->
+            FilterChip(
+                selected = filter == selectedFilter,
+                onClick = { onFilterSelected(filter) },
+                label = { Text(reportFilterLabel(filter)) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun reportFilterLabel(filter: ReportListFilter): String {
+    return when (filter) {
+        ReportListFilter.ALL -> stringResource(R.string.report_list_filter_all)
+        ReportListFilter.XFEEDER -> stringResource(R.string.report_list_filter_xfeeder)
+        ReportListFilter.RET -> stringResource(R.string.report_list_filter_ret)
+        ReportListFilter.PERFORMANCE -> stringResource(R.string.report_list_filter_performance)
+        ReportListFilter.NON_GUIDED -> stringResource(R.string.report_list_filter_non_guided)
+    }
+}
+
+@Composable
+private fun reportWorkflowLabel(report: SiteReportListItem): String {
+    return when (val summary = report.closureSummary) {
         is ReportListClosureSummary.Xfeeder -> stringResource(R.string.report_list_closure_workflow_xfeeder)
         is ReportListClosureSummary.Ret -> stringResource(R.string.report_list_closure_workflow_ret)
         is ReportListClosureSummary.Throughput -> stringResource(
             R.string.report_list_closure_workflow_performance,
-            stringResource(performanceWorkflowTypeLabelRes(com.quartz.platform.domain.model.PerformanceWorkflowType.THROUGHPUT))
+            stringResource(performanceWorkflowTypeLabelRes(PerformanceWorkflowType.THROUGHPUT))
         )
         is ReportListClosureSummary.Qos -> stringResource(
             R.string.report_list_closure_workflow_performance,
-            stringResource(performanceWorkflowTypeLabelRes(com.quartz.platform.domain.model.PerformanceWorkflowType.QOS_SCRIPT))
+            stringResource(performanceWorkflowTypeLabelRes(PerformanceWorkflowType.QOS_SCRIPT))
         )
+        null -> when (report.originWorkflowType) {
+            ReportDraftOriginWorkflowType.XFEEDER -> stringResource(R.string.report_list_filter_xfeeder)
+            ReportDraftOriginWorkflowType.RET -> stringResource(R.string.report_list_filter_ret)
+            ReportDraftOriginWorkflowType.PERFORMANCE -> stringResource(R.string.report_list_filter_performance)
+            null -> stringResource(R.string.report_list_workflow_non_guided)
+        }
     }
-    val resultLabel = when (summary) {
-        is ReportListClosureSummary.Xfeeder -> {
-            stringResource(xfeederSectorOutcomeLabelRes(summary.sectorOutcome))
-        }
+}
 
-        is ReportListClosureSummary.Ret -> {
-            stringResource(retResultOutcomeLabelRes(summary.resultOutcome))
+@Composable
+private fun reportDominantIssue(report: SiteReportListItem): String {
+    if (report.syncState == ReportSyncState.FAILED) {
+        return stringResource(R.string.report_list_issue_sync_failed)
+    }
+    return when (val summary = report.closureSummary) {
+        is ReportListClosureSummary.Qos -> when {
+            summary.failedFamilyCount > 0 || summary.blockedFamilyCount > 0 ->
+                stringResource(R.string.report_list_issue_qos_execution)
+            summary.dominantIssueCode != null || !summary.preconditionsReady ->
+                stringResource(R.string.report_list_issue_qos_preflight)
+            summary.pendingRunCount > 0 ->
+                stringResource(R.string.report_list_issue_guided_follow_up)
+            else -> stringResource(R.string.report_list_issue_ready_for_review)
         }
-
         is ReportListClosureSummary.Throughput -> {
-            stringResource(
-                performanceSessionStatusLabelRes(summary.sessionStatus)
-            )
+            if (!summary.preconditionsReady) {
+                stringResource(R.string.report_list_issue_performance_preflight)
+            } else {
+                stringResource(R.string.report_list_issue_ready_for_review)
+            }
         }
-
-        is ReportListClosureSummary.Qos -> {
-            stringResource(
-                performanceSessionStatusLabelRes(summary.sessionStatus)
-            )
+        is ReportListClosureSummary.Ret -> {
+            if (summary.completedRequiredStepCount < summary.requiredStepCount) {
+                stringResource(R.string.report_list_issue_guided_follow_up)
+            } else {
+                stringResource(R.string.report_list_issue_ready_for_review)
+            }
         }
-    }
-    val signalLabel = when (summary) {
         is ReportListClosureSummary.Xfeeder -> {
             when (summary.signal) {
-                XfeederSignal.RELATED_SECTOR -> stringResource(R.string.report_list_closure_signal_related_sector)
-                XfeederSignal.UNRELIABLE -> stringResource(R.string.report_list_closure_signal_unreliable)
-                XfeederSignal.OBSERVED_MULTIPLE -> stringResource(R.string.report_list_closure_signal_observed_multiple)
-                null -> null
+                XfeederSignal.RELATED_SECTOR,
+                XfeederSignal.UNRELIABLE,
+                XfeederSignal.OBSERVED_MULTIPLE -> stringResource(R.string.report_list_issue_xfeeder_signal)
+                null -> stringResource(R.string.report_list_issue_ready_for_review)
             }
         }
-
-        is ReportListClosureSummary.Ret -> {
-            stringResource(
-                R.string.report_list_closure_signal_ret_steps,
-                summary.completedRequiredStepCount,
-                summary.requiredStepCount
-            )
-        }
-
-        is ReportListClosureSummary.Throughput -> {
-            val baseSignal = stringResource(
-                R.string.report_list_closure_signal_performance_throughput,
-                summary.completedRequiredStepCount,
-                summary.requiredStepCount,
-                if (summary.preconditionsReady) {
-                    stringResource(R.string.value_yes)
-                } else {
-                    stringResource(R.string.value_no)
-                },
-                summary.downloadMbps?.toString() ?: "-",
-                summary.uploadMbps?.toString() ?: "-",
-                summary.latencyMs?.toString() ?: "-"
-            )
-            val diagnostics = buildDeviceDiagnosticsSignal(
-                observedNetworkStatus = summary.observedNetworkStatus,
-                observedBatteryLevelPercent = summary.observedBatteryLevelPercent,
-                observedLocationAvailable = summary.observedLocationAvailable
-            )
-            diagnostics?.let { "$baseSignal · $it" } ?: baseSignal
-        }
-
-        is ReportListClosureSummary.Qos -> {
-            val baseSignal = stringResource(
-                R.string.report_list_closure_signal_performance_qos_compact,
-                summary.completedRequiredStepCount,
-                summary.requiredStepCount,
-                if (summary.preconditionsReady) {
-                    stringResource(R.string.value_yes)
-                } else {
-                    stringResource(R.string.value_no)
-                },
-                summary.testFamilyCount,
-                summary.completedFamilyCount,
-                summary.failedFamilyCount,
-                summary.blockedFamilyCount,
-                stringResource(qosEngineStateLabelRes(summary.executionEngineState))
-            )
-            val withCoverage = "$baseSignal · ${
-                stringResource(
-                    R.string.report_list_closure_signal_performance_qos_coverage,
-                    summary.familiesMeetingRequiredRepeatCount,
-                    summary.requiredRepeatCount,
-                    summary.pendingRunCount
-                )
-            }"
-            val withReason = summary.dominantIssueCode?.let { code ->
-                "$withCoverage · ${
-                    stringResource(
-                        R.string.report_list_closure_signal_performance_qos_reason,
-                        stringResource(qosIssueCodeLabelRes(code))
-                    )
-                }"
-            } ?: withCoverage
-            val diagnostics = buildDeviceDiagnosticsSignal(
-                observedNetworkStatus = summary.observedNetworkStatus,
-                observedBatteryLevelPercent = summary.observedBatteryLevelPercent,
-                observedLocationAvailable = summary.observedLocationAvailable
-            )
-            diagnostics?.let { "$withReason · $it" } ?: withReason
-        }
-    }
-
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.report_list_closure_summary_title),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.report_list_closure_summary_line,
-                    workflowLabel,
-                    resultLabel
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-            signalLabel?.let { signal ->
-                Text(
-                    text = stringResource(R.string.report_list_closure_summary_signal, signal),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
+        null -> when (report.syncState) {
+            ReportSyncState.PENDING -> stringResource(R.string.report_list_issue_sync_pending)
+            ReportSyncState.LOCAL_ONLY -> stringResource(R.string.report_list_issue_local_review)
+            ReportSyncState.SYNCED -> stringResource(R.string.report_list_issue_ready_for_review)
+            ReportSyncState.FAILED -> stringResource(R.string.report_list_issue_sync_failed)
         }
     }
 }
 
 @Composable
-private fun buildDeviceDiagnosticsSignal(
-    observedNetworkStatus: NetworkStatus?,
-    observedBatteryLevelPercent: Int?,
-    observedLocationAvailable: Boolean?
-): String? {
-    val parts = buildList {
-        observedNetworkStatus?.let { network ->
-            add(
-                stringResource(
-                    R.string.report_list_closure_signal_device_network,
-                    stringResource(networkStatusLabelRes(network))
-                )
-            )
+private fun reportNextAction(report: SiteReportListItem): String {
+    return when {
+        report.syncState == ReportSyncState.FAILED -> {
+            stringResource(R.string.report_list_next_action_retry_sync)
         }
-        observedBatteryLevelPercent?.let { battery ->
-            add(
-                stringResource(
-                    R.string.report_list_closure_signal_device_battery,
-                    battery
-                )
-            )
+        report.originWorkflowType != null -> {
+            stringResource(R.string.report_list_next_action_open_guided)
         }
-        observedLocationAvailable?.let { locationAvailable ->
-            add(
-                stringResource(
-                    R.string.report_list_closure_signal_device_location,
-                    if (locationAvailable) {
-                        stringResource(R.string.value_yes)
-                    } else {
-                        stringResource(R.string.value_no)
-                    }
-                )
-            )
+        else -> {
+            stringResource(R.string.report_list_next_action_open_draft)
         }
     }
-    return parts.takeIf { it.isNotEmpty() }?.joinToString(" • ")
 }
 
 @Composable
-private fun ReportFailureTrace(
-    lastAttemptAtEpochMillis: Long?,
-    retryCount: Int,
-    failureReason: String?
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        lastAttemptAtEpochMillis?.let {
-            Text(
-                text = stringResource(R.string.label_last_attempt, formatEpoch(it)),
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-        Text(
-            text = stringResource(R.string.label_retry_count, retryCount),
-            style = MaterialTheme.typography.bodySmall
+private fun reportMetrics(report: SiteReportListItem): List<OperationalMetric> {
+    val baseMetrics = mutableListOf(
+        OperationalMetric(
+            value = report.revision.toString(),
+            label = stringResource(R.string.report_list_metric_revision),
+            severity = OperationalSeverity.NORMAL
         )
-        if (!failureReason.isNullOrBlank()) {
-            Text(
-                text = stringResource(R.string.label_local_failure_reason, failureReason),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
+    )
+    when (val summary = report.closureSummary) {
+        is ReportListClosureSummary.Xfeeder -> {
+            baseMetrics += OperationalMetric(
+                value = stringResource(xfeederSectorOutcomeLabelRes(summary.sectorOutcome)),
+                label = stringResource(R.string.report_list_metric_result),
+                severity = if (summary.signal == null) {
+                    OperationalSeverity.SUCCESS
+                } else {
+                    OperationalSeverity.WARNING
+                }
             )
         }
+        is ReportListClosureSummary.Ret -> {
+            baseMetrics += OperationalMetric(
+                value = "${summary.completedRequiredStepCount}/${summary.requiredStepCount}",
+                label = stringResource(R.string.report_list_metric_required_steps),
+                severity = if (summary.completedRequiredStepCount == summary.requiredStepCount) {
+                    OperationalSeverity.SUCCESS
+                } else {
+                    OperationalSeverity.WARNING
+                }
+            )
+            baseMetrics += OperationalMetric(
+                value = stringResource(retResultOutcomeLabelRes(summary.resultOutcome)),
+                label = stringResource(R.string.report_list_metric_result),
+                severity = OperationalSeverity.NORMAL
+            )
+        }
+        is ReportListClosureSummary.Throughput -> {
+            baseMetrics += OperationalMetric(
+                value = "${summary.completedRequiredStepCount}/${summary.requiredStepCount}",
+                label = stringResource(R.string.report_list_metric_required_steps),
+                severity = if (summary.completedRequiredStepCount == summary.requiredStepCount) {
+                    OperationalSeverity.SUCCESS
+                } else {
+                    OperationalSeverity.WARNING
+                }
+            )
+            baseMetrics += OperationalMetric(
+                value = if (summary.preconditionsReady) {
+                    stringResource(R.string.value_yes)
+                } else {
+                    stringResource(R.string.value_no)
+                },
+                label = stringResource(R.string.report_list_metric_preflight),
+                severity = if (summary.preconditionsReady) {
+                    OperationalSeverity.SUCCESS
+                } else {
+                    OperationalSeverity.WARNING
+                }
+            )
+        }
+        is ReportListClosureSummary.Qos -> {
+            baseMetrics += OperationalMetric(
+                value = "${summary.completedFamilyCount}/${summary.testFamilyCount}",
+                label = stringResource(R.string.report_list_metric_families),
+                severity = if (summary.failedFamilyCount == 0 && summary.blockedFamilyCount == 0) {
+                    OperationalSeverity.SUCCESS
+                } else {
+                    OperationalSeverity.WARNING
+                }
+            )
+            baseMetrics += OperationalMetric(
+                value = "${summary.familiesMeetingRequiredRepeatCount}/${summary.requiredRepeatCount}",
+                label = stringResource(R.string.report_list_metric_repeat_coverage),
+                severity = if (summary.pendingRunCount == 0) {
+                    OperationalSeverity.SUCCESS
+                } else {
+                    OperationalSeverity.WARNING
+                }
+            )
+        }
+        null -> Unit
+    }
+    if (report.syncState == ReportSyncState.FAILED) {
+        baseMetrics += OperationalMetric(
+            value = report.syncTrace.retryCount.toString(),
+            label = stringResource(R.string.report_list_metric_retries),
+            severity = OperationalSeverity.CRITICAL
+        )
+    }
+    return baseMetrics.take(3)
+}
+
+private fun reportFailureTraceMessage(report: SiteReportListItem): String? {
+    if (report.syncState != ReportSyncState.FAILED) return null
+    val parts = buildList {
+        report.syncTrace.lastAttemptAtEpochMillis?.let {
+            add("Dernière tentative ${formatEpoch(it)}")
+        }
+        add("Retries ${report.syncTrace.retryCount}")
+        report.syncTrace.failureReason?.takeIf { it.isNotBlank() }?.let { reason ->
+            add(reason)
+        }
+    }
+    return parts.joinToString(" • ")
+}
+
+private fun reportPriorityScore(report: SiteReportListItem): Int {
+    var score = 0
+    when (report.syncState) {
+        ReportSyncState.FAILED -> score += 400
+        ReportSyncState.PENDING -> score += 180
+        ReportSyncState.LOCAL_ONLY -> score += 90
+        ReportSyncState.SYNCED -> Unit
+    }
+    when (val summary = report.closureSummary) {
+        is ReportListClosureSummary.Qos -> {
+            if (summary.failedFamilyCount > 0) score += 220
+            if (summary.blockedFamilyCount > 0) score += 200
+            if (!summary.preconditionsReady) score += 180
+            if (summary.dominantIssueCode != null) score += 160
+            if (summary.pendingRunCount > 0) score += 100
+        }
+        is ReportListClosureSummary.Throughput -> {
+            if (!summary.preconditionsReady) score += 120
+            if (summary.completedRequiredStepCount < summary.requiredStepCount) score += 80
+        }
+        is ReportListClosureSummary.Ret -> {
+            if (summary.completedRequiredStepCount < summary.requiredStepCount) score += 110
+        }
+        is ReportListClosureSummary.Xfeeder -> {
+            if (summary.signal != null) score += 100
+        }
+        null -> Unit
+    }
+    if (report.originWorkflowType != null) {
+        score += 40
+    }
+    return score
+}
+
+private fun reportNeedsAttention(report: SiteReportListItem): Boolean {
+    if (report.syncState == ReportSyncState.FAILED) return true
+    return when (val summary = report.closureSummary) {
+        is ReportListClosureSummary.Qos -> {
+            summary.failedFamilyCount > 0 ||
+                summary.blockedFamilyCount > 0 ||
+                !summary.preconditionsReady ||
+                summary.dominantIssueCode != null
+        }
+        is ReportListClosureSummary.Throughput -> !summary.preconditionsReady
+        is ReportListClosureSummary.Ret -> summary.completedRequiredStepCount < summary.requiredStepCount
+        is ReportListClosureSummary.Xfeeder -> summary.signal != null
+        null -> report.syncState == ReportSyncState.PENDING
     }
 }
 
 @Composable
-private fun SyncStateChip(syncState: ReportSyncState) {
-    AssistChip(
-        onClick = {},
-        label = {
-            Text(
-                stringResource(
-                    R.string.label_sync_state,
-                    stringResource(syncStateLabelRes(syncState))
-                )
-            )
-        }
-    )
+private fun reportSeverity(report: SiteReportListItem): OperationalSeverity {
+    return when {
+        report.syncState == ReportSyncState.FAILED -> OperationalSeverity.CRITICAL
+        report.closureSummary is ReportListClosureSummary.Qos && isCriticalQos(report.closureSummary) ->
+            OperationalSeverity.CRITICAL
+        reportNeedsAttention(report) -> OperationalSeverity.WARNING
+        report.originWorkflowType != null -> OperationalSeverity.SUCCESS
+        else -> OperationalSeverity.NORMAL
+    }
+}
+
+private fun isCriticalQos(summary: ReportListClosureSummary.Qos): Boolean {
+    return summary.failedFamilyCount > 0 ||
+        summary.blockedFamilyCount > 0 ||
+        summary.executionEngineState in setOf(
+            QosExecutionEngineState.FAILED,
+            QosExecutionEngineState.BLOCKED,
+            QosExecutionEngineState.PREFLIGHT_BLOCKED
+        )
+}
+
+private fun syncStateSeverity(syncState: ReportSyncState): OperationalSeverity {
+    return when (syncState) {
+        ReportSyncState.LOCAL_ONLY -> OperationalSeverity.NORMAL
+        ReportSyncState.PENDING -> OperationalSeverity.WARNING
+        ReportSyncState.SYNCED -> OperationalSeverity.SUCCESS
+        ReportSyncState.FAILED -> OperationalSeverity.CRITICAL
+    }
 }
 
 private fun formatEpoch(epochMillis: Long): String {
@@ -580,36 +760,11 @@ private fun formatEpoch(epochMillis: Long): String {
     )
 }
 
-private fun qosEngineStateLabelRes(state: QosExecutionEngineState): Int {
-    return when (state) {
-        QosExecutionEngineState.READY -> R.string.performance_qos_engine_state_ready
-        QosExecutionEngineState.PREFLIGHT_BLOCKED -> R.string.performance_qos_engine_state_preflight_blocked
-        QosExecutionEngineState.RUNNING -> R.string.performance_qos_engine_state_running
-        QosExecutionEngineState.PAUSED -> R.string.performance_qos_engine_state_paused
-        QosExecutionEngineState.RESUMED -> R.string.performance_qos_engine_state_resumed
-        QosExecutionEngineState.COMPLETED -> R.string.performance_qos_engine_state_completed
-        QosExecutionEngineState.FAILED -> R.string.performance_qos_engine_state_failed
-        QosExecutionEngineState.BLOCKED -> R.string.performance_qos_engine_state_blocked
-    }
-}
-
-private fun qosIssueCodeLabelRes(code: QosExecutionIssueCode): Int {
-    return when (code) {
-        QosExecutionIssueCode.PREREQUISITE_NOT_READY -> R.string.qos_issue_code_prerequisite_not_ready
-        QosExecutionIssueCode.BATTERY_INSUFFICIENT -> R.string.qos_issue_code_battery_insufficient
-        QosExecutionIssueCode.LOCATION_UNAVAILABLE -> R.string.qos_issue_code_location_unavailable
-        QosExecutionIssueCode.TARGET_TECHNOLOGY_MISMATCH -> R.string.qos_issue_code_target_technology_mismatch
-        QosExecutionIssueCode.PHONE_TARGET_MISSING -> R.string.qos_issue_code_phone_target_missing
-        QosExecutionIssueCode.NETWORK_UNAVAILABLE -> R.string.qos_issue_code_network_unavailable
-        QosExecutionIssueCode.THRESHOLD_NOT_MET -> R.string.qos_issue_code_threshold_not_met
-        QosExecutionIssueCode.OPERATOR_ABORTED -> R.string.qos_issue_code_operator_aborted
-        QosExecutionIssueCode.UNKNOWN -> R.string.qos_issue_code_unknown
-    }
-}
-
-private fun networkStatusLabelRes(status: NetworkStatus): Int {
-    return when (status) {
-        NetworkStatus.AVAILABLE -> R.string.performance_device_network_available
-        NetworkStatus.UNAVAILABLE -> R.string.performance_device_network_unavailable
+private fun formatRelativeAge(epochMillis: Long): String {
+    val age = Duration.between(Instant.ofEpochMilli(epochMillis), Instant.now()).toHours()
+    return when {
+        age < 1 -> "<1h"
+        age < 24 -> "${age}h"
+        else -> "${age / 24}j"
     }
 }

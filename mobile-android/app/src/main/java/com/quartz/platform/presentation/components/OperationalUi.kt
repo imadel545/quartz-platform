@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +28,12 @@ enum class OperationalSeverity {
 
 data class OperationalSignal(
     val text: String,
+    val severity: OperationalSeverity = OperationalSeverity.NORMAL
+)
+
+data class OperationalMetric(
+    val value: String,
+    val label: String,
     val severity: OperationalSeverity = OperationalSeverity.NORMAL
 )
 
@@ -127,6 +134,7 @@ fun MissionHeaderCard(
     subtitle: String,
     signals: List<OperationalSignal>,
     modifier: Modifier = Modifier,
+    metrics: List<OperationalMetric> = emptyList(),
     primaryAction: (@Composable () -> Unit)? = null,
     secondaryActions: @Composable (() -> Unit)? = null,
     content: (@Composable () -> Unit)? = null
@@ -137,6 +145,9 @@ fun MissionHeaderCard(
         subtitle = subtitle
     ) {
         OperationalSignalRow(signals = signals)
+        if (metrics.isNotEmpty()) {
+            OperationalMetricRow(metrics = metrics)
+        }
         if (primaryAction != null) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -147,6 +158,44 @@ fun MissionHeaderCard(
         }
         secondaryActions?.invoke()
         content?.invoke()
+    }
+}
+
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+fun OperationalMetricRow(
+    metrics: List<OperationalMetric>,
+    modifier: Modifier = Modifier
+) {
+    if (metrics.isEmpty()) return
+    FlowRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        metrics.forEach { metric ->
+            OperationalMetricBadge(metric = metric)
+        }
+    }
+}
+
+@Composable
+fun OperationalEmptyStateCard(
+    title: String,
+    message: String,
+    modifier: Modifier = Modifier,
+    action: (@Composable () -> Unit)? = null
+) {
+    OperationalSectionCard(
+        modifier = modifier,
+        title = title
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        action?.invoke()
     }
 }
 
@@ -178,6 +227,32 @@ private fun OperationalSignalBadge(signal: OperationalSignal) {
             style = MaterialTheme.typography.labelMedium,
             color = signalColor(signal.severity)
         )
+    }
+}
+
+@Composable
+private fun OperationalMetricBadge(metric: OperationalMetric) {
+    Surface(
+        color = severityContainerColor(metric.severity),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(min = 88.dp)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = metric.value,
+                style = MaterialTheme.typography.titleSmall,
+                color = signalColor(metric.severity)
+            )
+            Text(
+                text = metric.label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 

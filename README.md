@@ -98,6 +98,10 @@ quartz-platform/
         - Débit/QoS session (`PerformanceSessionScreen`) now follows strict mission-console layering (preflight → active run → outcome capture) with diagnostics/script/history collapsed by default
         - ReportDraft (`ReportDraftScreen`) now follows reviewer-first ordering (summary/findings/evidence/actions), with technical evidence and draft editor disclosure-based
         - Control Tower (`ReviewerControlTowerScreen`) now keeps queue urgency/actions above the fold and moves preset library/tuning/advanced controls to explicit disclosures
+      - Mission Surface Consolidation v2 delivered the next product-level reviewer/operator jump:
+        - ReportList now behaves as a triage queue with mission summary metrics, a top-priority draft card, dominant issue/next-action guidance, and more expressive local row signals
+        - XFeeder guided runtime now follows a clearer mission path (mission header, progress, terrain context, outcome capture) with checklist/history/advanced context disclosure-based
+        - shared operational UI primitives now include metric rows and reusable empty-state cards so mission/review surfaces can expose compact summary density without falling back to flat text lists
   - Room migrations and schema snapshots kept explicit
 
 ## Explicitly out of scope at this stage

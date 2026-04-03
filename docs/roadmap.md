@@ -74,6 +74,10 @@ The roadmap prioritizes:
       - `PerformanceSessionScreen` redesigned into strict mission-console layout with one dominant runtime path and advanced QoS sections collapsed by default
       - `ReportDraftScreen` redesigned into reviewer-first flow with dominant findings/actions above technical evidence
       - `ReviewerControlTowerScreen` redesigned into queue-first supervision flow with urgency/actions above the fold and controls matrix moved to disclosures
+    - Mission Surface Consolidation v2:
+      - `ReportListScreen` redesigned into a stronger triage queue with mission summary metrics, top-priority draft emphasis, dominant issue visibility, and clearer next-action cues
+      - `XfeederGuidedSessionScreen` redesigned around mission progress, terrain context, and outcome capture, with checklist/history/advanced context disclosure-based
+      - design-system depth increased with operational metric rows and reusable empty-state cards to support clearer mission/review density on mobile
   - mission/runtime design-system hardening:
     - reusable mission header primitive with explicit primary/secondary action hierarchy (`MissionHeaderCard`)
     - reusable severity-based runtime alert/info primitive (`OperationalMessageCard`)

@@ -146,6 +146,10 @@ Product/UX recovery now also reinforces mission-driven runtime execution clarity
   - QoS/throughput execution now behaves as a strict mission console (preflight first, then active run, then outcome capture; advanced controls collapsed),
   - ReportDraft now prioritizes reviewer flow and keeps technical/editor/debug tooling secondary behind explicit disclosure,
   - Control Tower now behaves as a supervision queue surface first (SLA/urgency + actions above fold), with tuning and advanced controls disclosure-based.
+- Mission Surface Consolidation v2 now extends that recovery to the next weak runtime surfaces:
+  - ReportList behaves as an operational review queue instead of a flat local draft list, with mission summary metrics, top-priority triage, dominant issue labeling, and next-action guidance,
+  - XFeeder guided runtime now separates mission progress, terrain context, and outcome capture from checklist/history/advanced context so the operator path is readable in seconds,
+  - shared UI patterns now include compact metric rows and stronger empty-state cards, allowing denser but clearer mission/review summaries without reverting to text-heavy cards.
 
 ### 4. Throughput and QoS testing
 The system should support:
