@@ -772,6 +772,17 @@
     <string name="report_draft_section_content_hint">Rédaction structurée pour lecture superviseur.</string>
     <string name="report_draft_section_actions_title">Actions de clôture locale</string>
     <string name="report_draft_section_actions_hint">Enregistrer, préparer la sync, puis revenir au flux site.</string>
+    <string name="report_draft_section_findings_title">Constats prioritaires</string>
+    <string name="report_draft_section_findings_hint">Ce qui bloque la revue ou la clôture en priorité.</string>
+    <string name="report_draft_finding_sync_failed">Synchronisation en échec: action superviseur requise.</string>
+    <string name="report_draft_finding_unsaved_changes">Modifications locales non enregistrées.</string>
+    <string name="report_draft_finding_no_guided_evidence">Aucune évidence guidée liée à ce brouillon.</string>
+    <string name="report_draft_action_show_technical_evidence">Afficher l’évidence technique</string>
+    <string name="report_draft_action_hide_technical_evidence">Masquer l’évidence technique</string>
+    <string name="report_draft_section_technical_evidence_title">Évidence technique avancée</string>
+    <string name="report_draft_section_technical_evidence_hint">Trace sync et diagnostic détaillé pour analyse avancée.</string>
+    <string name="report_draft_action_show_editor">Afficher l’édition du brouillon</string>
+    <string name="report_draft_action_hide_editor">Masquer l’édition du brouillon</string>
 
     <string name="reviewer_control_tower_section_queue_actions_title">Actions de file</string>
     <string name="reviewer_control_tower_section_queue_actions_hint">Réduire le temps entre triage, ouverture et reprise.</string>
@@ -779,8 +790,21 @@
     <string name="reviewer_control_tower_section_lenses_hint">Appliquez des presets pour prioriser immédiatement.</string>
     <string name="reviewer_control_tower_action_show_queue_tuning">Afficher le tuning de file</string>
     <string name="reviewer_control_tower_action_hide_queue_tuning">Masquer le tuning de file</string>
+    <string name="reviewer_control_tower_action_show_preset_library">Afficher la bibliothèque de presets</string>
+    <string name="reviewer_control_tower_action_hide_preset_library">Masquer la bibliothèque de presets</string>
     <string name="reviewer_control_tower_section_advanced_title">Contrôles avancés supervision</string>
     <string name="reviewer_control_tower_summary_attention_short">Attention: %1$d • Sync KO: %2$d • Risque QoS: %3$d</string>
+
+    <string name="performance_action_show_advanced_tools">Afficher outils avancés session</string>
+    <string name="performance_action_hide_advanced_tools">Masquer outils avancés session</string>
+    <string name="performance_header_qos_active_run">Exécution active</string>
+    <string name="performance_label_qos_no_active_family">Aucune famille active: lancez un run pour démarrer la mission.</string>
+    <string name="performance_header_qos_outcome_capture">Capture de résultat</string>
+    <string name="performance_label_qos_preflight_ok">Préflight OK: conditions locales prêtes pour exécution.</string>
+    <string name="performance_action_show_qos_script_selection">Afficher sélection script</string>
+    <string name="performance_action_hide_qos_script_selection">Masquer sélection script</string>
+    <string name="performance_action_show_qos_family_matrix">Afficher matrice familles</string>
+    <string name="performance_action_hide_qos_family_matrix">Masquer matrice familles</string>
 
     <string name="info_demo_snapshot_loaded">Snapshot de démo chargé. Vous pouvez maintenant ouvrir le détail d’un site.</string>
     <string name="info_local_draft_created">Brouillon local créé.</string>

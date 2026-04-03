@@ -53,6 +53,7 @@ import com.quartz.platform.domain.model.qosExecutionEventSortOrder
 import com.quartz.platform.presentation.performance.session.performanceSessionStatusLabelRes
 import com.quartz.platform.presentation.performance.session.performanceWorkflowTypeLabelRes
 import com.quartz.platform.presentation.components.AdvancedDisclosureButton
+import com.quartz.platform.presentation.components.MissionHeaderCard
 import com.quartz.platform.presentation.components.OperationalMessageCard
 import com.quartz.platform.presentation.components.OperationalSectionCard
 import com.quartz.platform.presentation.components.OperationalSeverity
@@ -135,6 +136,8 @@ fun ReportDraftScreen(
 
         var showDeveloperTools by rememberSaveable { mutableStateOf(false) }
         var showClosureDetails by rememberSaveable { mutableStateOf(false) }
+        var showTechnicalEvidence by rememberSaveable { mutableStateOf(false) }
+        var showDraftEditor by rememberSaveable { mutableStateOf(false) }
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -143,32 +146,29 @@ fun ReportDraftScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                OperationalSectionCard(
+                MissionHeaderCard(
                     title = stringResource(R.string.report_draft_section_review_header_title),
-                    subtitle = stringResource(R.string.label_site_id, state.draft.siteId)
-                ) {
-                    OperationalSignalRow(
-                        signals = listOf(
-                            OperationalSignal(stringResource(R.string.label_local_revision, state.draft.revision)),
-                            OperationalSignal(
-                                text = stringResource(
-                                    R.string.label_sync_state,
-                                    stringResource(syncStateLabelRes(state.syncState))
-                                ),
-                                severity = when (state.syncState) {
-                                    ReportSyncState.SYNCED -> OperationalSeverity.SUCCESS
-                                    ReportSyncState.FAILED -> OperationalSeverity.CRITICAL
-                                    ReportSyncState.PENDING -> OperationalSeverity.WARNING
-                                    ReportSyncState.LOCAL_ONLY -> OperationalSeverity.NORMAL
-                                }
-                            )
+                    subtitle = stringResource(R.string.label_site_id, state.draft.siteId),
+                    signals = listOf(
+                        OperationalSignal(stringResource(R.string.label_local_revision, state.draft.revision)),
+                        OperationalSignal(
+                            text = stringResource(
+                                R.string.label_sync_state,
+                                stringResource(syncStateLabelRes(state.syncState))
+                            ),
+                            severity = when (state.syncState) {
+                                ReportSyncState.SYNCED -> OperationalSeverity.SUCCESS
+                                ReportSyncState.FAILED -> OperationalSeverity.CRITICAL
+                                ReportSyncState.PENDING -> OperationalSeverity.WARNING
+                                ReportSyncState.LOCAL_ONLY -> OperationalSeverity.NORMAL
+                            }
                         )
                     )
+                ) {
                     Text(
                         text = stringResource(syncStateDescriptionRes(state.syncState)),
                         style = MaterialTheme.typography.bodySmall
                     )
-                    SyncTraceabilityDetails(trace = state.syncTrace)
                     if (state.hasUnsavedChanges) {
                         Text(
                             text = stringResource(R.string.message_unsaved_local_changes),
@@ -177,6 +177,10 @@ fun ReportDraftScreen(
                         )
                     }
                 }
+            }
+
+            item {
+                ReviewerCriticalFindingsCard(state = state)
             }
 
             item {
@@ -219,6 +223,114 @@ fun ReportDraftScreen(
                 }
             }
 
+            item {
+                OperationalSectionCard(
+                    title = stringResource(R.string.report_draft_section_actions_title),
+                    subtitle = stringResource(R.string.report_draft_section_actions_hint)
+                ) {
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isQueueingSync &&
+                            !state.isSaving &&
+                            !state.hasUnsavedChanges &&
+                            state.syncState != ReportSyncState.PENDING,
+                        onClick = onQueueSync
+                    ) {
+                        Text(
+                            if (state.isQueueingSync) {
+                                stringResource(R.string.action_enqueue_sync_loading)
+                            } else {
+                                stringResource(R.string.action_enqueue_sync)
+                            }
+                        )
+                    }
+
+                    Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isSaving,
+                        onClick = onSave
+                    ) {
+                        Text(
+                            if (state.isSaving) {
+                                stringResource(R.string.action_save_local_draft_loading)
+                            } else {
+                                stringResource(R.string.action_save_local_draft)
+                            }
+                        )
+                    }
+
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onOpenReportList(state.draft.siteId) }
+                    ) {
+                        Text(stringResource(R.string.action_open_site_reports))
+                    }
+
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onBack
+                    ) {
+                        Text(stringResource(R.string.action_back_to_site))
+                    }
+                }
+            }
+
+            item {
+                AdvancedDisclosureButton(
+                    expanded = showTechnicalEvidence,
+                    onToggle = { showTechnicalEvidence = !showTechnicalEvidence },
+                    showLabel = stringResource(R.string.report_draft_action_show_technical_evidence),
+                    hideLabel = stringResource(R.string.report_draft_action_hide_technical_evidence)
+                )
+            }
+
+            if (showTechnicalEvidence) {
+                item {
+                    OperationalSectionCard(
+                        title = stringResource(R.string.report_draft_section_technical_evidence_title),
+                        subtitle = stringResource(R.string.report_draft_section_technical_evidence_hint)
+                    ) {
+                        SyncTraceabilityDetails(trace = state.syncTrace)
+                    }
+                }
+            }
+
+            item {
+                AdvancedDisclosureButton(
+                    expanded = showDraftEditor,
+                    onToggle = { showDraftEditor = !showDraftEditor },
+                    showLabel = stringResource(R.string.report_draft_action_show_editor),
+                    hideLabel = stringResource(R.string.report_draft_action_hide_editor)
+                )
+            }
+
+            if (showDraftEditor) {
+                item {
+                    OperationalSectionCard(
+                        title = stringResource(R.string.report_draft_section_content_title),
+                        subtitle = stringResource(R.string.report_draft_section_content_hint)
+                    ) {
+                        OutlinedTextField(
+                            value = state.titleInput,
+                            onValueChange = onTitleChanged,
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text(stringResource(R.string.input_label_report_title)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
+                        )
+
+                        OutlinedTextField(
+                            value = state.observationInput,
+                            onValueChange = onObservationChanged,
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 5,
+                            label = { Text(stringResource(R.string.input_label_report_observation)) },
+                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
+                        )
+                    }
+                }
+            }
+
             if (state.isSyncSimulationControlVisible) {
                 item {
                     AdvancedDisclosureButton(
@@ -244,31 +356,6 @@ fun ReportDraftScreen(
                 }
             }
 
-            item {
-                OperationalSectionCard(
-                    title = stringResource(R.string.report_draft_section_content_title),
-                    subtitle = stringResource(R.string.report_draft_section_content_hint)
-                ) {
-                    OutlinedTextField(
-                        value = state.titleInput,
-                        onValueChange = onTitleChanged,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(stringResource(R.string.input_label_report_title)) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
-                    )
-
-                    OutlinedTextField(
-                        value = state.observationInput,
-                        onValueChange = onObservationChanged,
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 5,
-                        label = { Text(stringResource(R.string.input_label_report_observation)) },
-                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
-                    )
-                }
-            }
-
             state.errorMessage?.let { error ->
                 item {
                     OperationalMessageCard(
@@ -288,58 +375,56 @@ fun ReportDraftScreen(
                 }
             }
 
-            item {
-                OperationalSectionCard(
-                    title = stringResource(R.string.report_draft_section_actions_title),
-                    subtitle = stringResource(R.string.report_draft_section_actions_hint)
-                ) {
-                    Button(
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !state.isSaving,
-                        onClick = onSave
-                    ) {
-                        Text(
-                            if (state.isSaving) {
-                                stringResource(R.string.action_save_local_draft_loading)
-                            } else {
-                                stringResource(R.string.action_save_local_draft)
-                            }
-                        )
-                    }
-
-                    Button(
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !state.isQueueingSync &&
-                            !state.isSaving &&
-                            !state.hasUnsavedChanges &&
-                            state.syncState != ReportSyncState.PENDING,
-                        onClick = onQueueSync
-                    ) {
-                        Text(
-                            if (state.isQueueingSync) {
-                                stringResource(R.string.action_enqueue_sync_loading)
-                            } else {
-                                stringResource(R.string.action_enqueue_sync)
-                            }
-                        )
-                    }
-
-                    OutlinedButton(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = onBack
-                    ) {
-                        Text(stringResource(R.string.action_back_to_site))
-                    }
-
-                    OutlinedButton(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = { onOpenReportList(state.draft.siteId) }
-                    ) {
-                        Text(stringResource(R.string.action_open_site_reports))
-                    }
-                }
-            }
         }
+    }
+}
+
+@Composable
+private fun ReviewerCriticalFindingsCard(
+    state: ReportDraftUiState
+) {
+    val findings = buildList {
+        if (state.syncState == ReportSyncState.FAILED) {
+            add(
+                OperationalSignal(
+                    text = stringResource(R.string.report_draft_finding_sync_failed),
+                    severity = OperationalSeverity.CRITICAL
+                )
+            )
+        }
+        if (state.hasUnsavedChanges) {
+            add(
+                OperationalSignal(
+                    text = stringResource(R.string.report_draft_finding_unsaved_changes),
+                    severity = OperationalSeverity.WARNING
+                )
+            )
+        }
+        if (state.closureProjections.isEmpty()) {
+            add(
+                OperationalSignal(
+                    text = stringResource(R.string.report_draft_finding_no_guided_evidence),
+                    severity = OperationalSeverity.WARNING
+                )
+            )
+        } else {
+            add(
+                OperationalSignal(
+                    text = stringResource(
+                        R.string.report_draft_signal_guided_projection_count,
+                        state.closureProjections.size
+                    ),
+                    severity = OperationalSeverity.SUCCESS
+                )
+            )
+        }
+    }
+
+    OperationalSectionCard(
+        title = stringResource(R.string.report_draft_section_findings_title),
+        subtitle = stringResource(R.string.report_draft_section_findings_hint)
+    ) {
+        OperationalSignalRow(signals = findings, maxVisibleSignals = 4)
     }
 }
 

@@ -142,6 +142,10 @@ Product/UX recovery now also reinforces mission-driven runtime execution clarity
   - mission entry headers with explicit primary vs secondary action hierarchy (`MissionHeaderCard`),
   - runtime alert/info rendering through shared severity cards (`OperationalMessageCard`),
   - non-interactive severity badges with explicit overflow signal (`+N`) for clearer scanability and safer touch semantics.
+- Mission Surface Consolidation v1 finalized the critical runtime surfaces:
+  - QoS/throughput execution now behaves as a strict mission console (preflight first, then active run, then outcome capture; advanced controls collapsed),
+  - ReportDraft now prioritizes reviewer flow and keeps technical/editor/debug tooling secondary behind explicit disclosure,
+  - Control Tower now behaves as a supervision queue surface first (SLA/urgency + actions above fold), with tuning and advanced controls disclosure-based.
 
 ### 4. Throughput and QoS testing
 The system should support:

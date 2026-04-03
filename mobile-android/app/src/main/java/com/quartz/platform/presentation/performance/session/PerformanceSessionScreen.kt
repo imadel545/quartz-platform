@@ -58,6 +58,8 @@ import com.quartz.platform.domain.model.QosFamilyExecutionStatus
 import com.quartz.platform.domain.model.QosTestFamily
 import com.quartz.platform.domain.model.qosExecutionEventSortOrder
 import com.quartz.platform.presentation.components.AdvancedDisclosureButton
+import com.quartz.platform.presentation.components.MissionHeaderCard
+import com.quartz.platform.presentation.components.OperationalMessageCard
 import com.quartz.platform.presentation.components.OperationalSectionCard
 import com.quartz.platform.presentation.components.OperationalSeverity
 import com.quartz.platform.presentation.components.OperationalSignal
@@ -196,7 +198,8 @@ fun PerformanceSessionScreen(
 
         var showSessionHistory by rememberSaveable { mutableStateOf(false) }
         var showDiagnostics by rememberSaveable { mutableStateOf(false) }
-        var showChecklist by rememberSaveable { mutableStateOf(true) }
+        var showChecklist by rememberSaveable { mutableStateOf(false) }
+        var showAdvancedSessionTools by rememberSaveable { mutableStateOf(false) }
 
         LazyColumn(
             modifier = Modifier
@@ -233,99 +236,54 @@ fun PerformanceSessionScreen(
                         OperationalSeverity.WARNING
                     }
                 )
-                OperationalSectionCard(
+                MissionHeaderCard(
                     title = stringResource(R.string.performance_mission_title),
                     subtitle = stringResource(
                         R.string.performance_mission_subtitle,
                         state.siteLabel.ifBlank { state.siteId }
-                    )
+                    ),
+                    signals = listOf(workflowSignal, prereqSignal)
                 ) {
                     Text(
                         text = stringResource(R.string.performance_shell_disclaimer),
                         style = MaterialTheme.typography.bodySmall
-                    )
-                    OperationalSignalRow(
-                        signals = listOf(workflowSignal, prereqSignal)
                     )
                 }
             }
 
             state.errorMessage?.let { error ->
                 item {
-                    OperationalSectionCard(
-                        title = stringResource(R.string.home_runtime_alert_title)
-                    ) {
-                        Text(
-                            text = error,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                    OperationalMessageCard(
+                        title = stringResource(R.string.home_runtime_alert_title),
+                        message = error,
+                        severity = OperationalSeverity.CRITICAL
+                    )
                 }
             }
 
             state.infoMessage?.let { info ->
                 item {
-                    OperationalSectionCard(
-                        title = stringResource(R.string.home_runtime_info_title)
-                    ) {
-                        Text(
-                            text = info,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                    OperationalMessageCard(
+                        title = stringResource(R.string.home_runtime_info_title),
+                        message = info,
+                        severity = OperationalSeverity.NORMAL
+                    )
                 }
             }
 
-            item {
-                SessionCreationCard(
-                    isCreatingSession = state.isCreatingSession,
-                    selectedOperator = state.selectedOperator,
-                    selectedTechnology = state.selectedTechnology,
-                    availableOperators = state.availableOperators,
-                    availableTechnologies = state.availableTechnologies,
-                    onOperatorSelected = onOperatorSelected,
-                    onTechnologySelected = onTechnologySelected,
-                    onCreateThroughputSessionClicked = onCreateThroughputSessionClicked,
-                    onCreateQosSessionClicked = onCreateQosSessionClicked
-                )
-            }
-
-            item {
-                AdvancedDisclosureButton(
-                    expanded = showSessionHistory,
-                    onToggle = { showSessionHistory = !showSessionHistory },
-                    showLabel = stringResource(
-                        R.string.performance_action_show_history,
-                        state.sessionHistory.size
-                    ),
-                    hideLabel = stringResource(
-                        R.string.performance_action_hide_history,
-                        state.sessionHistory.size
+            if (state.session == null) {
+                item {
+                    SessionCreationCard(
+                        isCreatingSession = state.isCreatingSession,
+                        selectedOperator = state.selectedOperator,
+                        selectedTechnology = state.selectedTechnology,
+                        availableOperators = state.availableOperators,
+                        availableTechnologies = state.availableTechnologies,
+                        onOperatorSelected = onOperatorSelected,
+                        onTechnologySelected = onTechnologySelected,
+                        onCreateThroughputSessionClicked = onCreateThroughputSessionClicked,
+                        onCreateQosSessionClicked = onCreateQosSessionClicked
                     )
-                )
-            }
-
-            if (showSessionHistory) {
-                if (state.sessionHistory.isEmpty()) {
-                    item {
-                        OperationalSectionCard(
-                            title = stringResource(R.string.performance_header_session_history, 0)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.performance_empty_session),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                } else {
-                    items(state.sessionHistory, key = { session -> session.id }) { session ->
-                        PerformanceHistoryCard(
-                            session = session,
-                            isSelected = session.id == state.selectedSessionId,
-                            onSelect = onSelectHistorySessionClicked
-                        )
-                    }
                 }
             }
 
@@ -347,46 +305,6 @@ fun PerformanceSessionScreen(
                         onPrerequisiteBatteryChanged = onPrerequisiteBatteryChanged,
                         onPrerequisiteLocationChanged = onPrerequisiteLocationChanged
                     )
-                }
-
-                item {
-                    AdvancedDisclosureButton(
-                        expanded = showDiagnostics,
-                        onToggle = { showDiagnostics = !showDiagnostics },
-                        showLabel = stringResource(R.string.performance_action_show_diagnostics),
-                        hideLabel = stringResource(R.string.performance_action_hide_diagnostics)
-                    )
-                }
-
-                if (showDiagnostics) {
-                    item {
-                        DeviceDiagnosticsCard(
-                            observedNetworkStatus = state.observedNetworkStatus,
-                            observedBatteryLevelPercent = state.observedBatteryLevelPercent,
-                            observedBatteryIsCharging = state.observedBatteryIsCharging,
-                            observedBatterySufficient = state.observedBatterySufficient,
-                            observedLocationAvailable = state.observedLocationAvailable,
-                            observedSignalsCapturedAtEpochMillis = state.observedSignalsCapturedAtEpochMillis,
-                            isRefreshing = state.isRefreshingDeviceDiagnostics,
-                            onRefreshDeviceDiagnosticsClicked = onRefreshDeviceDiagnosticsClicked,
-                            onApplyDeviceDiagnosticsClicked = onApplyDeviceDiagnosticsClicked
-                        )
-                    }
-                }
-
-                item {
-                    AdvancedDisclosureButton(
-                        expanded = showChecklist,
-                        onToggle = { showChecklist = !showChecklist },
-                        showLabel = stringResource(R.string.performance_action_show_checklist),
-                        hideLabel = stringResource(R.string.performance_action_hide_checklist)
-                    )
-                }
-
-                if (showChecklist) {
-                    items(session.steps, key = { step -> step.code.name }) { step ->
-                        PerformanceStepCard(step = step, onStepStatusSelected = onStepStatusSelected)
-                    }
                 }
 
                 when (session.workflowType) {
@@ -465,6 +383,95 @@ fun PerformanceSessionScreen(
                 }
 
                 item {
+                    AdvancedDisclosureButton(
+                        expanded = showAdvancedSessionTools,
+                        onToggle = { showAdvancedSessionTools = !showAdvancedSessionTools },
+                        showLabel = stringResource(R.string.performance_action_show_advanced_tools),
+                        hideLabel = stringResource(R.string.performance_action_hide_advanced_tools)
+                    )
+                }
+
+                if (showAdvancedSessionTools) {
+                    item {
+                        AdvancedDisclosureButton(
+                            expanded = showDiagnostics,
+                            onToggle = { showDiagnostics = !showDiagnostics },
+                            showLabel = stringResource(R.string.performance_action_show_diagnostics),
+                            hideLabel = stringResource(R.string.performance_action_hide_diagnostics)
+                        )
+                    }
+
+                    if (showDiagnostics) {
+                        item {
+                            DeviceDiagnosticsCard(
+                                observedNetworkStatus = state.observedNetworkStatus,
+                                observedBatteryLevelPercent = state.observedBatteryLevelPercent,
+                                observedBatteryIsCharging = state.observedBatteryIsCharging,
+                                observedBatterySufficient = state.observedBatterySufficient,
+                                observedLocationAvailable = state.observedLocationAvailable,
+                                observedSignalsCapturedAtEpochMillis = state.observedSignalsCapturedAtEpochMillis,
+                                isRefreshing = state.isRefreshingDeviceDiagnostics,
+                                onRefreshDeviceDiagnosticsClicked = onRefreshDeviceDiagnosticsClicked,
+                                onApplyDeviceDiagnosticsClicked = onApplyDeviceDiagnosticsClicked
+                            )
+                        }
+                    }
+
+                    item {
+                        AdvancedDisclosureButton(
+                            expanded = showChecklist,
+                            onToggle = { showChecklist = !showChecklist },
+                            showLabel = stringResource(R.string.performance_action_show_checklist),
+                            hideLabel = stringResource(R.string.performance_action_hide_checklist)
+                        )
+                    }
+
+                    if (showChecklist) {
+                        items(session.steps, key = { step -> step.code.name }) { step ->
+                            PerformanceStepCard(step = step, onStepStatusSelected = onStepStatusSelected)
+                        }
+                    }
+
+                    item {
+                        AdvancedDisclosureButton(
+                            expanded = showSessionHistory,
+                            onToggle = { showSessionHistory = !showSessionHistory },
+                            showLabel = stringResource(
+                                R.string.performance_action_show_history,
+                                state.sessionHistory.size
+                            ),
+                            hideLabel = stringResource(
+                                R.string.performance_action_hide_history,
+                                state.sessionHistory.size
+                            )
+                        )
+                    }
+
+                    if (showSessionHistory) {
+                        if (state.sessionHistory.isEmpty()) {
+                            item {
+                                OperationalSectionCard(
+                                    title = stringResource(R.string.performance_header_session_history, 0)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.performance_empty_session),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                        } else {
+                            items(state.sessionHistory, key = { historySession -> historySession.id }) { historySession ->
+                                PerformanceHistoryCard(
+                                    session = historySession,
+                                    isSelected = historySession.id == state.selectedSessionId,
+                                    onSelect = onSelectHistorySessionClicked
+                                )
+                            }
+                        }
+                    }
+                }
+
+                item {
                     OperationalSectionCard(
                         title = stringResource(R.string.performance_section_review_capture),
                         subtitle = stringResource(R.string.performance_section_review_capture_hint)
@@ -486,17 +493,13 @@ fun PerformanceSessionScreen(
 
                 state.completionGuardMessage?.let { guard ->
                     item {
-                        OperationalSectionCard(
-                            title = stringResource(R.string.home_runtime_alert_title)
-                        ) {
-                            Text(
-                                text = guard,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
+                    OperationalMessageCard(
+                        title = stringResource(R.string.home_runtime_alert_title),
+                        message = guard,
+                        severity = OperationalSeverity.CRITICAL
+                    )
                 }
+            }
             }
 
             item {
@@ -990,6 +993,21 @@ private fun QosPanel(
     var showRunPlan by rememberSaveable { mutableStateOf(false) }
     var showTimeline by rememberSaveable { mutableStateOf(false) }
     var showScriptEditor by rememberSaveable { mutableStateOf(false) }
+    var showScriptSelection by rememberSaveable { mutableStateOf(false) }
+    var showFamilyMatrix by rememberSaveable { mutableStateOf(false) }
+
+    val sortedFamilies = selectedTestFamilies.sortedBy { it.name }
+    val selectedFamilyLabels = if (sortedFamilies.isEmpty()) {
+        stringResource(R.string.value_not_available)
+    } else {
+        sortedFamilies
+            .map { family -> stringResource(qosTestFamilyLabelRes(family)) }
+            .joinToString(", ")
+    }
+    val activeFamily = executionSnapshot?.activeFamily ?: sortedFamilies.firstOrNull()
+    val activeFamilyStatus = activeFamily?.let { familyStatusByType[it] } ?: QosFamilyExecutionStatus.NOT_RUN
+    val activeCoverage = activeFamily?.let { runCoverageByType[it] }
+    val activeFamilyPreflightIssues = activeFamily?.let { preflightIssuesByFamily[it].orEmpty() }.orEmpty()
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -1007,30 +1025,10 @@ private fun QosPanel(
                 ),
                 style = MaterialTheme.typography.bodySmall
             )
-            availableScripts.forEach { script ->
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = script.id != selectedScriptId,
-                    onClick = { onQosScriptSelected(script.id, script.name) }
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.performance_label_qos_script_item,
-                            script.name,
-                            script.repeatCount,
-                            script.testFamilies.size
-                        )
-                    )
-                }
-            }
             Text(
                 text = stringResource(
                     R.string.performance_label_qos_selected_test_families,
-                    buildList {
-                        for (family in selectedTestFamilies.sortedBy { it.name }) {
-                            add(stringResource(qosTestFamilyLabelRes(family)))
-                        }
-                    }.joinToString(", ").ifBlank { stringResource(R.string.value_not_available) }
+                    selectedFamilyLabels
                 ),
                 style = MaterialTheme.typography.bodySmall
             )
@@ -1052,8 +1050,43 @@ private fun QosPanel(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+
             Text(
-                text = stringResource(R.string.performance_header_qos_family_execution),
+                text = stringResource(R.string.performance_header_prerequisites),
+                style = MaterialTheme.typography.titleSmall
+            )
+            if (showCompletionIssues && completionIssues.isNotEmpty()) {
+                completionIssues.toList().sortedBy { it.name }.forEach { issue ->
+                    Text(
+                        text = stringResource(
+                            R.string.performance_label_qos_preflight_issue,
+                            stringResource(qosCompletionIssueLabelRes(issue))
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            } else if (activeFamilyPreflightIssues.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.performance_label_qos_preflight_ok),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                activeFamilyPreflightIssues.toList().sortedBy { it.name }.forEach { issue ->
+                    Text(
+                        text = stringResource(
+                            R.string.performance_label_qos_family_preflight_issue,
+                            stringResource(qosPreflightIssueLabelRes(issue))
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.performance_header_qos_active_run),
                 style = MaterialTheme.typography.titleSmall
             )
             executionSnapshot?.let { snapshot ->
@@ -1064,37 +1097,6 @@ private fun QosPanel(
                     ),
                     style = MaterialTheme.typography.bodySmall
                 )
-                Text(
-                    text = stringResource(
-                        R.string.performance_label_qos_engine_progress,
-                        snapshot.plannedRunCount,
-                        snapshot.pendingRunCount,
-                        snapshot.runningRunCount,
-                        snapshot.pausedRunCount,
-                        snapshot.failedRunCount,
-                        snapshot.blockedRunCount
-                    ),
-                    style = MaterialTheme.typography.bodySmall
-                )
-                if (snapshot.recoveryState != QosRecoveryState.NONE) {
-                    Text(
-                        text = stringResource(
-                            R.string.performance_label_qos_engine_recovery_state,
-                            stringResource(qosRecoveryStateLabelRes(snapshot.recoveryState))
-                        ),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                snapshot.activeFamily?.let { activeFamily ->
-                    Text(
-                        text = stringResource(
-                            R.string.performance_label_qos_engine_active_run,
-                            stringResource(qosTestFamilyLabelRes(activeFamily)),
-                            snapshot.activeRepetitionIndex ?: 1
-                        ),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
                 snapshot.nextFamily?.let { nextFamily ->
                     Text(
                         text = stringResource(
@@ -1106,71 +1108,21 @@ private fun QosPanel(
                     )
                 }
             }
-            if (runPlan.isNotEmpty()) {
-                AdvancedDisclosureButton(
-                    expanded = showRunPlan,
-                    onToggle = { showRunPlan = !showRunPlan },
-                    showLabel = stringResource(R.string.performance_action_show_qos_run_plan),
-                    hideLabel = stringResource(R.string.performance_action_hide_qos_run_plan)
-                )
-                if (showRunPlan) {
-                    Text(
-                        text = stringResource(R.string.performance_header_qos_run_plan),
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    runPlan.take(10).forEach { run ->
-                        Text(
-                            text = stringResource(
-                                R.string.performance_label_qos_run_plan_line,
-                                stringResource(qosTestFamilyLabelRes(run.family)),
-                                run.repetitionIndex,
-                                stringResource(qosRunPlanStatusLabelRes(run.status))
-                            ),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    val hiddenRunCount = runPlan.size - 10
-                    if (hiddenRunCount > 0) {
-                        Text(
-                            text = stringResource(
-                                R.string.performance_label_qos_run_plan_more,
-                                hiddenRunCount
-                            ),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
-            }
-            if (showCompletionIssues && completionIssues.isNotEmpty()) {
+            if (activeFamily == null) {
                 Text(
-                    text = stringResource(R.string.performance_header_qos_preflight_issues),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.error
+                    text = stringResource(R.string.performance_label_qos_no_active_family),
+                    style = MaterialTheme.typography.bodySmall
                 )
-                completionIssues.toList().sortedBy { issue -> issue.name }.forEach { issue ->
-                    Text(
-                        text = stringResource(
-                            R.string.performance_label_qos_preflight_issue,
-                            stringResource(qosCompletionIssueLabelRes(issue))
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-            selectedTestFamilies.sortedBy { family -> family.name }.forEach { family ->
-                val familyStatus = familyStatusByType[family] ?: QosFamilyExecutionStatus.NOT_RUN
-                val coverage = runCoverageByType[family]
-                val preflightIssues = preflightIssuesByFamily[family].orEmpty()
+            } else {
                 Text(
                     text = stringResource(
                         R.string.performance_label_qos_family_status,
-                        stringResource(qosTestFamilyLabelRes(family)),
-                        stringResource(qosFamilyExecutionStatusLabelRes(familyStatus))
+                        stringResource(qosTestFamilyLabelRes(activeFamily)),
+                        stringResource(qosFamilyExecutionStatusLabelRes(activeFamilyStatus))
                     ),
                     style = MaterialTheme.typography.bodySmall
                 )
-                coverage?.let {
+                activeCoverage?.let {
                     Text(
                         text = stringResource(
                             R.string.performance_label_qos_family_runs,
@@ -1183,153 +1135,63 @@ private fun QosPanel(
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
-                if (preflightIssues.isNotEmpty()) {
-                    preflightIssues.toList().sortedBy { issue -> issue.name }.forEach { issue ->
-                        Text(
-                            text = stringResource(
-                                R.string.performance_label_qos_family_preflight_issue,
-                                stringResource(qosPreflightIssueLabelRes(issue))
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
+
+                when (executionSnapshot?.engineState) {
+                    QosExecutionEngineState.RUNNING, QosExecutionEngineState.RESUMED -> {
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { onQosRunnerPauseClicked(activeFamily) }
+                        ) {
+                            Text(stringResource(R.string.performance_action_qos_runner_pause))
+                        }
+                    }
+                    QosExecutionEngineState.PAUSED -> {
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { onQosRunnerResumeClicked(activeFamily) }
+                        ) {
+                            Text(stringResource(R.string.performance_action_qos_runner_resume))
+                        }
+                    }
+                    else -> {
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { onQosRunnerStartClicked(activeFamily) }
+                        ) {
+                            Text(stringResource(R.string.performance_action_qos_runner_start))
+                        }
                     }
                 }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedButton(
                         modifier = Modifier.weight(1f),
-                        onClick = { onQosRunnerStartClicked(family) }
-                    ) {
-                        Text(stringResource(R.string.performance_action_qos_runner_start))
-                    }
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = { onQosRunnerPauseClicked(family) }
-                    ) {
-                        Text(stringResource(R.string.performance_action_qos_runner_pause))
-                    }
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = { onQosRunnerResumeClicked(family) }
-                    ) {
-                        Text(stringResource(R.string.performance_action_qos_runner_resume))
-                    }
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = { onQosRunnerPassClicked(family) }
+                        onClick = { onQosRunnerPassClicked(activeFamily) }
                     ) {
                         Text(stringResource(R.string.performance_action_qos_runner_pass))
                     }
                     OutlinedButton(
                         modifier = Modifier.weight(1f),
-                        onClick = { onQosRunnerFailClicked(family) }
+                        onClick = { onQosRunnerFailClicked(activeFamily) }
                     ) {
                         Text(stringResource(R.string.performance_action_qos_runner_fail))
                     }
                     OutlinedButton(
                         modifier = Modifier.weight(1f),
-                        onClick = { onQosRunnerBlockClicked(family) }
+                        onClick = { onQosRunnerBlockClicked(activeFamily) }
                     ) {
                         Text(stringResource(R.string.performance_action_qos_runner_block))
                     }
                 }
-                if (familyStatus == QosFamilyExecutionStatus.FAILED || familyStatus == QosFamilyExecutionStatus.BLOCKED) {
-                    Text(
-                        text = stringResource(
-                            R.string.performance_label_qos_family_reason_code,
-                            familyReasonCodeByType[family]?.let { code ->
-                                stringResource(qosIssueCodeLabelRes(code))
-                            } ?: stringResource(R.string.value_not_available)
-                        ),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    qosReasonOptionsForFamily(family).forEach { code ->
-                        OutlinedButton(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { onQosFamilyReasonCodeChanged(family, code) }
-                        ) {
-                            Text(
-                                stringResource(
-                                    R.string.performance_action_qos_reason_code_select,
-                                    stringResource(qosIssueCodeLabelRes(code))
-                                )
-                            )
-                        }
-                    }
-                    familyReasonCodeByType[family]?.let { code ->
-                        Text(
-                            text = stringResource(
-                                R.string.performance_label_qos_family_reason_action,
-                                stringResource(qosIssueCodeActionRes(code))
-                            ),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
-                        value = familyFailureReasonByType[family].orEmpty(),
-                        onValueChange = { value -> onQosFamilyFailureReasonChanged(family, value) },
-                        label = { Text(stringResource(R.string.performance_input_qos_family_failure_reason)) }
-                    )
-                }
             }
-            AdvancedDisclosureButton(
-                expanded = showTimeline,
-                onToggle = { showTimeline = !showTimeline },
-                showLabel = stringResource(R.string.performance_action_show_qos_timeline),
-                hideLabel = stringResource(R.string.performance_action_hide_qos_timeline)
+
+            Text(
+                text = stringResource(R.string.performance_header_qos_outcome_capture),
+                style = MaterialTheme.typography.titleSmall
             )
-            if (showTimeline) {
-                Text(
-                    text = stringResource(R.string.performance_header_qos_execution_timeline),
-                    style = MaterialTheme.typography.titleSmall
-                )
-                if (timelineEvents.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.performance_label_qos_timeline_empty),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                } else {
-                    timelineEvents
-                        .sortedWith(
-                            compareByDescending<QosExecutionTimelineEvent> { event ->
-                                event.checkpointSequence
-                            }.thenBy { event ->
-                                event.family.name
-                            }.thenBy { event ->
-                                event.repetitionIndex
-                            }.thenBy { event ->
-                                event.occurredAtEpochMillis
-                            }.thenBy { event ->
-                                qosExecutionEventSortOrder(event.eventType)
-                            }
-                        )
-                        .take(8)
-                        .forEach { event ->
-                            val line = stringResource(
-                                R.string.performance_label_qos_timeline_line,
-                                formatEpoch(event.occurredAtEpochMillis),
-                                stringResource(qosTestFamilyLabelRes(event.family)),
-                                event.repetitionIndex,
-                                stringResource(qosExecutionEventTypeLabelRes(event.eventType))
-                            )
-                            Text(
-                                text = event.reason?.takeIf { reason -> reason.isNotBlank() }?.let { reason ->
-                                    "$line (${stringResource(R.string.label_failure_reason, reason)})"
-                                } ?: line,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                }
-            }
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
                 value = configuredRepeat,
@@ -1337,6 +1199,175 @@ private fun QosPanel(
                 label = { Text(stringResource(R.string.performance_input_qos_configured_repeat_count)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = targetTechnology,
+                onValueChange = onQosTargetTechnologyChanged,
+                label = { Text(stringResource(R.string.performance_input_qos_target_technology)) }
+            )
+            if (configuredTechnologies.isNotEmpty() && targetTechnology.isNotBlank() && targetTechnology !in configuredTechnologies) {
+                Text(
+                    text = stringResource(R.string.performance_error_qos_target_technology_mismatch_inline),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = targetPhone,
+                onValueChange = onQosTargetPhoneChanged,
+                label = { Text(stringResource(R.string.performance_input_qos_target_phone)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = iterationCount,
+                onValueChange = onQosIterationCountChanged,
+                label = { Text(stringResource(R.string.performance_input_qos_iteration_count)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                readOnly = true
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = successCount,
+                onValueChange = onQosSuccessCountChanged,
+                label = { Text(stringResource(R.string.performance_input_qos_success_count)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                readOnly = true
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = failureCount,
+                onValueChange = onQosFailureCountChanged,
+                label = { Text(stringResource(R.string.performance_input_qos_failure_count)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                readOnly = true
+            )
+
+            if (activeFamily != null && (activeFamilyStatus == QosFamilyExecutionStatus.FAILED || activeFamilyStatus == QosFamilyExecutionStatus.BLOCKED)) {
+                Text(
+                    text = stringResource(
+                        R.string.performance_label_qos_family_reason_code,
+                        familyReasonCodeByType[activeFamily]?.let { code ->
+                            stringResource(qosIssueCodeLabelRes(code))
+                        } ?: stringResource(R.string.value_not_available)
+                    ),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                qosReasonOptionsForFamily(activeFamily).forEach { code ->
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { onQosFamilyReasonCodeChanged(activeFamily, code) }
+                    ) {
+                        Text(
+                            stringResource(
+                                R.string.performance_action_qos_reason_code_select,
+                                stringResource(qosIssueCodeLabelRes(code))
+                            )
+                        )
+                    }
+                }
+                familyReasonCodeByType[activeFamily]?.let { code ->
+                    Text(
+                        text = stringResource(
+                            R.string.performance_label_qos_family_reason_action,
+                            stringResource(qosIssueCodeActionRes(code))
+                        ),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = familyFailureReasonByType[activeFamily].orEmpty(),
+                    onValueChange = { value -> onQosFamilyFailureReasonChanged(activeFamily, value) },
+                    label = { Text(stringResource(R.string.performance_input_qos_family_failure_reason)) }
+                )
+            }
+
+            AdvancedDisclosureButton(
+                expanded = showScriptSelection,
+                onToggle = { showScriptSelection = !showScriptSelection },
+                showLabel = stringResource(R.string.performance_action_show_qos_script_selection),
+                hideLabel = stringResource(R.string.performance_action_hide_qos_script_selection)
+            )
+            if (showScriptSelection) {
+                availableScripts.forEach { script ->
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = script.id != selectedScriptId,
+                        onClick = { onQosScriptSelected(script.id, script.name) }
+                    ) {
+                        Text(
+                            stringResource(
+                                R.string.performance_label_qos_script_item,
+                                script.name,
+                                script.repeatCount,
+                                script.testFamilies.size
+                            )
+                        )
+                    }
+                }
+            }
+
+            if (runPlan.isNotEmpty()) {
+                AdvancedDisclosureButton(
+                    expanded = showRunPlan,
+                    onToggle = { showRunPlan = !showRunPlan },
+                    showLabel = stringResource(R.string.performance_action_show_qos_run_plan),
+                    hideLabel = stringResource(R.string.performance_action_hide_qos_run_plan)
+                )
+                if (showRunPlan) {
+                    runPlan.take(10).forEach { run ->
+                        Text(
+                            text = stringResource(
+                                R.string.performance_label_qos_run_plan_line,
+                                stringResource(qosTestFamilyLabelRes(run.family)),
+                                run.repetitionIndex,
+                                stringResource(qosRunPlanStatusLabelRes(run.status))
+                            ),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+
+            AdvancedDisclosureButton(
+                expanded = showTimeline,
+                onToggle = { showTimeline = !showTimeline },
+                showLabel = stringResource(R.string.performance_action_show_qos_timeline),
+                hideLabel = stringResource(R.string.performance_action_hide_qos_timeline)
+            )
+            if (showTimeline) {
+                if (timelineEvents.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.performance_label_qos_timeline_empty),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                } else {
+                    timelineEvents.sortedWith(
+                        compareByDescending<QosExecutionTimelineEvent> { event -> event.checkpointSequence }
+                            .thenBy { event -> event.family.name }
+                            .thenBy { event -> event.repetitionIndex }
+                            .thenBy { event -> event.occurredAtEpochMillis }
+                            .thenBy { event -> qosExecutionEventSortOrder(event.eventType) }
+                    ).take(8).forEach { event ->
+                        val line = stringResource(
+                            R.string.performance_label_qos_timeline_line,
+                            formatEpoch(event.occurredAtEpochMillis),
+                            stringResource(qosTestFamilyLabelRes(event.family)),
+                            event.repetitionIndex,
+                            stringResource(qosExecutionEventTypeLabelRes(event.eventType))
+                        )
+                        Text(
+                            text = event.reason?.takeIf { reason -> reason.isNotBlank() }?.let { reason ->
+                                "$line (${stringResource(R.string.label_failure_reason, reason)})"
+                            } ?: line,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+
             AdvancedDisclosureButton(
                 expanded = showScriptEditor,
                 onToggle = { showScriptEditor = !showScriptEditor },
@@ -1344,10 +1375,6 @@ private fun QosPanel(
                 hideLabel = stringResource(R.string.performance_action_hide_qos_script_editor)
             )
             if (showScriptEditor) {
-                Text(
-                    text = stringResource(R.string.performance_header_qos_script_editor),
-                    style = MaterialTheme.typography.titleSmall
-                )
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = scriptEditorName,
@@ -1388,54 +1415,40 @@ private fun QosPanel(
                     )
                 }
             }
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = targetTechnology,
-                onValueChange = onQosTargetTechnologyChanged,
-                label = { Text(stringResource(R.string.performance_input_qos_target_technology)) }
+
+            AdvancedDisclosureButton(
+                expanded = showFamilyMatrix,
+                onToggle = { showFamilyMatrix = !showFamilyMatrix },
+                showLabel = stringResource(R.string.performance_action_show_qos_family_matrix),
+                hideLabel = stringResource(R.string.performance_action_hide_qos_family_matrix)
             )
-            if (
-                configuredTechnologies.isNotEmpty() &&
-                targetTechnology.isNotBlank() &&
-                targetTechnology !in configuredTechnologies
-            ) {
-                Text(
-                    text = stringResource(R.string.performance_error_qos_target_technology_mismatch_inline),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
+            if (showFamilyMatrix) {
+                sortedFamilies.forEach { family ->
+                    val familyStatus = familyStatusByType[family] ?: QosFamilyExecutionStatus.NOT_RUN
+                    val coverage = runCoverageByType[family]
+                    Text(
+                        text = stringResource(
+                            R.string.performance_label_qos_family_status,
+                            stringResource(qosTestFamilyLabelRes(family)),
+                            stringResource(qosFamilyExecutionStatusLabelRes(familyStatus))
+                        ),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    coverage?.let {
+                        Text(
+                            text = stringResource(
+                                R.string.performance_label_qos_family_runs,
+                                it.passFailTerminalCount,
+                                it.requiredRepetitions,
+                                it.startedCount,
+                                it.blockedCount,
+                                it.activeRepetitionIndex?.toString() ?: stringResource(R.string.value_not_available)
+                            ),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
             }
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = targetPhone,
-                onValueChange = onQosTargetPhoneChanged,
-                label = { Text(stringResource(R.string.performance_input_qos_target_phone)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
-            )
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = iterationCount,
-                onValueChange = onQosIterationCountChanged,
-                label = { Text(stringResource(R.string.performance_input_qos_iteration_count)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                readOnly = true
-            )
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = successCount,
-                onValueChange = onQosSuccessCountChanged,
-                label = { Text(stringResource(R.string.performance_input_qos_success_count)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                readOnly = true
-            )
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = failureCount,
-                onValueChange = onQosFailureCountChanged,
-                label = { Text(stringResource(R.string.performance_input_qos_failure_count)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                readOnly = true
-            )
         }
     }
 }

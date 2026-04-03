@@ -94,6 +94,10 @@ quartz-platform/
       - Site mission header now uses the same mission-card hierarchy as Home for consistency and lower cognitive switching cost
       - ReportDraft and Control Tower runtime alert/info feedback now use shared severity cards instead of ad-hoc plain cards
       - ReportDraft developer tools remain disclosure-gated and are only exposed when simulation control state is enabled
+      - Mission Surface Consolidation v1 delivered structural P0 on three critical surfaces:
+        - Débit/QoS session (`PerformanceSessionScreen`) now follows strict mission-console layering (preflight → active run → outcome capture) with diagnostics/script/history collapsed by default
+        - ReportDraft (`ReportDraftScreen`) now follows reviewer-first ordering (summary/findings/evidence/actions), with technical evidence and draft editor disclosure-based
+        - Control Tower (`ReviewerControlTowerScreen`) now keeps queue urgency/actions above the fold and moves preset library/tuning/advanced controls to explicit disclosures
   - Room migrations and schema snapshots kept explicit
 
 ## Explicitly out of scope at this stage
@@ -104,3 +108,4 @@ quartz-platform/
 - Telecom-grade QoS execution automation and modem/OEM orchestration
 
 Use `mobile-android/README.md` for Android setup/run details and operational quality-gate commands.
+Runtime/debug exposure rules are documented in [`docs/runtime-debug-policy.md`](docs/runtime-debug-policy.md).

@@ -70,6 +70,10 @@ The roadmap prioritizes:
     - Control Tower advanced controls made collapsible for mobile triage readability
     - Control Tower queue-tuning filter controls are now disclosure-based while presets stay immediately available
     - reusable operational design primitives now applied cross-surface to enforce consistent hierarchy/severity/disclosure semantics
+    - Mission Surface Consolidation v1 (forced P0 structural delivery):
+      - `PerformanceSessionScreen` redesigned into strict mission-console layout with one dominant runtime path and advanced QoS sections collapsed by default
+      - `ReportDraftScreen` redesigned into reviewer-first flow with dominant findings/actions above technical evidence
+      - `ReviewerControlTowerScreen` redesigned into queue-first supervision flow with urgency/actions above the fold and controls matrix moved to disclosures
   - mission/runtime design-system hardening:
     - reusable mission header primitive with explicit primary/secondary action hierarchy (`MissionHeaderCard`)
     - reusable severity-based runtime alert/info primitive (`OperationalMessageCard`)

@@ -120,6 +120,10 @@ Current Android implementation covers a bounded local-first workflow baseline:
     - report list adds compact mission summary + concise qos closure wording for triage readability
     - control-tower advanced controls are collapsible to keep first-screen triage density readable on mobile
     - control-tower queue-tuning filters are explicitly disclosure-based while presets remain immediately actionable
+    - mission surface consolidation (P0 structural):
+      - `PerformanceSessionScreen` enforces mission-first runtime order (preflight, active run, outcome capture) with advanced QoS controls disclosure-only
+      - `ReportDraftScreen` enforces reviewer-first runtime order and keeps technical evidence/editor/debug paths disclosure-gated
+      - `ReviewerControlTowerScreen` keeps urgency/queue actions above the fold and defers preset library/tuning/advanced controls behind disclosure
     - shared operational presentation primitives centralize section hierarchy, severity signal rendering, and advanced-disclosure behavior to reduce UX drift across runtime surfaces
     - shared mission/runtime primitives now include:
       - `MissionHeaderCard` to standardize mission header/action hierarchy across entry surfaces

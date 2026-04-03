@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.quartz.platform.R
+import com.quartz.platform.BuildConfig
 import com.quartz.platform.core.text.UiStrings
 import com.quartz.platform.data.remote.simulation.SyncSimulationControl
 import com.quartz.platform.data.remote.simulation.SyncSimulationMode
@@ -51,7 +52,9 @@ class ReportDraftViewModel @Inject constructor(
 
     init {
         _uiState.update { state ->
-            state.copy(isSyncSimulationControlVisible = syncSimulationControl != null)
+            state.copy(
+                isSyncSimulationControlVisible = BuildConfig.DEBUG && syncSimulationControl != null
+            )
         }
         observeDraft()
         observeSyncState()

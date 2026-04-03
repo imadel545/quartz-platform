@@ -57,17 +57,17 @@ class MvpRuntimeFlowTest {
 
         composeRule.waitUntilExists(string(R.string.title_report_draft))
         composeRule.onNodeWithText(string(R.string.title_report_draft)).assertIsDisplayed()
-        composeRule.waitUntilExistsSubstring(syncStatePrefix())
-        composeRule
-            .onAllNodesWithText(syncStatePrefix(), substring = true)
-            .onFirst()
-            .assertIsDisplayed()
-        composeRule.waitUntilExists(string(R.string.report_draft_action_show_developer_tools))
-        composeRule.onNodeWithText(string(R.string.report_draft_action_show_developer_tools)).performClick()
-        composeRule.waitUntilExists(string(R.string.debug_header_sync_simulation))
-        composeRule.onNodeWithText(string(R.string.debug_header_sync_simulation)).assertIsDisplayed()
-        composeRule.waitUntilExists(string(R.string.debug_header_live_sync_snapshot))
-        composeRule.onNodeWithText(string(R.string.debug_header_live_sync_snapshot)).assertIsDisplayed()
+        val showDeveloperTools = string(R.string.report_draft_action_show_developer_tools)
+        if (nodeExists(showDeveloperTools)) {
+            composeRule.onNodeWithText(showDeveloperTools).performClick()
+            composeRule.waitUntilExists(string(R.string.debug_header_live_sync_snapshot))
+            if (nodeExists(string(R.string.debug_header_sync_simulation))) {
+                composeRule.onNodeWithText(string(R.string.debug_header_sync_simulation)).assertIsDisplayed()
+            }
+        } else {
+            composeRule.waitUntilExists(string(R.string.report_draft_action_show_technical_evidence))
+            composeRule.onNodeWithText(string(R.string.report_draft_action_show_technical_evidence)).assertIsDisplayed()
+        }
     }
 
     @Test

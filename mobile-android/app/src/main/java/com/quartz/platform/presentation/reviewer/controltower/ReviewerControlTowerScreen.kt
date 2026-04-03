@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -139,6 +138,7 @@ fun ReviewerControlTowerScreen(
             else -> {
                 var showAdvancedControls by rememberSaveable { mutableStateOf(false) }
                 var showQueueTuning by rememberSaveable { mutableStateOf(false) }
+                var showPresetLibrary by rememberSaveable { mutableStateOf(false) }
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -170,22 +170,51 @@ fun ReviewerControlTowerScreen(
                             title = stringResource(R.string.reviewer_control_tower_section_lenses_title),
                             subtitle = stringResource(R.string.reviewer_control_tower_section_lenses_hint)
                         ) {
-                            ControlTowerPresetRow(
-                                selectedPreset = state.selectedPreset,
-                                onPresetSelected = onPresetSelected
-                            )
+                            Button(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { onPresetSelected(ReviewerQueuePreset.NEEDS_ATTENTION_NOW) }
+                            ) {
+                                Text(stringResource(R.string.reviewer_control_tower_preset_attention_now))
+                            }
                             AdvancedDisclosureButton(
-                                expanded = showQueueTuning,
-                                onToggle = { showQueueTuning = !showQueueTuning },
-                                showLabel = stringResource(R.string.reviewer_control_tower_action_show_queue_tuning),
-                                hideLabel = stringResource(R.string.reviewer_control_tower_action_hide_queue_tuning)
+                                expanded = showPresetLibrary,
+                                onToggle = { showPresetLibrary = !showPresetLibrary },
+                                showLabel = stringResource(R.string.reviewer_control_tower_action_show_preset_library),
+                                hideLabel = stringResource(R.string.reviewer_control_tower_action_hide_preset_library)
                             )
-                            if (showQueueTuning) {
-                                ControlTowerFilterRow(
-                                    selectedFilter = state.selectedFilter,
-                                    onFilterSelected = onFilterSelected
+                            if (showPresetLibrary) {
+                                ControlTowerPresetRow(
+                                    selectedPreset = state.selectedPreset,
+                                    onPresetSelected = onPresetSelected
                                 )
                             }
+                        }
+                    }
+
+                    state.infoMessage?.let { info ->
+                        item {
+                            OperationalMessageCard(
+                                title = stringResource(R.string.home_runtime_info_title),
+                                message = info,
+                                severity = OperationalSeverity.NORMAL
+                            )
+                        }
+                    }
+
+                    item {
+                        AdvancedDisclosureButton(
+                            expanded = showQueueTuning,
+                            onToggle = { showQueueTuning = !showQueueTuning },
+                            showLabel = stringResource(R.string.reviewer_control_tower_action_show_queue_tuning),
+                            hideLabel = stringResource(R.string.reviewer_control_tower_action_hide_queue_tuning)
+                        )
+                    }
+                    if (showQueueTuning) {
+                        item {
+                            ControlTowerFilterRow(
+                                selectedFilter = state.selectedFilter,
+                                onFilterSelected = onFilterSelected
+                            )
                         }
                     }
 
@@ -221,16 +250,6 @@ fun ReviewerControlTowerScreen(
                                 urgencyMotifs = state.urgencyMotifs,
                                 statusMotifs = state.statusMotifs,
                                 onOpenDraft = onOpenDraft
-                            )
-                        }
-                    }
-
-                    state.infoMessage?.let { info ->
-                        item {
-                            OperationalMessageCard(
-                                title = stringResource(R.string.home_runtime_info_title),
-                                message = info,
-                                severity = OperationalSeverity.NORMAL
                             )
                         }
                     }
@@ -816,14 +835,24 @@ private fun ReviewerControlTowerItemCard(
         }
 
         if (item.attentionSignals.isNotEmpty()) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(item.attentionSignals.toList().sortedByDescending(::attentionSignalSeverity).take(3)) { signal ->
-                    AssistChip(
-                        onClick = {},
-                        label = { Text(stringResource(attentionSignalLabelRes(signal))) }
-                    )
-                }
-            }
+            OperationalSignalRow(
+                signals = item.attentionSignals
+                    .toList()
+                    .sortedByDescending(::attentionSignalSeverity)
+                    .take(3)
+                    .map { signal ->
+                        OperationalSignal(
+                            text = stringResource(attentionSignalLabelRes(signal)),
+                            severity = when (signal) {
+                                ReviewerAttentionSignal.SYNC_FAILED -> OperationalSeverity.CRITICAL
+                                ReviewerAttentionSignal.QOS_FAILED_OR_BLOCKED -> OperationalSeverity.CRITICAL
+                                ReviewerAttentionSignal.QOS_PREREQUISITES_NOT_READY -> OperationalSeverity.WARNING
+                                ReviewerAttentionSignal.STALE_DRAFT -> OperationalSeverity.WARNING
+                                ReviewerAttentionSignal.SYNC_PENDING -> OperationalSeverity.NORMAL
+                            }
+                        )
+                    }
+            )
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
