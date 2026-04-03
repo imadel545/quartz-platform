@@ -89,6 +89,11 @@ quartz-platform/
       - Control Tower advanced controls (queue-status filter/grouping/motifs) behind explicit disclosure to reduce runtime cognitive load
       - Control Tower triage lenses keep presets visible and move queue-tuning filters behind explicit disclosure
       - shared operational UI primitives (`OperationalSectionCard`, `OperationalSignalRow`, `AdvancedDisclosureButton`) now enforce consistent hierarchy/severity/disclosure patterns across Home, Site Detail, RET, ReportDraft, and Control Tower
+      - design-system runtime hardening now adds reusable mission/alert primitives (`MissionHeaderCard`, `OperationalMessageCard`) and removes fake-clickable status chips (signals render as non-interactive badges with explicit overflow `+N`)
+      - Home mission header now enforces single primary action with secondary actions grouped in a dedicated row
+      - Site mission header now uses the same mission-card hierarchy as Home for consistency and lower cognitive switching cost
+      - ReportDraft and Control Tower runtime alert/info feedback now use shared severity cards instead of ad-hoc plain cards
+      - ReportDraft developer tools remain disclosure-gated and are only exposed when simulation control state is enabled
   - Room migrations and schema snapshots kept explicit
 
 ## Explicitly out of scope at this stage

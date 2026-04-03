@@ -138,6 +138,10 @@ Product/UX recovery now also reinforces mission-driven runtime execution clarity
 - ReportList adds a mission triage summary card with compact QoS closure wording for faster supervisor scan,
 - Control Tower keeps high-value triage visible while advanced controls are intentionally collapsible.
 - shared operational presentation patterns (mission cards, signal chips, disclosure controls) are now reused across these surfaces to keep action hierarchy and severity language consistent in runtime.
+- mission/runtime design-system hardening now standardizes:
+  - mission entry headers with explicit primary vs secondary action hierarchy (`MissionHeaderCard`),
+  - runtime alert/info rendering through shared severity cards (`OperationalMessageCard`),
+  - non-interactive severity badges with explicit overflow signal (`+N`) for clearer scanability and safer touch semantics.
 
 ### 4. Throughput and QoS testing
 The system should support:

@@ -1,8 +1,3 @@
----
-
-# 3) `docs/roadmap.md`
-
-```md
 # Roadmap
 
 ## Roadmap objective
@@ -75,6 +70,10 @@ The roadmap prioritizes:
     - Control Tower advanced controls made collapsible for mobile triage readability
     - Control Tower queue-tuning filter controls are now disclosure-based while presets stay immediately available
     - reusable operational design primitives now applied cross-surface to enforce consistent hierarchy/severity/disclosure semantics
+  - mission/runtime design-system hardening:
+    - reusable mission header primitive with explicit primary/secondary action hierarchy (`MissionHeaderCard`)
+    - reusable severity-based runtime alert/info primitive (`OperationalMessageCard`)
+    - status signals now rendered as non-interactive badges (with explicit overflow indicator) to remove fake click affordances and improve scanability
   - shared workflow/session core reused by multiple guided flows
   - local report-draft continuity with typed provenance
   - workflow-typed closure projection in report draft flow for XFeeder/RET local review

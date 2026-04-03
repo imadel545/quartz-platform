@@ -121,6 +121,10 @@ Current Android implementation covers a bounded local-first workflow baseline:
     - control-tower advanced controls are collapsible to keep first-screen triage density readable on mobile
     - control-tower queue-tuning filters are explicitly disclosure-based while presets remain immediately actionable
     - shared operational presentation primitives centralize section hierarchy, severity signal rendering, and advanced-disclosure behavior to reduce UX drift across runtime surfaces
+    - shared mission/runtime primitives now include:
+      - `MissionHeaderCard` to standardize mission header/action hierarchy across entry surfaces
+      - `OperationalMessageCard` to standardize runtime info/error severity rendering
+      - non-interactive signal badges with overflow indicator (`+N`) to avoid fake click affordances and silent signal loss
 
 For XFeeder proximity, implementation is intentionally explicit and bounded:
 - `UNAVAILABLE`: location/altitude data cannot be trusted for eligibility

@@ -42,10 +42,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
 import com.quartz.platform.domain.model.SiteSummary
 import com.quartz.platform.presentation.components.AdvancedDisclosureButton
+import com.quartz.platform.presentation.components.MissionHeaderCard
+import com.quartz.platform.presentation.components.OperationalMessageCard
 import com.quartz.platform.presentation.components.OperationalSectionCard
 import com.quartz.platform.presentation.components.OperationalSeverity
 import com.quartz.platform.presentation.components.OperationalSignal
-import com.quartz.platform.presentation.components.OperationalSignalRow
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -143,16 +144,18 @@ fun HomeMapScreen(
             )
 
             state.errorMessage?.let { error ->
-                RuntimeMessageCard(
+                OperationalMessageCard(
+                    title = stringResource(R.string.home_runtime_alert_title),
                     message = error,
-                    isError = true
+                    severity = OperationalSeverity.CRITICAL
                 )
             }
 
             state.infoMessage?.let { info ->
-                RuntimeMessageCard(
+                OperationalMessageCard(
+                    title = stringResource(R.string.home_runtime_info_title),
                     message = info,
-                    isError = false
+                    severity = OperationalSeverity.NORMAL
                 )
             }
 
@@ -267,73 +270,53 @@ private fun HomeMissionEntryCard(
         )
     )
 
-    OperationalSectionCard(
+    MissionHeaderCard(
         title = stringResource(R.string.home_mission_title),
-        subtitle = selectionLabel
+        subtitle = selectionLabel,
+        signals = listOf(locationSignal, cacheSignal),
+        primaryAction = {
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onOpenControlTower
+            ) {
+                Text(stringResource(R.string.action_open_control_tower))
+            }
+        },
+        secondaryActions = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    modifier = Modifier.weight(1f),
+                    enabled = !state.isRecenterInProgress,
+                    onClick = onRecenter
+                ) {
+                    Text(
+                        if (state.isRecenterInProgress) {
+                            stringResource(R.string.action_recenter_loading)
+                        } else {
+                            stringResource(R.string.action_recenter)
+                        }
+                    )
+                }
+                state.selectedSite?.let { selected ->
+                    Button(
+                        modifier = Modifier.weight(1f),
+                        onClick = { onOpenSelectedSite(selected.id) }
+                    ) {
+                        Text(stringResource(R.string.home_action_open_site_intelligence))
+                    }
+                }
+            }
+        }
     ) {
-        OperationalSignalRow(
-            signals = listOf(locationSignal, cacheSignal)
-        )
         visibleSiteCode?.let { code ->
             Text(
                 text = stringResource(R.string.label_site_code, code),
                 style = MaterialTheme.typography.bodySmall
             )
         }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                modifier = Modifier.weight(1f),
-                onClick = onOpenControlTower
-            ) {
-                Text(stringResource(R.string.action_open_control_tower))
-            }
-            Button(
-                modifier = Modifier.weight(1f),
-                enabled = !state.isRecenterInProgress,
-                onClick = onRecenter
-            ) {
-                Text(
-                    if (state.isRecenterInProgress) {
-                        stringResource(R.string.action_recenter_loading)
-                    } else {
-                        stringResource(R.string.action_recenter)
-                    }
-                )
-            }
-        }
-
-        state.selectedSite?.let { selected ->
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { onOpenSelectedSite(selected.id) }
-            ) {
-                Text(stringResource(R.string.home_action_open_site_intelligence))
-            }
-        }
-    }
-}
-
-@Composable
-private fun RuntimeMessageCard(
-    message: String,
-    isError: Boolean
-) {
-    OperationalSectionCard(
-        title = if (isError) {
-            stringResource(R.string.home_runtime_alert_title)
-        } else {
-            stringResource(R.string.home_runtime_info_title)
-        }
-    ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-        )
     }
 }
 

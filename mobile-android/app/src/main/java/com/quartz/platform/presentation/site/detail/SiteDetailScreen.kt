@@ -39,6 +39,8 @@ import com.quartz.platform.domain.model.SiteCell
 import com.quartz.platform.domain.model.SiteDetail
 import com.quartz.platform.domain.model.SiteSector
 import com.quartz.platform.presentation.components.AdvancedDisclosureButton
+import com.quartz.platform.presentation.components.MissionHeaderCard
+import com.quartz.platform.presentation.components.OperationalMessageCard
 import com.quartz.platform.presentation.components.OperationalSectionCard
 import com.quartz.platform.presentation.components.OperationalSeverity
 import com.quartz.platform.presentation.components.OperationalSignal
@@ -184,12 +186,11 @@ fun SiteDetailScreen(
 
                     state.infoMessage?.let { info ->
                         item {
-                            OperationalSectionCard(title = stringResource(R.string.home_runtime_info_title)) {
-                                Text(
-                                    text = info,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
+                            OperationalMessageCard(
+                                title = stringResource(R.string.home_runtime_info_title),
+                                message = info,
+                                severity = OperationalSeverity.NORMAL
+                            )
                         }
                     }
 
@@ -405,23 +406,21 @@ private fun SectorMissionLaunchCard(
 
 @Composable
 private fun SiteMissionHeaderCard(site: SiteDetail) {
-    OperationalSectionCard(
+    MissionHeaderCard(
         title = site.name,
-        subtitle = stringResource(R.string.label_site_code, site.externalCode)
-    ) {
-        OperationalSignalRow(
-            signals = listOf(
-                OperationalSignal(stringResource(R.string.label_site_status, site.status)),
-                OperationalSignal(
-                    text = stringResource(R.string.label_site_sectors_in_service, site.sectorsInService),
-                    severity = OperationalSeverity.SUCCESS
-                ),
-                OperationalSignal(
-                    text = stringResource(R.string.label_site_sectors_forecast, site.sectorsForecast),
-                    severity = OperationalSeverity.WARNING
-                )
+        subtitle = stringResource(R.string.label_site_code, site.externalCode),
+        signals = listOf(
+            OperationalSignal(stringResource(R.string.label_site_status, site.status)),
+            OperationalSignal(
+                text = stringResource(R.string.label_site_sectors_in_service, site.sectorsInService),
+                severity = OperationalSeverity.SUCCESS
+            ),
+            OperationalSignal(
+                text = stringResource(R.string.label_site_sectors_forecast, site.sectorsForecast),
+                severity = OperationalSeverity.WARNING
             )
         )
+    ) {
         Text(
             text = if (site.indoorOnly) {
                 stringResource(R.string.label_site_profile_indoor)

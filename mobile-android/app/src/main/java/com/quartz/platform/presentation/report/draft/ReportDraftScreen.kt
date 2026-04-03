@@ -53,6 +53,7 @@ import com.quartz.platform.domain.model.qosExecutionEventSortOrder
 import com.quartz.platform.presentation.performance.session.performanceSessionStatusLabelRes
 import com.quartz.platform.presentation.performance.session.performanceWorkflowTypeLabelRes
 import com.quartz.platform.presentation.components.AdvancedDisclosureButton
+import com.quartz.platform.presentation.components.OperationalMessageCard
 import com.quartz.platform.presentation.components.OperationalSectionCard
 import com.quartz.platform.presentation.components.OperationalSeverity
 import com.quartz.platform.presentation.components.OperationalSignal
@@ -270,28 +271,20 @@ fun ReportDraftScreen(
 
             state.errorMessage?.let { error ->
                 item {
-                    OperationalSectionCard(
-                        title = stringResource(R.string.home_runtime_alert_title)
-                    ) {
-                        Text(
-                            text = error,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                    OperationalMessageCard(
+                        title = stringResource(R.string.home_runtime_alert_title),
+                        message = error,
+                        severity = OperationalSeverity.CRITICAL
+                    )
                 }
             }
             state.infoMessage?.let { info ->
                 item {
-                    OperationalSectionCard(
-                        title = stringResource(R.string.home_runtime_info_title)
-                    ) {
-                        Text(
-                            text = info,
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                    OperationalMessageCard(
+                        title = stringResource(R.string.home_runtime_info_title),
+                        message = info,
+                        severity = OperationalSeverity.NORMAL
+                    )
                 }
             }
 

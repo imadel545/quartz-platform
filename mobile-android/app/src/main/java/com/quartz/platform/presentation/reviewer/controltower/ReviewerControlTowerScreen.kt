@@ -45,6 +45,7 @@ import com.quartz.platform.domain.model.ReviewerUrgencyReason
 import com.quartz.platform.domain.model.SupervisorQueueActionType
 import com.quartz.platform.domain.model.SupervisorQueueStatus
 import com.quartz.platform.presentation.components.AdvancedDisclosureButton
+import com.quartz.platform.presentation.components.OperationalMessageCard
 import com.quartz.platform.presentation.components.OperationalSectionCard
 import com.quartz.platform.presentation.components.OperationalSeverity
 import com.quartz.platform.presentation.components.OperationalSignal
@@ -226,26 +227,21 @@ fun ReviewerControlTowerScreen(
 
                     state.infoMessage?.let { info ->
                         item {
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = info,
-                                    modifier = Modifier.padding(12.dp),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
+                            OperationalMessageCard(
+                                title = stringResource(R.string.home_runtime_info_title),
+                                message = info,
+                                severity = OperationalSeverity.NORMAL
+                            )
                         }
                     }
 
                     state.errorMessage?.let { error ->
                         item {
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = error,
-                                    modifier = Modifier.padding(12.dp),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
+                            OperationalMessageCard(
+                                title = stringResource(R.string.home_runtime_alert_title),
+                                message = error,
+                                severity = OperationalSeverity.CRITICAL
+                            )
                         }
                     }
 
