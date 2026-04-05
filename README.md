@@ -108,6 +108,11 @@ quartz-platform/
         - XFeeder session now exposes an explicit mission runtime-state banner (including non-started state) and uses selected-state chips for status/outcome/checklist updates to reduce action ambiguity
         - XFeeder heavy section composables were extracted into `XfeederGuidedSessionSections.kt` to keep screen orchestration readable
         - shared `OperationalUi` card/signal styling was hardened (clearer hierarchy, border/elevation rhythm, stronger normal-state readability) for cross-surface premium consistency
+      - Premium Runtime Finalization v3 (this cycle):
+        - Home Map now exposes an explicit mission runtime-state banner (site selection/location readiness), contextual primary action, and mission metrics above the fold
+        - Site Detail is now split into orchestration + extracted section components (`SiteDetailSections.kt`) with mission actions/guided launches first and technical structure disclosure-gated
+        - RET guided runtime is now split into orchestration + extracted section components (`RetGuidedSessionSections.kt`) with mission header/runtime state first and checklist/execution/review/history layered in progressive disclosures
+        - runtime proof artifacts were captured for Home, Site Detail, and RET mission surfaces in `artifacts/runtime-proof/mission-surface-consolidation-v3/`
       - QoS Mission Console Recovery + Presentation Architecture Stabilization:
         - `PerformanceSessionScreen` is now decomposed into mission sections instead of one giant mixed console
         - QoS execution runtime is explicitly layered as overview → preflight → active run → outcome capture → advanced tools

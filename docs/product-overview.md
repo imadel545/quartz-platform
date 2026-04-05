@@ -155,6 +155,11 @@ Product/UX recovery now also reinforces mission-driven runtime execution clarity
   - XFeeder now shows runtime-state guidance even when no session exists and uses selected-state chips for status/outcome/checklist updates, reducing action ambiguity for technicians.
   - XFeeder and ReportList monolith pressure is reduced by extracting section composables (`XfeederGuidedSessionSections.kt`, `ReportListQueueSections.kt`).
   - Shared operational cards/signals now enforce stronger visual hierarchy (card rhythm, signal readability, compact severity language) for cross-surface premium consistency.
+- Premium Runtime Finalization v3 (current cycle) raises mission-entry and RET execution clarity:
+  - Home Map now surfaces explicit mission runtime state (site selection + location readiness), mission metrics, and contextual primary action above the fold.
+  - Site Detail now separates mission launch, guided workflows, local drafts, and technical structure with progressive disclosure and extracted section composables (`SiteDetailSections.kt`).
+  - RET guided runtime now follows mission-first ordering (header/state/summary/actions first) with checklist, execution controls, review capture, history, and geospatial advanced context disclosure-based via `RetGuidedSessionSections.kt`.
+  - Runtime proof captures for these surfaces are stored in `artifacts/runtime-proof/mission-surface-consolidation-v3/`.
 - QoS mission-console recovery now applies the same product rule to Débit/QoS:
   - the performance screen is structured around mission summary, preflight, execution, outcome capture, and advanced support,
   - advanced script/timeline/history tooling no longer competes with the active operator path above the fold,

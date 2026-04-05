@@ -84,6 +84,11 @@ The roadmap prioritizes:
       - `XfeederGuidedSessionScreen` now exposes runtime state even when session is not started and uses selected-state chips for status/outcome/checklist transitions
       - XFeeder section blocks extracted into `XfeederGuidedSessionSections` to keep orchestration readable
       - shared operational card/signal styling hardened for stronger cross-surface visual hierarchy and readability
+    - Premium Runtime Finalization v3 (current cycle):
+      - `HomeMapScreen` now exposes mission runtime-state guidance (site selection + location readiness), mission metrics, and contextual primary action hierarchy
+      - `SiteDetailScreen` split into orchestration + extracted section file (`SiteDetailSections.kt`) with mission actions/guided workflows above technical detail disclosure
+      - `RetGuidedSessionScreen` split into orchestration + extracted section file (`RetGuidedSessionSections.kt`) with mission-first runtime ordering and disclosure-based advanced layers
+      - runtime screenshot/XML proof archived in `artifacts/runtime-proof/mission-surface-consolidation-v3/`
     - QoS Mission Console Recovery + Presentation Architecture Stabilization:
       - `PerformanceSessionScreen` decomposed into mission sections with explicit QoS runtime layering (`overview`, `preflight`, `active run`, `outcome capture`, `advanced tools`)
       - performance presentation helpers extracted out of the screen/ViewModel to reduce monolith drift and keep screen orchestration focused on runtime hierarchy

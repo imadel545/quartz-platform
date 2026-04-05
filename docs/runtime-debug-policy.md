@@ -14,6 +14,8 @@ This policy defines what is visible in normal operator/reviewer runtime versus d
 - `ReportDraft` developer sync tools are disclosure-gated and only shown when debug simulation control is actually available.
 - QoS mission runtime keeps diagnostics, script editing, and timeline internals in advanced disclosure sections.
 - Control Tower keeps queue urgency/actions primary and moves tuning/advanced controls behind disclosure.
+- Site Detail keeps technical structure in explicit disclosure while mission launch cards remain primary.
+- RET runtime keeps checklist/execution/review/history/geospatial-advanced details disclosure-based so mission state/actions stay primary.
 
 ## Implementation references
 
@@ -21,4 +23,5 @@ This policy defines what is visible in normal operator/reviewer runtime versus d
 - `mobile-android/app/src/main/java/com/quartz/platform/presentation/report/draft/ReportDraftScreen.kt`
 - `mobile-android/app/src/main/java/com/quartz/platform/presentation/performance/session/PerformanceSessionScreen.kt`
 - `mobile-android/app/src/main/java/com/quartz/platform/presentation/reviewer/controltower/ReviewerControlTowerScreen.kt`
-
+- `mobile-android/app/src/main/java/com/quartz/platform/presentation/site/detail/SiteDetailScreen.kt`
+- `mobile-android/app/src/main/java/com/quartz/platform/presentation/ret/session/RetGuidedSessionScreen.kt`

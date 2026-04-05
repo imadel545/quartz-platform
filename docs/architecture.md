@@ -134,6 +134,11 @@ Current Android implementation covers a bounded local-first workflow baseline:
       - `XfeederGuidedSessionScreen` now surfaces runtime-state semantics even before session creation and uses selected-state chip controls to remove ambiguous status/outcome toggles
       - reusable XFeeder section blocks are extracted to `XfeederGuidedSessionSections.kt` to limit monolithic screen drift
       - shared `OperationalSectionCard`/signal badge styling is hardened to enforce clearer hierarchy and consistent premium rhythm across mission/review surfaces
+    - premium runtime finalization v3 extends mission-surface consolidation to entry and RET execution layers:
+      - `HomeMapScreen` now has explicit runtime-state semantics (site selection + location readiness), mission metrics, and contextual primary action hierarchy
+      - `SiteDetailScreen` now acts as orchestration only; structural sections are extracted in `SiteDetailSections.kt` (mission header/state/actions/guided launch first, technical details disclosure-gated)
+      - `RetGuidedSessionScreen` now acts as orchestration only; structural sections are extracted in `RetGuidedSessionSections.kt` with mission-first runtime ordering and progressive disclosure for checklist/execution/review/history
+      - runtime visual proof for these mission surfaces is archived under `artifacts/runtime-proof/mission-surface-consolidation-v3/`
     - QoS mission-console recovery extends the same structural recovery to the Débit/QoS surface:
       - `PerformanceSessionScreen` is decomposed into mission sections instead of one monolithic mixed console
       - QoS runtime is layered into overview, preflight, active run, outcome capture, and advanced tools

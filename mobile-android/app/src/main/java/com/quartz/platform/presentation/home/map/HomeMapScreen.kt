@@ -43,10 +43,14 @@ import com.quartz.platform.R
 import com.quartz.platform.domain.model.SiteSummary
 import com.quartz.platform.presentation.components.AdvancedDisclosureButton
 import com.quartz.platform.presentation.components.MissionHeaderCard
+import com.quartz.platform.presentation.components.OperationalMetric
+import com.quartz.platform.presentation.components.OperationalMetricRow
+import com.quartz.platform.presentation.components.OperationalEmptyStateCard
 import com.quartz.platform.presentation.components.OperationalMessageCard
 import com.quartz.platform.presentation.components.OperationalSectionCard
 import com.quartz.platform.presentation.components.OperationalSeverity
 import com.quartz.platform.presentation.components.OperationalSignal
+import com.quartz.platform.presentation.components.OperationalStateBanner
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -143,6 +147,8 @@ fun HomeMapScreen(
                 onRecenter = onRecenter
             )
 
+            HomeRuntimeStateBanner(state = state)
+
             state.errorMessage?.let { error ->
                 OperationalMessageCard(
                     title = stringResource(R.string.home_runtime_alert_title),
@@ -170,6 +176,7 @@ fun HomeMapScreen(
                     title = stringResource(R.string.home_map_section_title),
                     subtitle = stringResource(R.string.home_map_section_hint)
                 ) {
+                    HomeMapSelectionHint(state = state)
                     QuartzHomeMapView(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -183,6 +190,7 @@ fun HomeMapScreen(
                         cameraRequestVersion = state.cameraRequestVersion,
                         onSiteSelected = onMapSiteSelected
                     )
+                    HomeMapFooterSignals(state = state)
                 }
             }
 
@@ -274,12 +282,43 @@ private fun HomeMissionEntryCard(
         title = stringResource(R.string.home_mission_title),
         subtitle = selectionLabel,
         signals = listOf(locationSignal, cacheSignal),
+        metrics = listOf(
+            OperationalMetric(
+                value = state.filteredSites.size.toString(),
+                label = stringResource(R.string.report_list_metric_visible)
+            ),
+            OperationalMetric(
+                value = state.sites.size.toString(),
+                label = stringResource(R.string.home_metric_cache)
+            ),
+            OperationalMetric(
+                value = if (state.selectedSite != null) {
+                    stringResource(R.string.value_yes)
+                } else {
+                    stringResource(R.string.value_no)
+                },
+                label = stringResource(R.string.home_metric_selected)
+            )
+        ),
         primaryAction = {
             Button(
                 modifier = Modifier.fillMaxWidth(),
-                onClick = onOpenControlTower
+                onClick = {
+                    val selectedSite = state.selectedSite
+                    if (selectedSite != null) {
+                        onOpenSelectedSite(selectedSite.id)
+                    } else {
+                        onOpenControlTower()
+                    }
+                }
             ) {
-                Text(stringResource(R.string.action_open_control_tower))
+                Text(
+                    if (state.selectedSite != null) {
+                        stringResource(R.string.home_action_open_site_intelligence)
+                    } else {
+                        stringResource(R.string.action_open_control_tower)
+                    }
+                )
             }
         },
         secondaryActions = {
@@ -287,6 +326,12 @@ private fun HomeMissionEntryCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                Button(
+                    modifier = Modifier.weight(1f),
+                    onClick = onOpenControlTower
+                ) {
+                    Text(stringResource(R.string.action_open_control_tower))
+                }
                 Button(
                     modifier = Modifier.weight(1f),
                     enabled = !state.isRecenterInProgress,
@@ -299,14 +344,6 @@ private fun HomeMissionEntryCard(
                             stringResource(R.string.action_recenter)
                         }
                     )
-                }
-                state.selectedSite?.let { selected ->
-                    Button(
-                        modifier = Modifier.weight(1f),
-                        onClick = { onOpenSelectedSite(selected.id) }
-                    ) {
-                        Text(stringResource(R.string.home_action_open_site_intelligence))
-                    }
                 }
             }
         }
@@ -350,24 +387,82 @@ private fun EmptyMapState(
     isBootstrappingDemo: Boolean,
     onLoadDemoSnapshot: () -> Unit
 ) {
-    OperationalSectionCard(
+    OperationalEmptyStateCard(
         title = stringResource(R.string.empty_site_snapshot_cache),
-        subtitle = stringResource(R.string.empty_site_snapshot_cache_hint)
-    ) {
-        Button(
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !isBootstrappingDemo,
-            onClick = onLoadDemoSnapshot
-        ) {
-            Text(
-                if (isBootstrappingDemo) {
-                    stringResource(R.string.action_load_demo_snapshot_loading)
-                } else {
-                    stringResource(R.string.action_load_demo_snapshot)
-                }
-            )
+        message = stringResource(R.string.empty_site_snapshot_cache_hint),
+        action = {
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isBootstrappingDemo,
+                onClick = onLoadDemoSnapshot
+            ) {
+                Text(
+                    if (isBootstrappingDemo) {
+                        stringResource(R.string.action_load_demo_snapshot_loading)
+                    } else {
+                        stringResource(R.string.action_load_demo_snapshot)
+                    }
+                )
+            }
         }
+    )
+}
+
+@Composable
+private fun HomeRuntimeStateBanner(state: HomeMapUiState) {
+    val banner = when {
+        state.selectedSite == null -> Triple(
+            stringResource(R.string.home_runtime_state_title),
+            stringResource(R.string.home_runtime_state_select_site_message),
+            OperationalSeverity.WARNING
+        )
+        state.userLocation == null -> Triple(
+            stringResource(R.string.home_runtime_state_title),
+            stringResource(R.string.home_runtime_state_location_missing_message),
+            OperationalSeverity.WARNING
+        )
+        else -> Triple(
+            stringResource(R.string.home_runtime_state_title),
+            stringResource(
+                R.string.home_runtime_state_ready_message,
+                state.selectedSite?.name.orEmpty()
+            ),
+            OperationalSeverity.SUCCESS
+        )
     }
+
+    OperationalStateBanner(
+        title = banner.first,
+        message = banner.second,
+        severity = banner.third,
+        hint = stringResource(R.string.home_runtime_state_hint)
+    )
+}
+
+@Composable
+private fun HomeMapFooterSignals(state: HomeMapUiState) {
+    if (state.filteredSites.isEmpty()) return
+    OperationalMetricRow(
+        metrics = listOf(
+            OperationalMetric(
+                value = state.filteredSites.size.toString(),
+                label = stringResource(R.string.report_list_metric_visible)
+            )
+        )
+    )
+}
+
+@Composable
+private fun HomeMapSelectionHint(state: HomeMapUiState) {
+    state.selectedSite?.let { selected ->
+        Text(
+            text = stringResource(R.string.home_map_selected_site_hint, selected.name),
+            style = MaterialTheme.typography.bodySmall
+        )
+    } ?: Text(
+        text = stringResource(R.string.home_map_select_site_hint),
+        style = MaterialTheme.typography.bodySmall
+    )
 }
 
 @Composable
