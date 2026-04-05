@@ -41,7 +41,7 @@ class MvpRuntimeFlowTest {
     }
 
     @Test
-    fun navigation_to_report_draft_shows_sync_and_debug_panels() {
+    fun navigation_to_report_draft_shows_reviewer_runtime_structure() {
         ensureDemoSitesLoaded()
         openDemoSiteDetail()
 
@@ -57,17 +57,14 @@ class MvpRuntimeFlowTest {
 
         composeRule.waitUntilExists(string(R.string.title_report_draft))
         composeRule.onNodeWithText(string(R.string.title_report_draft)).assertIsDisplayed()
-        val showDeveloperTools = string(R.string.report_draft_action_show_developer_tools)
-        if (nodeExists(showDeveloperTools)) {
-            composeRule.onNodeWithText(showDeveloperTools).performClick()
-            composeRule.waitUntilExists(string(R.string.debug_header_live_sync_snapshot))
-            if (nodeExists(string(R.string.debug_header_sync_simulation))) {
-                composeRule.onNodeWithText(string(R.string.debug_header_sync_simulation)).assertIsDisplayed()
-            }
-        } else {
-            composeRule.waitUntilExists(string(R.string.report_draft_action_show_technical_evidence))
-            composeRule.onNodeWithText(string(R.string.report_draft_action_show_technical_evidence)).assertIsDisplayed()
-        }
+        composeRule.waitUntilExists(string(R.string.report_draft_runtime_state_title))
+        composeRule.onNodeWithText(string(R.string.report_draft_runtime_state_title)).assertIsDisplayed()
+        scrollToTextIfNeeded(string(R.string.report_draft_section_actions_title))
+        composeRule.waitUntilExists(string(R.string.report_draft_section_actions_title))
+        composeRule.onNodeWithText(string(R.string.report_draft_section_actions_title)).assertIsDisplayed()
+        scrollToTextIfNeeded(string(R.string.report_draft_action_show_technical_evidence))
+        composeRule.waitUntilExists(string(R.string.report_draft_action_show_technical_evidence))
+        composeRule.onNodeWithText(string(R.string.report_draft_action_show_technical_evidence)).assertIsDisplayed()
     }
 
     @Test

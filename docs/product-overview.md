@@ -150,6 +150,10 @@ Product/UX recovery now also reinforces mission-driven runtime execution clarity
   - ReportList behaves as an operational review queue instead of a flat local draft list, with mission summary metrics, top-priority triage, dominant issue labeling, and next-action guidance,
   - XFeeder guided runtime now separates mission progress, terrain context, and outcome capture from checklist/history/advanced context so the operator path is readable in seconds,
   - shared UI patterns now include compact metric rows and stronger empty-state cards, allowing denser but clearer mission/review summaries without reverting to text-heavy cards.
+- QoS mission-console recovery now applies the same product rule to Débit/QoS:
+  - the performance screen is structured around mission summary, preflight, execution, outcome capture, and advanced support,
+  - advanced script/timeline/history tooling no longer competes with the active operator path above the fold,
+  - QoS/throughput runtime is clearer for field execution while preserving the existing bounded local-first workflow truth.
 
 ### 4. Throughput and QoS testing
 The system should support:

@@ -1,9 +1,9 @@
 package com.quartz.platform.presentation.reviewer.controltower
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -33,26 +33,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quartz.platform.R
-import com.quartz.platform.domain.model.ReportDraftOriginWorkflowType
-import com.quartz.platform.domain.model.ReportSyncState
-import com.quartz.platform.domain.model.ReviewerAttentionSignal
-import com.quartz.platform.domain.model.ReviewerControlTowerGroupKey
-import com.quartz.platform.domain.model.ReviewerControlTowerItem
-import com.quartz.platform.domain.model.ReviewerDraftAgeBucket
-import com.quartz.platform.domain.model.ReviewerUrgencyClass
-import com.quartz.platform.domain.model.ReviewerUrgencyReason
-import com.quartz.platform.domain.model.SupervisorQueueActionType
-import com.quartz.platform.domain.model.SupervisorQueueStatus
 import com.quartz.platform.presentation.components.AdvancedDisclosureButton
+import com.quartz.platform.presentation.components.MissionPrimaryActionBar
+import com.quartz.platform.presentation.components.MissionPrimaryActionButton
 import com.quartz.platform.presentation.components.OperationalMessageCard
 import com.quartz.platform.presentation.components.OperationalSectionCard
 import com.quartz.platform.presentation.components.OperationalSeverity
 import com.quartz.platform.presentation.components.OperationalSignal
 import com.quartz.platform.presentation.components.OperationalSignalRow
-import com.quartz.platform.presentation.sync.syncStateLabelRes
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.quartz.platform.presentation.components.OperationalStateBanner
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
@@ -148,6 +137,33 @@ fun ReviewerControlTowerScreen(
                 ) {
                     item {
                         ControlTowerSummaryCard(state = state)
+                    }
+
+                    item {
+                        val severity = when {
+                            state.summary.actNowCount > 0 || state.summary.overdueCount > 0 -> OperationalSeverity.CRITICAL
+                            state.summary.attentionRequiredCount > 0 -> OperationalSeverity.WARNING
+                            else -> OperationalSeverity.SUCCESS
+                        }
+                        OperationalStateBanner(
+                            title = stringResource(R.string.reviewer_control_tower_runtime_state_title),
+                            message = stringResource(
+                                R.string.reviewer_control_tower_runtime_state_message,
+                                stringResource(state.selectedPreset.labelRes()),
+                                state.activeQueueItems.size,
+                                state.queuedItems.size
+                            ),
+                            severity = severity,
+                            hint = when {
+                                state.summary.actNowCount > 0 || state.summary.overdueCount > 0 -> {
+                                    stringResource(R.string.reviewer_control_tower_runtime_state_hint_act_now)
+                                }
+                                state.summary.attentionRequiredCount > 0 -> {
+                                    stringResource(R.string.reviewer_control_tower_runtime_state_hint_attention)
+                                }
+                                else -> stringResource(R.string.reviewer_control_tower_runtime_state_hint_clear)
+                            }
+                        )
                     }
 
                     item {
@@ -375,56 +391,56 @@ private fun ControlTowerActionRow(
             ),
             style = MaterialTheme.typography.bodySmall
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                modifier = Modifier.weight(1f),
-                enabled = state.queueTopDraftId != null,
-                onClick = onOpenTopPriority
-            ) {
-                Text(stringResource(R.string.reviewer_control_tower_action_open_top_priority))
-            }
-            OutlinedButton(
-                modifier = Modifier.weight(1f),
-                enabled = state.visibleSyncFailedCount > 0 && !state.isBulkRetryInProgress,
-                onClick = onRetryFailedVisibleSync
-            ) {
-                Text(
-                    if (state.isBulkRetryInProgress) {
-                        stringResource(R.string.action_retry_sync_loading)
-                    } else {
-                        stringResource(
-                            R.string.reviewer_control_tower_action_retry_visible_failed,
-                            state.visibleSyncFailedCount
-                        )
-                    }
+        MissionPrimaryActionBar(
+            primaryAction = {
+                MissionPrimaryActionButton(
+                    label = stringResource(R.string.reviewer_control_tower_action_open_top_priority),
+                    onClick = onOpenTopPriority,
+                    enabled = state.queueTopDraftId != null
                 )
+            },
+            secondaryAction = {
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = state.visibleSyncFailedCount > 0 && !state.isBulkRetryInProgress,
+                    onClick = onRetryFailedVisibleSync
+                ) {
+                    Text(
+                        if (state.isBulkRetryInProgress) {
+                            stringResource(R.string.action_retry_sync_loading)
+                        } else {
+                            stringResource(
+                                R.string.reviewer_control_tower_action_retry_visible_failed,
+                                state.visibleSyncFailedCount
+                            )
+                        }
+                    )
+                }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = state.visibleUntriagedCount > 0 && !state.isBulkQueueTransitionInProgress,
+                    onClick = onBulkMarkVisibleInReview
+                ) {
+                    Text(
+                        if (state.isBulkQueueTransitionInProgress) {
+                            stringResource(R.string.action_queue_status_update_loading)
+                        } else {
+                            stringResource(
+                                R.string.reviewer_control_tower_action_mark_visible_in_review,
+                                state.visibleUntriagedCount
+                            )
+                        }
+                    )
+                }
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = state.progressedDraftIds.isNotEmpty(),
+                    onClick = onResetQueueProgress
+                ) {
+                    Text(stringResource(R.string.reviewer_control_tower_action_reset_queue_progress))
+                }
             }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
-                modifier = Modifier.weight(1f),
-                enabled = state.visibleUntriagedCount > 0 && !state.isBulkQueueTransitionInProgress,
-                onClick = onBulkMarkVisibleInReview
-            ) {
-                Text(
-                    if (state.isBulkQueueTransitionInProgress) {
-                        stringResource(R.string.action_queue_status_update_loading)
-                    } else {
-                        stringResource(
-                            R.string.reviewer_control_tower_action_mark_visible_in_review,
-                            state.visibleUntriagedCount
-                        )
-                    }
-                )
-            }
-            OutlinedButton(
-                modifier = Modifier.weight(1f),
-                enabled = state.progressedDraftIds.isNotEmpty(),
-                onClick = onResetQueueProgress
-            ) {
-                Text(stringResource(R.string.reviewer_control_tower_action_reset_queue_progress))
-            }
-        }
+        )
     }
 }
 
@@ -509,20 +525,23 @@ private fun ControlTowerPresetRow(
                     selected = preset == selectedPreset,
                     onClick = { onPresetSelected(preset) },
                     label = {
-                        Text(
-                            text = when (preset) {
-                                ReviewerQueuePreset.NEEDS_ATTENTION_NOW -> stringResource(R.string.reviewer_control_tower_preset_attention_now)
-                                ReviewerQueuePreset.ACT_NOW_OVERDUE -> stringResource(R.string.reviewer_control_tower_preset_act_now_overdue)
-                                ReviewerQueuePreset.SYNC_FAILURES_FIRST -> stringResource(R.string.reviewer_control_tower_preset_sync_failures)
-                                ReviewerQueuePreset.QOS_RISK_FIRST -> stringResource(R.string.reviewer_control_tower_preset_qos_risk)
-                                ReviewerQueuePreset.STALE_GUIDED_WORK -> stringResource(R.string.reviewer_control_tower_preset_stale_guided)
-                                ReviewerQueuePreset.GUIDED_UNRESOLVED -> stringResource(R.string.reviewer_control_tower_preset_guided_unresolved)
-                            }
-                        )
+                        Text(text = stringResource(preset.labelRes()))
                     }
                 )
             }
         }
+    }
+}
+
+@StringRes
+private fun ReviewerQueuePreset.labelRes(): Int {
+    return when (this) {
+        ReviewerQueuePreset.NEEDS_ATTENTION_NOW -> R.string.reviewer_control_tower_preset_attention_now
+        ReviewerQueuePreset.ACT_NOW_OVERDUE -> R.string.reviewer_control_tower_preset_act_now_overdue
+        ReviewerQueuePreset.SYNC_FAILURES_FIRST -> R.string.reviewer_control_tower_preset_sync_failures
+        ReviewerQueuePreset.QOS_RISK_FIRST -> R.string.reviewer_control_tower_preset_qos_risk
+        ReviewerQueuePreset.STALE_GUIDED_WORK -> R.string.reviewer_control_tower_preset_stale_guided
+        ReviewerQueuePreset.GUIDED_UNRESOLVED -> R.string.reviewer_control_tower_preset_guided_unresolved
     }
 }
 
@@ -582,7 +601,7 @@ private fun ControlTowerMotifSection(
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(workflowMotifs) { motif ->
                         MotifCard(
-                            title = "${workflowLabel(motif.workflowType)} (${motif.draftCount})",
+                            title = "${stringResource(workflowLabelRes(motif.workflowType))} (${motif.draftCount})",
                             subtitle = buildString {
                                 append(
                                     stringResource(
@@ -703,348 +722,4 @@ private fun ControlTowerGroupingRow(
             }
         }
     }
-}
-
-@Composable
-private fun ControlTowerGroupSection(
-    group: ReviewerControlTowerGroup,
-    onOpenDraft: (String) -> Unit,
-    onOpenSite: (String) -> Unit,
-    onRetryDraftSync: (String) -> Unit,
-    retryingDraftIds: Set<String>,
-    transitioningDraftIds: Set<String>,
-    onMarkDraftInReview: (String) -> Unit,
-    onMarkDraftWaitingFeedback: (String) -> Unit,
-    onMarkDraftResolved: (String) -> Unit,
-    onReopenDraft: (String) -> Unit
-) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(
-                text = groupTitle(group.key),
-                style = MaterialTheme.typography.titleSmall
-            )
-            group.items.forEach { item ->
-                ReviewerControlTowerItemCard(
-                    item = item,
-                    isRetrying = item.draftId in retryingDraftIds,
-                    isQueueTransitioning = item.draftId in transitioningDraftIds,
-                    onOpenDraft = onOpenDraft,
-                    onOpenSite = onOpenSite,
-                    onRetryDraftSync = onRetryDraftSync,
-                    onMarkDraftInReview = onMarkDraftInReview,
-                    onMarkDraftWaitingFeedback = onMarkDraftWaitingFeedback,
-                    onMarkDraftResolved = onMarkDraftResolved,
-                    onReopenDraft = onReopenDraft
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ReviewerControlTowerItemCard(
-    item: ReviewerControlTowerItem,
-    isRetrying: Boolean,
-    isQueueTransitioning: Boolean,
-    onOpenDraft: (String) -> Unit,
-    onOpenSite: (String) -> Unit,
-    onRetryDraftSync: (String) -> Unit,
-    onMarkDraftInReview: (String) -> Unit,
-    onMarkDraftWaitingFeedback: (String) -> Unit,
-    onMarkDraftResolved: (String) -> Unit,
-    onReopenDraft: (String) -> Unit
-) {
-    OperationalSectionCard(
-        title = "${item.siteCode} • ${item.siteName}",
-        subtitle = item.title
-    ) {
-        val urgencySeverity = when (item.urgencyClass) {
-            ReviewerUrgencyClass.ACT_NOW -> OperationalSeverity.CRITICAL
-            ReviewerUrgencyClass.HIGH -> OperationalSeverity.WARNING
-            ReviewerUrgencyClass.WATCH -> OperationalSeverity.NORMAL
-            ReviewerUrgencyClass.NORMAL -> OperationalSeverity.SUCCESS
-        }
-        OperationalSignalRow(
-            signals = buildList {
-                add(
-                    OperationalSignal(
-                        text = stringResource(
-                            R.string.reviewer_control_tower_urgency_short,
-                            stringResource(urgencyClassLabelRes(item.urgencyClass)),
-                            stringResource(ageBucketLabelRes(item.ageBucket))
-                        ),
-                        severity = urgencySeverity
-                    )
-                )
-                add(
-                    OperationalSignal(
-                        text = stringResource(
-                            R.string.reviewer_control_tower_queue_status_short,
-                            stringResource(queueStatusLabelRes(item.queueStatus))
-                        )
-                    )
-                )
-                item.originWorkflowType?.let { workflow ->
-                    add(
-                        OperationalSignal(
-                            text = stringResource(
-                                R.string.reviewer_control_tower_workflow_short,
-                                workflowLabel(workflow)
-                            )
-                        )
-                    )
-                }
-            }
-        )
-        Text(
-            text = stringResource(R.string.label_updated_at, formatEpoch(item.updatedAtEpochMillis)),
-            style = MaterialTheme.typography.bodySmall
-        )
-        Text(
-            text = stringResource(
-                R.string.label_sync_state,
-                stringResource(syncStateLabelRes(item.syncTrace.state))
-            ),
-            style = MaterialTheme.typography.bodySmall
-        )
-        Text(
-            text = stringResource(
-                R.string.reviewer_control_tower_urgency_reason_short,
-                stringResource(urgencyReasonLabelRes(item.urgencyReason))
-            ),
-            style = MaterialTheme.typography.bodySmall
-        )
-        item.dominantAttentionSignal?.let { dominant ->
-            Text(
-                text = stringResource(
-                    R.string.reviewer_control_tower_dominant_signal,
-                    stringResource(attentionSignalLabelRes(dominant))
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-        if (ReviewerAttentionSignal.STALE_DRAFT in item.attentionSignals) {
-            Text(
-                text = stringResource(R.string.reviewer_control_tower_stale_age, item.staleAgeHours),
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-
-        if (item.attentionSignals.isNotEmpty()) {
-            OperationalSignalRow(
-                signals = item.attentionSignals
-                    .toList()
-                    .sortedByDescending(::attentionSignalSeverity)
-                    .take(3)
-                    .map { signal ->
-                        OperationalSignal(
-                            text = stringResource(attentionSignalLabelRes(signal)),
-                            severity = when (signal) {
-                                ReviewerAttentionSignal.SYNC_FAILED -> OperationalSeverity.CRITICAL
-                                ReviewerAttentionSignal.QOS_FAILED_OR_BLOCKED -> OperationalSeverity.CRITICAL
-                                ReviewerAttentionSignal.QOS_PREREQUISITES_NOT_READY -> OperationalSeverity.WARNING
-                                ReviewerAttentionSignal.STALE_DRAFT -> OperationalSeverity.WARNING
-                                ReviewerAttentionSignal.SYNC_PENDING -> OperationalSeverity.NORMAL
-                            }
-                        )
-                    }
-            )
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                modifier = Modifier.weight(1f),
-                onClick = { onOpenDraft(item.draftId) }
-            ) {
-                Text(stringResource(R.string.action_open_draft))
-            }
-            OutlinedButton(
-                modifier = Modifier.weight(1f),
-                onClick = { onOpenSite(item.siteId) }
-            ) {
-                Text(stringResource(R.string.reviewer_control_tower_action_open_site))
-            }
-        }
-        if (item.syncTrace.state == ReportSyncState.FAILED) {
-            OutlinedButton(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isRetrying,
-                onClick = { onRetryDraftSync(item.draftId) }
-            ) {
-                Text(
-                    if (isRetrying) {
-                        stringResource(R.string.action_retry_sync_loading)
-                    } else {
-                        stringResource(R.string.action_retry_sync)
-                    }
-                )
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            when (item.queueStatus) {
-                SupervisorQueueStatus.UNTRIAGED -> {
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        enabled = !isQueueTransitioning,
-                        onClick = { onMarkDraftInReview(item.draftId) }
-                    ) {
-                        Text(stringResource(R.string.reviewer_control_tower_action_mark_in_review))
-                    }
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        enabled = !isQueueTransitioning,
-                        onClick = { onMarkDraftResolved(item.draftId) }
-                    ) {
-                        Text(stringResource(R.string.reviewer_control_tower_action_mark_resolved))
-                    }
-                }
-                SupervisorQueueStatus.IN_REVIEW -> {
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        enabled = !isQueueTransitioning,
-                        onClick = { onMarkDraftWaitingFeedback(item.draftId) }
-                    ) {
-                        Text(stringResource(R.string.reviewer_control_tower_action_mark_waiting_feedback))
-                    }
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        enabled = !isQueueTransitioning,
-                        onClick = { onMarkDraftResolved(item.draftId) }
-                    ) {
-                        Text(stringResource(R.string.reviewer_control_tower_action_mark_resolved))
-                    }
-                }
-                SupervisorQueueStatus.WAITING_FIELD_FEEDBACK -> {
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        enabled = !isQueueTransitioning,
-                        onClick = { onMarkDraftInReview(item.draftId) }
-                    ) {
-                        Text(stringResource(R.string.reviewer_control_tower_action_mark_in_review))
-                    }
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        enabled = !isQueueTransitioning,
-                        onClick = { onMarkDraftResolved(item.draftId) }
-                    ) {
-                        Text(stringResource(R.string.reviewer_control_tower_action_mark_resolved))
-                    }
-                }
-                SupervisorQueueStatus.RESOLVED -> {
-                    OutlinedButton(
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isQueueTransitioning,
-                        onClick = { onReopenDraft(item.draftId) }
-                    ) {
-                        Text(stringResource(R.string.reviewer_control_tower_action_reopen))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun groupTitle(key: ReviewerControlTowerGroupKey): String {
-    return when (key) {
-        ReviewerControlTowerGroupKey.SYNC_FAILED -> stringResource(R.string.reviewer_control_tower_group_sync_failed)
-        ReviewerControlTowerGroupKey.QOS_RISK -> stringResource(R.string.reviewer_control_tower_group_qos_risk)
-        ReviewerControlTowerGroupKey.SYNC_PENDING -> stringResource(R.string.reviewer_control_tower_group_sync_pending)
-        ReviewerControlTowerGroupKey.STALE -> stringResource(R.string.reviewer_control_tower_group_stale)
-        ReviewerControlTowerGroupKey.NO_ATTENTION -> stringResource(R.string.reviewer_control_tower_group_no_attention)
-        ReviewerControlTowerGroupKey.WORKFLOW_XFEEDER -> stringResource(R.string.reviewer_control_tower_group_workflow_xfeeder)
-        ReviewerControlTowerGroupKey.WORKFLOW_RET -> stringResource(R.string.reviewer_control_tower_group_workflow_ret)
-        ReviewerControlTowerGroupKey.WORKFLOW_PERFORMANCE -> stringResource(R.string.reviewer_control_tower_group_workflow_performance)
-        ReviewerControlTowerGroupKey.WORKFLOW_NON_GUIDED -> stringResource(R.string.reviewer_control_tower_group_workflow_non_guided)
-    }
-}
-
-private fun attentionSignalLabelRes(signal: ReviewerAttentionSignal): Int {
-    return when (signal) {
-        ReviewerAttentionSignal.SYNC_FAILED -> R.string.reviewer_control_tower_signal_sync_failed
-        ReviewerAttentionSignal.SYNC_PENDING -> R.string.reviewer_control_tower_signal_sync_pending
-        ReviewerAttentionSignal.QOS_FAILED_OR_BLOCKED -> R.string.reviewer_control_tower_signal_qos_failed_or_blocked
-        ReviewerAttentionSignal.QOS_PREREQUISITES_NOT_READY -> R.string.reviewer_control_tower_signal_qos_preflight_blocked
-        ReviewerAttentionSignal.STALE_DRAFT -> R.string.reviewer_control_tower_signal_stale_draft
-    }
-}
-
-private fun attentionSignalSeverity(signal: ReviewerAttentionSignal): Int {
-    return when (signal) {
-        ReviewerAttentionSignal.SYNC_FAILED -> 5
-        ReviewerAttentionSignal.QOS_FAILED_OR_BLOCKED -> 4
-        ReviewerAttentionSignal.QOS_PREREQUISITES_NOT_READY -> 3
-        ReviewerAttentionSignal.SYNC_PENDING -> 2
-        ReviewerAttentionSignal.STALE_DRAFT -> 1
-    }
-}
-
-private fun urgencyClassLabelRes(urgencyClass: ReviewerUrgencyClass): Int {
-    return when (urgencyClass) {
-        ReviewerUrgencyClass.ACT_NOW -> R.string.reviewer_control_tower_urgency_act_now
-        ReviewerUrgencyClass.HIGH -> R.string.reviewer_control_tower_urgency_high
-        ReviewerUrgencyClass.WATCH -> R.string.reviewer_control_tower_urgency_watch
-        ReviewerUrgencyClass.NORMAL -> R.string.reviewer_control_tower_urgency_normal
-    }
-}
-
-private fun ageBucketLabelRes(ageBucket: ReviewerDraftAgeBucket): Int {
-    return when (ageBucket) {
-        ReviewerDraftAgeBucket.FRESH -> R.string.reviewer_control_tower_age_fresh
-        ReviewerDraftAgeBucket.AGING -> R.string.reviewer_control_tower_age_aging
-        ReviewerDraftAgeBucket.STALE -> R.string.reviewer_control_tower_age_stale
-        ReviewerDraftAgeBucket.OVERDUE -> R.string.reviewer_control_tower_age_overdue
-    }
-}
-
-private fun urgencyReasonLabelRes(reason: ReviewerUrgencyReason): Int {
-    return when (reason) {
-        ReviewerUrgencyReason.SYNC_FAILED -> R.string.reviewer_control_tower_urgency_reason_sync_failed
-        ReviewerUrgencyReason.QOS_FAILED_OR_BLOCKED -> R.string.reviewer_control_tower_urgency_reason_qos_failed
-        ReviewerUrgencyReason.QOS_PREREQUISITES_NOT_READY -> R.string.reviewer_control_tower_urgency_reason_qos_preflight
-        ReviewerUrgencyReason.STALE_DRAFT -> R.string.reviewer_control_tower_urgency_reason_stale_draft
-        ReviewerUrgencyReason.STALE_GUIDED_WORK -> R.string.reviewer_control_tower_urgency_reason_stale_guided
-        ReviewerUrgencyReason.STALE_PENDING_SYNC -> R.string.reviewer_control_tower_urgency_reason_stale_pending
-        ReviewerUrgencyReason.NONE -> R.string.reviewer_control_tower_urgency_reason_none
-    }
-}
-
-private fun queueStatusLabelRes(status: SupervisorQueueStatus): Int {
-    return when (status) {
-        SupervisorQueueStatus.UNTRIAGED -> R.string.reviewer_control_tower_queue_status_untriaged
-        SupervisorQueueStatus.IN_REVIEW -> R.string.reviewer_control_tower_queue_status_in_review
-        SupervisorQueueStatus.WAITING_FIELD_FEEDBACK -> R.string.reviewer_control_tower_queue_status_waiting_feedback
-        SupervisorQueueStatus.RESOLVED -> R.string.reviewer_control_tower_queue_status_resolved
-    }
-}
-
-private fun queueActionLabelRes(actionType: SupervisorQueueActionType): Int {
-    return when (actionType) {
-        SupervisorQueueActionType.MARK_IN_REVIEW -> R.string.reviewer_control_tower_action_mark_in_review
-        SupervisorQueueActionType.BULK_MARK_IN_REVIEW -> R.string.reviewer_control_tower_action_bulk_mark_in_review
-        SupervisorQueueActionType.MARK_WAITING_FIELD_FEEDBACK -> R.string.reviewer_control_tower_action_mark_waiting_feedback
-        SupervisorQueueActionType.MARK_RESOLVED -> R.string.reviewer_control_tower_action_mark_resolved
-        SupervisorQueueActionType.REOPEN_TO_UNTRIAGED -> R.string.reviewer_control_tower_action_reopen
-        SupervisorQueueActionType.RETRY_SYNC -> R.string.action_retry_sync
-    }
-}
-
-private fun workflowLabel(workflowType: ReportDraftOriginWorkflowType?): String {
-    return when (workflowType) {
-        ReportDraftOriginWorkflowType.XFEEDER -> "XFEEDER"
-        ReportDraftOriginWorkflowType.RET -> "RET"
-        ReportDraftOriginWorkflowType.PERFORMANCE -> "PERFORMANCE"
-        null -> "NON_GUIDED"
-    }
-}
-
-private fun formatEpoch(epochMillis: Long): String {
-    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-    return formatter.format(
-        Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).toLocalDateTime()
-    )
 }

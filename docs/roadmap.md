@@ -78,6 +78,10 @@ The roadmap prioritizes:
       - `ReportListScreen` redesigned into a stronger triage queue with mission summary metrics, top-priority draft emphasis, dominant issue visibility, and clearer next-action cues
       - `XfeederGuidedSessionScreen` redesigned around mission progress, terrain context, and outcome capture, with checklist/history/advanced context disclosure-based
       - design-system depth increased with operational metric rows and reusable empty-state cards to support clearer mission/review density on mobile
+    - QoS Mission Console Recovery + Presentation Architecture Stabilization:
+      - `PerformanceSessionScreen` decomposed into mission sections with explicit QoS runtime layering (`overview`, `preflight`, `active run`, `outcome capture`, `advanced tools`)
+      - performance presentation helpers extracted out of the screen/ViewModel to reduce monolith drift and keep screen orchestration focused on runtime hierarchy
+      - advanced support surfaces (history, checklist, run plan, timeline, script selection/editor, family matrix) moved behind disclosure to keep field execution clarity above the fold
   - mission/runtime design-system hardening:
     - reusable mission header primitive with explicit primary/secondary action hierarchy (`MissionHeaderCard`)
     - reusable severity-based runtime alert/info primitive (`OperationalMessageCard`)
