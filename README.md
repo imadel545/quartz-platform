@@ -102,6 +102,12 @@ quartz-platform/
         - ReportList now behaves as a triage queue with mission summary metrics, a top-priority draft card, dominant issue/next-action guidance, and more expressive local row signals
         - XFeeder guided runtime now follows a clearer mission path (mission header, progress, terrain context, outcome capture) with checklist/history/advanced context disclosure-based
         - shared operational UI primitives now include metric rows and reusable empty-state cards so mission/review surfaces can expose compact summary density without falling back to flat text lists
+      - Premium Runtime Finalization v2 (this cycle):
+        - ReportList was decomposed into orchestration + queue section rendering (`ReportListScreen` + `ReportListQueueSections`) to reduce monolith risk and enforce queue-first readability
+        - ReportList now exposes an explicit runtime queue-state banner and tighter filter/visible-count controls above the list
+        - XFeeder session now exposes an explicit mission runtime-state banner (including non-started state) and uses selected-state chips for status/outcome/checklist updates to reduce action ambiguity
+        - XFeeder heavy section composables were extracted into `XfeederGuidedSessionSections.kt` to keep screen orchestration readable
+        - shared `OperationalUi` card/signal styling was hardened (clearer hierarchy, border/elevation rhythm, stronger normal-state readability) for cross-surface premium consistency
       - QoS Mission Console Recovery + Presentation Architecture Stabilization:
         - `PerformanceSessionScreen` is now decomposed into mission sections instead of one giant mixed console
         - QoS execution runtime is explicitly layered as overview → preflight → active run → outcome capture → advanced tools

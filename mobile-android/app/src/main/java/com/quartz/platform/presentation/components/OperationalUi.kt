@@ -1,5 +1,6 @@
 package com.quartz.platform.presentation.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -45,19 +46,29 @@ fun OperationalSectionCard(
     subtitle: String? = null,
     content: @Composable () -> Unit
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+        )
+    ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall
+                style = MaterialTheme.typography.titleMedium
             )
             subtitle?.let {
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -290,10 +301,10 @@ fun MissionPrimaryActionButton(
 private fun OperationalSignalBadge(signal: OperationalSignal) {
     Surface(
         color = severityContainerColor(signal.severity),
-        shape = MaterialTheme.shapes.small
+        shape = MaterialTheme.shapes.medium
     ) {
         Text(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
             text = signal.text,
             style = MaterialTheme.typography.labelMedium,
             color = signalColor(signal.severity)
@@ -329,7 +340,7 @@ private fun OperationalMetricBadge(metric: OperationalMetric) {
 
 @Composable
 private fun signalColor(severity: OperationalSeverity) = when (severity) {
-    OperationalSeverity.NORMAL -> MaterialTheme.colorScheme.onSurfaceVariant
+    OperationalSeverity.NORMAL -> MaterialTheme.colorScheme.onSurface
     OperationalSeverity.SUCCESS -> MaterialTheme.colorScheme.primary
     OperationalSeverity.WARNING -> MaterialTheme.colorScheme.tertiary
     OperationalSeverity.CRITICAL -> MaterialTheme.colorScheme.error

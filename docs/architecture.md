@@ -128,6 +128,12 @@ Current Android implementation covers a bounded local-first workflow baseline:
       - `ReportListScreen` now behaves as a reviewer/operator queue with explicit priority summary, dominant issue labeling, next-action guidance, and stronger workflow/sync/urgency visual differentiation
       - `XfeederGuidedSessionScreen` now layers mission context, progress, terrain context, and outcome capture before checklist/history/advanced controls
       - shared operational primitives now include compact metric rows and empty-state cards to reduce ad-hoc textual cards on mission/review surfaces
+    - premium runtime finalization v2 (current cycle) deepens this architecture:
+      - `ReportListScreen` now focuses on orchestration only, while queue rendering/triage helpers live in `ReportListQueueSections.kt`
+      - report queue now surfaces explicit runtime-state semantics (`État file de revue`) and compact queue controls above list content
+      - `XfeederGuidedSessionScreen` now surfaces runtime-state semantics even before session creation and uses selected-state chip controls to remove ambiguous status/outcome toggles
+      - reusable XFeeder section blocks are extracted to `XfeederGuidedSessionSections.kt` to limit monolithic screen drift
+      - shared `OperationalSectionCard`/signal badge styling is hardened to enforce clearer hierarchy and consistent premium rhythm across mission/review surfaces
     - QoS mission-console recovery extends the same structural recovery to the Débit/QoS surface:
       - `PerformanceSessionScreen` is decomposed into mission sections instead of one monolithic mixed console
       - QoS runtime is layered into overview, preflight, active run, outcome capture, and advanced tools

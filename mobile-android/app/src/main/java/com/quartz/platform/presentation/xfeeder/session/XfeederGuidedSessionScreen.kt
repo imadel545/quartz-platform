@@ -20,11 +20,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -73,15 +72,13 @@ import com.quartz.platform.presentation.components.OperationalSectionCard
 import com.quartz.platform.presentation.components.OperationalSeverity
 import com.quartz.platform.presentation.components.OperationalSignal
 import com.quartz.platform.presentation.components.OperationalSignalRow
+import com.quartz.platform.presentation.components.OperationalStateBanner
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
@@ -210,7 +207,11 @@ fun XfeederGuidedSessionScreen(
 
             else -> {
                 var showAdvancedMissionContext by rememberSaveable { mutableStateOf(false) }
-                var showChecklist by rememberSaveable { mutableStateOf(true) }
+                var showChecklist by rememberSaveable(state.session?.id) {
+                    mutableStateOf(
+                        state.session?.toProgressSnapshot()?.remainingRequiredSteps?.let { it > 0 } ?: true
+                    )
+                }
 
                 LazyColumn(
                     modifier = Modifier
@@ -261,6 +262,9 @@ fun XfeederGuidedSessionScreen(
 
                     if (state.session == null) {
                         item {
+                            XfeederRuntimeStateBanner(state = state)
+                        }
+                        item {
                             OperationalEmptyStateCard(
                                 title = stringResource(R.string.xfeeder_runtime_empty_title),
                                 message = stringResource(R.string.xfeeder_empty_session)
@@ -276,20 +280,11 @@ fun XfeederGuidedSessionScreen(
                         }
                     } else {
                         item {
-                            XfeederMissionProgressCard(state = state)
+                            XfeederRuntimeStateBanner(state = state)
                         }
 
                         item {
-                            GeospatialSessionSurfaceCard(
-                                state = state,
-                                onMeasurementZoneExtensionReasonChanged = onMeasurementZoneExtensionReasonChanged,
-                                onProximityReferenceAltitudeChanged = onProximityReferenceAltitudeChanged,
-                                onExtendMeasurementZoneClicked = onExtendMeasurementZoneClicked,
-                                onResetMeasurementZoneClicked = onResetMeasurementZoneClicked,
-                                onToggleProximityModeClicked = onToggleProximityModeClicked,
-                                onRefreshUserLocationClicked = onRefreshUserLocationClicked,
-                                onOpenNavigationToMeasurementZone = onOpenNavigationToMeasurementZone
-                            )
+                            XfeederMissionProgressCard(state = state)
                         }
 
                         item {
@@ -304,6 +299,19 @@ fun XfeederGuidedSessionScreen(
                                 onResultSummaryChanged = onResultSummaryChanged,
                                 onSaveSummary = onSaveSummary,
                                 onCreateReportDraft = onCreateReportDraft
+                            )
+                        }
+
+                        item {
+                            GeospatialSessionSurfaceCard(
+                                state = state,
+                                onMeasurementZoneExtensionReasonChanged = onMeasurementZoneExtensionReasonChanged,
+                                onProximityReferenceAltitudeChanged = onProximityReferenceAltitudeChanged,
+                                onExtendMeasurementZoneClicked = onExtendMeasurementZoneClicked,
+                                onResetMeasurementZoneClicked = onResetMeasurementZoneClicked,
+                                onToggleProximityModeClicked = onToggleProximityModeClicked,
+                                onRefreshUserLocationClicked = onRefreshUserLocationClicked,
+                                onOpenNavigationToMeasurementZone = onOpenNavigationToMeasurementZone
                             )
                         }
 
@@ -525,6 +533,37 @@ private fun XfeederMissionPrimaryAction(
 }
 
 @Composable
+private fun XfeederRuntimeStateBanner(state: XfeederGuidedSessionUiState) {
+    val progress = state.session?.toProgressSnapshot()
+    val severity = when {
+        state.completionGuardMessage != null -> OperationalSeverity.CRITICAL
+        state.hasUnsavedChanges -> OperationalSeverity.WARNING
+        state.session?.status == XfeederSessionStatus.COMPLETED -> OperationalSeverity.SUCCESS
+        state.session == null -> OperationalSeverity.NORMAL
+        progress?.remainingRequiredSteps == 0 -> OperationalSeverity.SUCCESS
+        else -> OperationalSeverity.WARNING
+    }
+    val message = when {
+        state.session == null -> stringResource(R.string.xfeeder_runtime_state_message_not_started)
+        state.completionGuardMessage != null -> state.completionGuardMessage
+        state.hasUnsavedChanges -> stringResource(R.string.xfeeder_runtime_state_message_unsaved)
+        state.session.status == XfeederSessionStatus.COMPLETED -> stringResource(
+            R.string.xfeeder_runtime_state_message_completed
+        )
+        else -> stringResource(
+            R.string.xfeeder_runtime_state_message_active,
+            progress?.remainingRequiredSteps ?: 0
+        )
+    }
+    OperationalStateBanner(
+        title = stringResource(R.string.xfeeder_runtime_state_title),
+        message = message,
+        severity = severity,
+        hint = xfeederNextActionText(state, progress)
+    )
+}
+
+@Composable
 private fun XfeederMissionProgressCard(state: XfeederGuidedSessionUiState) {
     val session = requireNotNull(state.session)
     val progress = session.toProgressSnapshot()
@@ -617,6 +656,28 @@ private fun OutcomeCaptureCard(
         title = stringResource(R.string.xfeeder_section_review_capture),
         subtitle = stringResource(R.string.xfeeder_section_review_capture_hint)
     ) {
+        OperationalSignalRow(
+            signals = listOf(
+                OperationalSignal(
+                    text = stringResource(
+                        R.string.xfeeder_signal_session_status,
+                        stringResource(xfeederSessionStatusLabelRes(state.selectedStatus))
+                    ),
+                    severity = sessionStatusSeverity(state.selectedStatus)
+                ),
+                OperationalSignal(
+                    text = stringResource(
+                        R.string.xfeeder_label_sector_outcome,
+                        stringResource(xfeederSectorOutcomeLabelRes(state.selectedOutcome))
+                    ),
+                    severity = if (state.selectedOutcome == XfeederSectorOutcome.NOT_TESTED) {
+                        OperationalSeverity.NORMAL
+                    } else {
+                        OperationalSeverity.SUCCESS
+                    }
+                )
+            )
+        )
         Text(
             text = stringResource(R.string.xfeeder_label_status_update),
             style = MaterialTheme.typography.labelLarge
@@ -626,7 +687,8 @@ private fun OutcomeCaptureCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             XfeederSessionStatus.entries.forEach { status ->
-                AssistChip(
+                FilterChip(
+                    selected = status == state.selectedStatus,
                     onClick = { onSessionStatusSelected(status) },
                     label = { Text(stringResource(xfeederSessionStatusLabelRes(status))) }
                 )
@@ -642,7 +704,8 @@ private fun OutcomeCaptureCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             XfeederSectorOutcome.entries.forEach { outcome ->
-                AssistChip(
+                FilterChip(
+                    selected = outcome == state.selectedOutcome,
                     onClick = { onSectorOutcomeSelected(outcome) },
                     label = { Text(stringResource(xfeederSectorOutcomeLabelRes(outcome))) }
                 )
@@ -757,12 +820,14 @@ private fun ClosureEvidenceFields(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 XfeederUnreliableReason.entries.forEach { reason ->
-                    AssistChip(
+                    FilterChip(
+                        selected = state.selectedUnreliableReason == reason,
                         onClick = { onUnreliableReasonSelected(reason) },
                         label = { Text(stringResource(xfeederUnreliableReasonLabelRes(reason))) }
                     )
                 }
-                AssistChip(
+                FilterChip(
+                    selected = state.selectedUnreliableReason == null,
                     onClick = { onUnreliableReasonSelected(null) },
                     label = { Text(stringResource(R.string.xfeeder_action_clear_unreliable_reason)) }
                 )
@@ -1093,193 +1158,6 @@ private fun XfeederSessionMapView(
             map.invalidate()
             overlaysVersion = currentVersion
         }
-    )
-}
-
-@Composable
-private fun SectorCellsContextCard(state: XfeederGuidedSessionUiState) {
-    OperationalSectionCard(
-        title = stringResource(R.string.xfeeder_header_sector_cells_context),
-        subtitle = stringResource(R.string.xfeeder_section_advanced_context_hint)
-    ) {
-        if (state.systemOperatorContexts.isEmpty()) {
-            Text(
-                text = stringResource(R.string.xfeeder_empty_sector_system_context),
-                style = MaterialTheme.typography.bodySmall
-            )
-        } else {
-            state.systemOperatorContexts.forEach { context ->
-                Text(
-                    text = stringResource(
-                        R.string.xfeeder_label_system_context_item,
-                        context.technology,
-                        context.operatorName,
-                        context.band,
-                        context.connectedCells,
-                        context.totalCells
-                    ),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
-
-        Text(
-            text = stringResource(R.string.xfeeder_header_linked_cells),
-            style = MaterialTheme.typography.labelLarge
-        )
-        if (state.sectorCells.isEmpty()) {
-            Text(
-                text = stringResource(R.string.empty_sector_cells),
-                style = MaterialTheme.typography.bodySmall
-            )
-        } else {
-            state.sectorCells.forEach { cell ->
-                Text(
-                    text = stringResource(
-                        R.string.xfeeder_label_cell_context_item,
-                        cell.label,
-                        cell.technology,
-                        cell.operatorName,
-                        cell.band,
-                        if (cell.isConnected) {
-                            stringResource(R.string.xfeeder_value_cell_connected)
-                        } else {
-                            stringResource(R.string.xfeeder_value_cell_not_connected)
-                        }
-                    ),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SessionEntryChoiceCard(
-    hasLatest: Boolean,
-    isCreating: Boolean,
-    onResumeLatest: () -> Unit,
-    onCreateSession: () -> Unit
-) {
-    OperationalSectionCard(
-        title = stringResource(R.string.xfeeder_entry_choice_title),
-        subtitle = stringResource(R.string.xfeeder_entry_choice_hint)
-    ) {
-        if (hasLatest) {
-            OutlinedButton(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onResumeLatest
-            ) {
-                Text(stringResource(R.string.xfeeder_action_resume_latest))
-            }
-        }
-        Button(
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !isCreating,
-            onClick = onCreateSession
-        ) {
-            Text(
-                text = if (isCreating) {
-                    stringResource(R.string.xfeeder_action_create_session_loading)
-                } else {
-                    stringResource(R.string.xfeeder_action_create_session)
-                }
-            )
-        }
-    }
-}
-
-@Composable
-private fun SessionHistoryItemCard(
-    session: XfeederGuidedSession,
-    isSelected: Boolean,
-    onOpen: () -> Unit
-) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = stringResource(
-                    R.string.xfeeder_label_history_item,
-                    stringResource(xfeederSessionStatusLabelRes(session.status)),
-                    formatEpoch(session.updatedAtEpochMillis)
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = stringResource(
-                    R.string.xfeeder_label_sector_outcome,
-                    stringResource(xfeederSectorOutcomeLabelRes(session.sectorOutcome))
-                ),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isSelected,
-                onClick = onOpen
-            ) {
-                Text(
-                    text = if (isSelected) {
-                        stringResource(R.string.xfeeder_action_session_opened)
-                    } else {
-                        stringResource(R.string.xfeeder_action_open_session)
-                    }
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun StepChecklistCard(
-    step: XfeederGuidedStep,
-    onStepStatusSelected: (XfeederStepCode, XfeederStepStatus) -> Unit
-) {
-    OperationalSectionCard(
-        title = stringResource(xfeederStepCodeLabelRes(step.code)),
-        subtitle = if (step.required) {
-            stringResource(R.string.xfeeder_label_required_step)
-        } else {
-            stringResource(R.string.xfeeder_label_optional_step)
-        }
-    ) {
-        OperationalSignalRow(
-            signals = listOf(
-                OperationalSignal(
-                    text = stringResource(
-                        R.string.xfeeder_label_step_status,
-                        stringResource(xfeederStepStatusLabelRes(step.status))
-                    ),
-                    severity = when (step.status) {
-                        XfeederStepStatus.DONE -> OperationalSeverity.SUCCESS
-                        XfeederStepStatus.BLOCKED -> OperationalSeverity.CRITICAL
-                        XfeederStepStatus.IN_PROGRESS -> OperationalSeverity.WARNING
-                        XfeederStepStatus.TODO -> OperationalSeverity.NORMAL
-                    }
-                )
-            )
-        )
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            XfeederStepStatus.entries.forEach { status ->
-                AssistChip(
-                    onClick = { onStepStatusSelected(step.code, status) },
-                    label = { Text(stringResource(xfeederStepStatusLabelRes(status))) }
-                )
-            }
-        }
-    }
-}
-
-private fun formatEpoch(epochMillis: Long): String {
-    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-    return formatter.format(
-        Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).toLocalDateTime()
     )
 }
 

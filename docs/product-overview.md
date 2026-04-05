@@ -150,6 +150,11 @@ Product/UX recovery now also reinforces mission-driven runtime execution clarity
   - ReportList behaves as an operational review queue instead of a flat local draft list, with mission summary metrics, top-priority triage, dominant issue labeling, and next-action guidance,
   - XFeeder guided runtime now separates mission progress, terrain context, and outcome capture from checklist/history/advanced context so the operator path is readable in seconds,
   - shared UI patterns now include compact metric rows and stronger empty-state cards, allowing denser but clearer mission/review summaries without reverting to text-heavy cards.
+- Premium Runtime Finalization v2 (current cycle) strengthens the same product direction:
+  - ReportList now exposes explicit queue-state semantics (`État file de revue`) and filter/visible-count controls while moving queue rendering logic into dedicated section composables for maintainability.
+  - XFeeder now shows runtime-state guidance even when no session exists and uses selected-state chips for status/outcome/checklist updates, reducing action ambiguity for technicians.
+  - XFeeder and ReportList monolith pressure is reduced by extracting section composables (`XfeederGuidedSessionSections.kt`, `ReportListQueueSections.kt`).
+  - Shared operational cards/signals now enforce stronger visual hierarchy (card rhythm, signal readability, compact severity language) for cross-surface premium consistency.
 - QoS mission-console recovery now applies the same product rule to Débit/QoS:
   - the performance screen is structured around mission summary, preflight, execution, outcome capture, and advanced support,
   - advanced script/timeline/history tooling no longer competes with the active operator path above the fold,
