@@ -160,6 +160,9 @@ Product/UX recovery now also reinforces mission-driven runtime execution clarity
   - Site Detail now separates mission launch, guided workflows, local drafts, and technical structure with progressive disclosure and extracted section composables (`SiteDetailSections.kt`).
   - RET guided runtime now follows mission-first ordering (header/state/summary/actions first) with checklist, execution controls, review capture, history, and geospatial advanced context disclosure-based via `RetGuidedSessionSections.kt`.
   - Runtime proof captures for these surfaces are stored in `artifacts/runtime-proof/mission-surface-consolidation-v3/`.
+- Premium Runtime Finalization v4 (current cycle) reduces XFeeder runtime monolith debt:
+  - XFeeder screen orchestration is now isolated from heavy mission section rendering.
+  - Mission header/progress/outcome/geospatial/context blocks are extracted in `XfeederGuidedSessionMissionSections.kt`, keeping the runtime path stable while improving maintainability and future UX iteration speed.
 - QoS mission-console recovery now applies the same product rule to Débit/QoS:
   - the performance screen is structured around mission summary, preflight, execution, outcome capture, and advanced support,
   - advanced script/timeline/history tooling no longer competes with the active operator path above the fold,

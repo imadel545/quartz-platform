@@ -89,6 +89,10 @@ The roadmap prioritizes:
       - `SiteDetailScreen` split into orchestration + extracted section file (`SiteDetailSections.kt`) with mission actions/guided workflows above technical detail disclosure
       - `RetGuidedSessionScreen` split into orchestration + extracted section file (`RetGuidedSessionSections.kt`) with mission-first runtime ordering and disclosure-based advanced layers
       - runtime screenshot/XML proof archived in `artifacts/runtime-proof/mission-surface-consolidation-v3/`
+    - Premium Runtime Finalization v4 (current cycle):
+      - `XfeederGuidedSessionScreen` reduced to orchestration scope (344 lines) from a large monolith
+      - heavy mission rendering moved to `XfeederGuidedSessionMissionSections.kt` (header/progress/outcome/geospatial/context helpers)
+      - this lowers presentation maintenance risk and prepares safer cross-surface mission UX convergence
     - QoS Mission Console Recovery + Presentation Architecture Stabilization:
       - `PerformanceSessionScreen` decomposed into mission sections with explicit QoS runtime layering (`overview`, `preflight`, `active run`, `outcome capture`, `advanced tools`)
       - performance presentation helpers extracted out of the screen/ViewModel to reduce monolith drift and keep screen orchestration focused on runtime hierarchy

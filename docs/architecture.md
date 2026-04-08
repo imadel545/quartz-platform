@@ -139,6 +139,9 @@ Current Android implementation covers a bounded local-first workflow baseline:
       - `SiteDetailScreen` now acts as orchestration only; structural sections are extracted in `SiteDetailSections.kt` (mission header/state/actions/guided launch first, technical details disclosure-gated)
       - `RetGuidedSessionScreen` now acts as orchestration only; structural sections are extracted in `RetGuidedSessionSections.kt` with mission-first runtime ordering and progressive disclosure for checklist/execution/review/history
       - runtime visual proof for these mission surfaces is archived under `artifacts/runtime-proof/mission-surface-consolidation-v3/`
+    - premium runtime finalization v4 strengthens XFeeder maintainability boundaries:
+      - `XfeederGuidedSessionScreen` now focuses on orchestration only
+      - heavy mission runtime sections were extracted to `XfeederGuidedSessionMissionSections.kt` to reduce monolithic presentation risk while preserving mission-first runtime behavior
     - QoS mission-console recovery extends the same structural recovery to the Débit/QoS surface:
       - `PerformanceSessionScreen` is decomposed into mission sections instead of one monolithic mixed console
       - QoS runtime is layered into overview, preflight, active run, outcome capture, and advanced tools
