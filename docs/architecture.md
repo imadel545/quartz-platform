@@ -146,6 +146,7 @@ Current Android implementation covers a bounded local-first workflow baseline:
       - `PerformanceSessionScreen` is decomposed into mission sections instead of one monolithic mixed console
       - QoS runtime is layered into overview, preflight, active run, outcome capture, and advanced tools
       - session history, checklist, run plan, timeline, script selection/editor, and family matrix are disclosure-based support sections instead of first-screen competitors
+      - QoS mission render blocks are extracted to `PerformanceSessionQosSections.kt`, keeping `PerformanceSessionSections.kt` focused on non-QoS shared sections and lowering presentation monolith risk
     - shared operational presentation primitives centralize section hierarchy, severity signal rendering, and advanced-disclosure behavior to reduce UX drift across runtime surfaces
     - shared mission/runtime primitives now include:
       - `MissionHeaderCard` to standardize mission header/action hierarchy across entry surfaces

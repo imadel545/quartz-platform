@@ -97,6 +97,7 @@ The roadmap prioritizes:
       - `PerformanceSessionScreen` decomposed into mission sections with explicit QoS runtime layering (`overview`, `preflight`, `active run`, `outcome capture`, `advanced tools`)
       - performance presentation helpers extracted out of the screen/ViewModel to reduce monolith drift and keep screen orchestration focused on runtime hierarchy
       - advanced support surfaces (history, checklist, run plan, timeline, script selection/editor, family matrix) moved behind disclosure to keep field execution clarity above the fold
+      - QoS mission rendering extracted into `PerformanceSessionQosSections.kt`, reducing `PerformanceSessionSections.kt` monolith pressure for safer iteration
   - mission/runtime design-system hardening:
     - reusable mission header primitive with explicit primary/secondary action hierarchy (`MissionHeaderCard`)
     - reusable severity-based runtime alert/info primitive (`OperationalMessageCard`)

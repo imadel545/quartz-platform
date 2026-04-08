@@ -121,6 +121,7 @@ quartz-platform/
         - QoS execution runtime is explicitly layered as overview → preflight → active run → outcome capture → advanced tools
         - session history, checklist, script selection/editor, run plan, timeline, and family matrix are disclosure-based instead of competing above the fold
         - performance label/format/QoS derivation helpers are extracted out of the screen/ViewModel to reduce presentation monolith drift
+        - QoS mission section rendering is now extracted into `PerformanceSessionQosSections.kt`, reducing monolithic pressure in `PerformanceSessionSections.kt`
   - Room migrations and schema snapshots kept explicit
 
 ## Explicitly out of scope at this stage
